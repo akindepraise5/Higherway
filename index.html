@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Higherway — Wisdom for a More Faithful Life</title>
+<meta name="description" content="Higherway is a digital archive of inspired teachings, practical insights and biblical perspectives. Browse every edition, preview the pages, download the PDF.">
+<meta name="theme-color" content="#141A17">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200;0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23141A17'/%3E%3Cpath d='M7 20a9 9 0 0 1 18 0' fill='none' stroke='%23D8B25F' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+
+<style>
+/* ============================================================
+   HIGHERWAY — design tokens
+   ============================================================ */
+:root{
+  color-scheme: light;
+
+  --paper:      #F5F1EA;
+  --paper-2:    #FBF8F3;
+  --paper-3:    #EFE9DF;
+  --ink:        #141A17;
+  --ink-2:      #3B443E;
+  --ink-3:      #6E756E;
+  --taupe:      #7C7A6E;
+  --forest:     #1A231E;
+  --forest-2:   #232E27;
+  --gold:       #B08A3E;
+  --gold-2:     #D8B25F;
+  --gold-wash:  #EFE3C9;
+
+  --line:       rgba(20,26,23,.14);
+  --line-soft:  rgba(20,26,23,.08);
+  --line-dark:  rgba(245,241,234,.16);
+
+  --serif: 'Newsreader', 'Iowan Old Style', 'Palatino Linotype', Georgia, 'Times New Roman', serif;
+  --sans:  'Instrument Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --gut: clamp(20px, 5vw, 56px);
+  --max: 1320px;
+  --hdr: 72px;
+
+  --ease: cubic-bezier(.22,.61,.36,1);
+  --ease-out: cubic-bezier(.16,1,.3,1);
+}
+
+/* ============================================================
+   base
+   ============================================================ */
+*,*::before,*::after{ box-sizing:border-box; }
+html{ -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.6;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  overflow-x:hidden;
+}
+body.is-locked{ overflow:hidden; }
+img,svg{ display:block; max-width:100%; }
+button{ font:inherit; color:inherit; background:none; border:0; cursor:pointer; }
+input,select{ font:inherit; color:inherit; }
+input[type=search]::-webkit-search-cancel-button,
+input[type=search]::-webkit-search-decoration{ -webkit-appearance:none; appearance:none; }
+a{ color:inherit; text-decoration:none; }
+h1,h2,h3,h4,p{ margin:0; }
+ul,ol{ margin:0; padding:0; list-style:none; }
+::selection{ background:var(--gold-wash); color:var(--ink); }
+:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; border-radius:2px; }
+
+.wrap{ width:100%; max-width:var(--max); margin-inline:auto; padding-inline:var(--gut); }
+.wrap--narrow{ max-width:920px; }
+
+.eyebrow{
+  font-family:var(--sans); font-size:11px; font-weight:500;
+  letter-spacing:.2em; text-transform:uppercase; color:var(--taupe);
+}
+.eyebrow--gold{ color:var(--gold); }
+.eyebrow--light{ color:rgba(245,241,234,.6); }
+
+.display{
+  font-family:var(--serif); font-weight:300; line-height:1.02;
+  letter-spacing:-.022em; font-optical-sizing:auto;
+}
+.d1{ font-size:clamp(44px, 7.4vw, 96px); }
+.d2{ font-size:clamp(34px, 5vw, 62px); }
+.d3{ font-size:clamp(26px, 3.2vw, 40px); }
+.d4{ font-size:clamp(21px, 2.2vw, 27px); letter-spacing:-.015em; }
+.lede{ font-size:clamp(15.5px,1.15vw,17.5px); line-height:1.65; color:var(--ink-2); max-width:52ch; }
+.small{ font-size:13.5px; color:var(--ink-3); }
+.i{ font-style:italic; }
+
+/* ---- buttons ---- */
+.btn{
+  display:inline-flex; align-items:center; gap:10px;
+  padding:13px 22px; border-radius:999px;
+  font-size:14px; font-weight:500;
+  background:var(--ink); color:var(--paper-2);
+  border:1px solid var(--ink);
+  transition:background .35s var(--ease), color .35s var(--ease), transform .2s var(--ease), border-color .35s var(--ease);
+}
+.btn:hover{ background:var(--forest-2); border-color:var(--forest-2); }
+.btn:active{ transform:translateY(1px); }
+.btn .arw{ transition:transform .4s var(--ease-out); }
+.btn:hover .arw{ transform:translateX(4px); }
+.btn--ghost{ background:transparent; color:var(--ink); border-color:var(--line); }
+.btn--ghost:hover{ background:transparent; border-color:var(--ink); }
+.btn--light{ background:var(--paper-2); color:var(--ink); border-color:var(--paper-2); }
+.btn--light:hover{ background:#fff; border-color:#fff; }
+.btn--onDark{ background:transparent; color:var(--paper-2); border-color:var(--line-dark); }
+.btn--onDark:hover{ background:transparent; border-color:rgba(245,241,234,.5); }
+.btn--lg{ padding:16px 28px; font-size:15px; }
+.btn--block{ width:100%; justify-content:center; }
+
+.tlink{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:13px; font-weight:500; letter-spacing:.02em;
+  padding-bottom:3px; border-bottom:1px solid var(--line);
+  transition:border-color .3s var(--ease), gap .3s var(--ease);
+}
+.tlink:hover{ border-color:var(--ink); gap:12px; }
+
+.ico{ width:16px; height:16px; flex:none; stroke:currentColor; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+
+/* ============================================================
+   masthead
+   ============================================================ */
+.mast{
+  position:sticky; top:0; z-index:80;
+  background:rgba(245,241,234,.86);
+  backdrop-filter:saturate(1.4) blur(14px); -webkit-backdrop-filter:saturate(1.4) blur(14px);
+  border-bottom:1px solid transparent;
+  transition:border-color .4s var(--ease);
+}
+.mast.is-stuck{ border-bottom-color:var(--line-soft); }
+.mast__in{ display:flex; align-items:center; gap:28px; height:var(--hdr); }
+
+.mark{ display:flex; flex-direction:column; align-items:flex-start; gap:1px; margin-right:auto; }
+.mark__arc{ width:36px; height:11px; overflow:visible; }
+.mark__arc path{ fill:none; stroke:var(--gold-2); stroke-width:2.2; stroke-linecap:round; }
+.mark__word{ font-family:var(--serif); font-size:23px; font-weight:400; letter-spacing:-.018em; line-height:1; }
+
+.nav{ display:flex; align-items:center; gap:30px; }
+.nav a{ position:relative; font-size:14.5px; color:var(--ink-2); padding:6px 0; transition:color .3s var(--ease); }
+.nav a::after{
+  content:''; position:absolute; left:0; right:0; bottom:0; height:1px;
+  background:var(--ink); transform:scaleX(0); transform-origin:left;
+  transition:transform .45s var(--ease-out);
+}
+.nav a:hover{ color:var(--ink); }
+.nav a:hover::after{ transform:scaleX(1); }
+.nav a.is-on{ color:var(--ink); }
+.nav a.is-on::after{ transform:scaleX(1); background:var(--gold); }
+
+.mast__tools{ display:flex; align-items:center; gap:8px; }
+.iconbtn{
+  width:40px; height:40px; display:grid; place-items:center; border-radius:50%;
+  border:1px solid transparent; transition:background .3s var(--ease);
+}
+.iconbtn:hover{ background:rgba(20,26,23,.05); }
+.iconbtn .ico{ width:18px; height:18px; }
+.burger{ display:none; }
+.burger span{ display:block; width:18px; height:1.5px; background:var(--ink); border-radius:2px; transform-origin:center; transition:transform .4s var(--ease-out), opacity .3s; }
+body.menu-open .burger span:nth-child(1){ transform:translateY(6.5px) rotate(45deg); }
+body.menu-open .burger span:nth-child(2){ opacity:0; }
+body.menu-open .burger span:nth-child(3){ transform:translateY(-6.5px) rotate(-45deg); }
+
+.drawer{
+  position:fixed; inset:var(--hdr) 0 0; z-index:70;
+  background:var(--paper); padding:8px var(--gut) 40px;
+  display:flex; flex-direction:column; overflow-y:auto;
+  opacity:0; visibility:hidden; transform:translateY(-8px);
+  transition:opacity .38s var(--ease), transform .38s var(--ease-out), visibility .38s;
+}
+body.menu-open .drawer{ opacity:1; visibility:visible; transform:none; }
+.drawer__nav{ border-top:1px solid var(--line-soft); }
+.drawer__nav a{
+  display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+  padding:20px 2px; border-bottom:1px solid var(--line-soft);
+  font-family:var(--serif); font-size:30px; font-weight:300; letter-spacing:-.02em;
+}
+.drawer__nav a .n{ font-family:var(--sans); font-size:11px; letter-spacing:.2em; color:var(--taupe); }
+.drawer__nav a.is-on{ color:var(--gold); }
+.drawer__cta{ margin-top:26px; }
+.drawer__foot{ margin-top:auto; padding-top:32px; }
+
+/* ============================================================
+   the publication object — covers, plates, scanned pages
+   ============================================================ */
+.cover{
+  position:relative; container-type:inline-size;
+  aspect-ratio:3/4; overflow:hidden; background:var(--forest); border-radius:2px;
+  box-shadow:0 1px 2px rgba(20,26,23,.10), 0 18px 40px -22px rgba(20,26,23,.45);
+}
+.cover__art{ position:absolute; inset:0; }
+.cover__art svg,.cover__art img{ width:100%; height:100%; object-fit:cover; }
+.cover__veil{
+  position:absolute; inset:0;
+  background:linear-gradient(178deg, rgba(12,16,14,.55) 0%, rgba(12,16,14,.10) 32%, rgba(12,16,14,.30) 64%, rgba(12,16,14,.74) 100%);
+}
+.cover__type{
+  position:absolute; inset:0; display:flex; flex-direction:column;
+  padding:7cqw 7cqw 6.5cqw; color:#F7F4EE; text-align:center;
+}
+.cover__mark{ display:flex; flex-direction:column; align-items:center; }
+.cover__mark svg{ width:12cqw; height:3.4cqw; overflow:visible; margin-bottom:.6cqw; }
+.cover__mark svg path{ fill:none; stroke:var(--gold-2); stroke-width:2.4; stroke-linecap:round; }
+.cover__wm{ font-family:var(--serif); font-size:8.6cqw; font-weight:400; letter-spacing:-.02em; line-height:1; }
+.cover__date{
+  margin-top:1.8cqw; font-size:2.3cqw; font-weight:500;
+  letter-spacing:.34em; text-transform:uppercase; color:rgba(247,244,238,.72); text-indent:.34em;
+}
+.cover__ttl{
+  margin-top:auto; font-family:var(--serif); font-weight:300;
+  font-size:13cqw; line-height:.98; letter-spacing:-.03em;
+}
+.cover__foot{ margin-top:5cqw; }
+.cover__foot .r{ height:1px; background:rgba(247,244,238,.32); margin-bottom:3.4cqw; }
+.cover__foot .t{
+  font-size:2.1cqw; font-weight:500; letter-spacing:.22em;
+  text-transform:uppercase; color:rgba(247,244,238,.8); text-indent:.22em;
+}
+.cover--flat{ box-shadow:none; }
+.cover--mini .cover__wm,.cover--mini .cover__date,.cover--mini .cover__foot{ display:none; }
+.cover--mini .cover__type{ padding:11cqw 9cqw; }
+.cover--mini .cover__mark svg{ width:30cqw; height:9cqw; margin-bottom:0; }
+.cover--mini .cover__mark svg path{ stroke-width:3.4; }
+.cover--mini .cover__ttl{ font-size:17cqw; line-height:1.04; }
+
+.plate{
+  position:relative; container-type:inline-size;
+  aspect-ratio:4/5; overflow:hidden; background:var(--forest); border-radius:2px;
+}
+.plate__art{ position:absolute; inset:0; }
+.plate__art svg,.plate__art img{ width:100%; height:100%; object-fit:cover; }
+.plate__veil{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(12,16,14,.38) 0%, rgba(12,16,14,0) 40%, rgba(12,16,14,.50) 100%); }
+.plate__wm{
+  position:absolute; top:5.5cqw; left:6cqw; display:flex; align-items:center; gap:1.8cqw;
+  font-family:var(--serif); font-size:5cqw; color:rgba(247,244,238,.92); letter-spacing:-.02em; line-height:1;
+}
+.plate__wm svg{ width:6cqw; height:1.9cqw; overflow:visible; }
+.plate__wm svg path{ fill:none; stroke:var(--gold-2); stroke-width:2.8; stroke-linecap:round; }
+.plate__cat{
+  position:absolute; left:6cqw; right:6cqw; bottom:5.5cqw;
+  font-size:2.5cqw; font-weight:500; letter-spacing:.2em; text-transform:uppercase;
+  color:rgba(247,244,238,.88); text-indent:.2em;
+}
+
+/* a scanned page of the printed publication */
+.page{
+  position:relative; container-type:inline-size; aspect-ratio:5/7;
+  background:#FCFAF4; overflow:hidden;
+  box-shadow:0 1px 2px rgba(20,26,23,.08), 0 24px 50px -28px rgba(20,26,23,.5);
+}
+.page::after{
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:
+    linear-gradient(90deg, rgba(120,105,75,.14) 0%, rgba(120,105,75,0) 7%, rgba(120,105,75,0) 93%, rgba(120,105,75,.10) 100%),
+    radial-gradient(120% 90% at 50% 45%, rgba(255,255,255,0) 55%, rgba(122,110,84,.13) 100%);
+}
+.page img{ width:100%; height:100%; object-fit:cover; }
+.page__in{ position:absolute; inset:0; padding:8cqw 8cqw 6cqw; display:flex; flex-direction:column; color:#2B2F2B; }
+.page__rh{
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:2cqw; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:#9A9384;
+  padding-bottom:2.4cqw; border-bottom:1px solid rgba(43,47,43,.16);
+}
+.page__cat{ margin-top:6cqw; font-size:2.1cqw; font-weight:500; letter-spacing:.22em; text-transform:uppercase; color:var(--gold); }
+.page__h{ margin-top:2.4cqw; font-family:var(--serif); font-size:9cqw; font-weight:300; line-height:1.02; letter-spacing:-.03em; }
+.page__deck{ margin-top:3cqw; font-family:var(--serif); font-size:3.4cqw; font-style:italic; line-height:1.4; color:#5E625B; }
+.page__band{ margin-top:4.5cqw; aspect-ratio:16/7; overflow:hidden; background:#E8E2D6; }
+.page__band svg,.page__band img{ width:100%; height:100%; object-fit:cover; }
+.page__body{ margin-top:4cqw; font-family:var(--serif); font-size:2.55cqw; line-height:1.62; text-align:justify; hyphens:auto; color:#43483F; }
+.page__body p+p{ margin-top:1.2em; text-indent:1.6em; }
+.page__body--cols{ column-count:2; column-gap:5cqw; }
+.page__body .dc{ float:left; font-size:9cqw; line-height:.86; padding:.5cqw 1.4cqw 0 0; font-weight:400; color:var(--ink); }
+.page__pn{ margin-top:auto; padding-top:4cqw; text-align:center; font-size:2.2cqw; letter-spacing:.14em; color:#9A9384; }
+
+/* ============================================================
+   hero
+   ============================================================ */
+.hero{ position:relative; padding-block:clamp(56px,8vw,104px) clamp(40px,5vw,64px); overflow:hidden; }
+.hero__scene{ position:absolute; inset:0; z-index:0; }
+.hero__scene svg{ width:100%; height:100%; object-fit:cover; }
+.hero__scene::after{
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(96deg, rgba(10,14,12,.88) 0%, rgba(10,14,12,.72) 30%, rgba(10,14,12,.30) 62%, rgba(10,14,12,.06) 100%);
+}
+.hero__in{ position:relative; z-index:1; color:var(--paper-2); min-height:min(60vh,520px); display:flex; flex-direction:column; }
+.hero h1{ margin-top:22px; max-width:14ch; color:#FCFAF5; }
+.hero .lede{ margin-top:26px; color:rgba(251,248,243,.82); max-width:46ch; }
+.hero__cta{ display:flex; flex-wrap:wrap; gap:12px; margin-top:34px; }
+.hero__rail{
+  position:absolute; top:0; right:var(--gut); text-align:right;
+  font-size:10.5px; font-weight:500; letter-spacing:.22em; text-transform:uppercase;
+  color:rgba(251,248,243,.55); line-height:2; max-width:13ch;
+}
+.hero__terms{
+  position:relative; z-index:1; display:flex; flex-wrap:wrap; align-items:center; gap:clamp(14px,3vw,34px);
+  margin-top:clamp(44px,7vw,88px); padding-top:22px; border-top:1px solid rgba(251,248,243,.18);
+  font-size:11px; font-weight:500; letter-spacing:.22em; text-transform:uppercase; color:rgba(251,248,243,.62);
+}
+.hero__terms .dash{ color:rgba(251,248,243,.3); }
+
+/* ============================================================
+   sections
+   ============================================================ */
+.sec{ padding-block:clamp(56px,7vw,104px); }
+.sec--tight{ padding-block:clamp(40px,5vw,72px); }
+.sec--line{ border-top:1px solid var(--line-soft); }
+.sec--paper2{ background:var(--paper-2); }
+.sechead{ display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:clamp(26px,3vw,40px); }
+.sechead__t{ margin-top:12px; }
+.sechead__aside{ display:flex; align-items:center; gap:10px; flex:none; }
+
+/* latest edition */
+.latest{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(32px,6vw,88px); align-items:center; }
+.latest__cover{ width:min(100%,392px); justify-self:center; transform:rotate(-1.2deg); transition:transform .7s var(--ease-out); }
+.latest__cover:hover{ transform:rotate(0deg) translateY(-6px); }
+.stats{ display:flex; gap:clamp(20px,3vw,44px); margin-top:36px; padding-top:26px; border-top:1px solid var(--line-soft); }
+.stats div{ min-width:0; }
+.stats .n{ font-family:var(--serif); font-size:clamp(28px,3vw,38px); font-weight:300; line-height:1; letter-spacing:-.02em; }
+.stats .l{ margin-top:8px; font-size:10.5px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:var(--taupe); }
+
+/* horizontal rail */
+.rail{
+  display:grid; grid-auto-flow:column; grid-auto-columns:minmax(230px,1fr);
+  gap:clamp(16px,2vw,28px); overflow-x:auto; scroll-snap-type:x mandatory;
+  scrollbar-width:none; padding-bottom:4px;
+}
+.rail::-webkit-scrollbar{ display:none; }
+.rail > *{ scroll-snap-align:start; }
+.railbtn{ width:38px; height:38px; border:1px solid var(--line); border-radius:50%; display:grid; place-items:center; transition:border-color .3s, background .3s; }
+.railbtn:hover{ border-color:var(--ink); background:var(--ink); color:var(--paper-2); }
+
+/* material card */
+.mcard{ display:block; }
+.mcard__fig{ overflow:hidden; border-radius:2px; background:var(--paper-3); }
+.mcard__fig .plate{ transition:transform .8s var(--ease-out); }
+.mcard:hover .plate{ transform:scale(1.035); }
+.mcard__t{ margin-top:16px; font-family:var(--serif); font-size:19px; font-weight:400; line-height:1.24; letter-spacing:-.015em; }
+.mcard:hover .mcard__t{ color:var(--gold); }
+.mcard__t{ transition:color .3s var(--ease); }
+.mcard__m{ margin-top:8px; font-size:12.5px; color:var(--taupe); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.mcard__m .dot{ width:3px; height:3px; border-radius:50%; background:currentColor; opacity:.5; }
+
+/* grids */
+.grid-m{ display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(20px,2.4vw,36px) clamp(16px,2vw,28px); }
+.grid-e{ display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(24px,2.6vw,40px) clamp(16px,2vw,28px); }
+.grid-c{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line-soft); border-block:1px solid var(--line-soft); }
+
+/* category tile */
+.ctile{ background:var(--paper); padding:clamp(22px,2.4vw,32px); display:flex; flex-direction:column; gap:10px; min-height:170px; transition:background .4s var(--ease); }
+.ctile:hover{ background:var(--paper-2); }
+.ctile__top{ display:flex; align-items:center; justify-content:space-between; }
+.ctile__n{ font-size:11px; font-weight:500; letter-spacing:.18em; color:var(--taupe); }
+.ctile__t{ font-family:var(--serif); font-size:clamp(22px,2.2vw,28px); font-weight:300; letter-spacing:-.02em; margin-top:auto; }
+.ctile__d{ font-size:13px; color:var(--ink-3); line-height:1.5; }
+.ctile .ico{ color:var(--gold); }
+
+/* ============================================================
+   library controls
+   ============================================================ */
+.pagehead{ padding-block:clamp(34px,4.5vw,64px) clamp(24px,3vw,36px); }
+.pagehead h1{ margin-top:14px; max-width:16ch; }
+.pagehead .lede{ margin-top:18px; }
+
+.search{ position:relative; display:flex; align-items:center; margin-top:clamp(26px,3vw,38px); }
+.search .ico{ position:absolute; left:20px; color:var(--taupe); pointer-events:none; }
+.search input{
+  width:100%; padding:17px 20px 17px 52px; border-radius:999px;
+  background:var(--paper-2); border:1px solid var(--line-soft);
+  font-size:15px; transition:border-color .3s var(--ease), background .3s;
+}
+.search input::placeholder{ color:var(--taupe); }
+.search input:focus{ outline:none; border-color:var(--ink); background:#fff; }
+.search__clear{ position:absolute; right:14px; width:34px; height:34px; display:grid; place-items:center; border-radius:50%; color:var(--taupe); }
+.search__clear:hover{ background:rgba(20,26,23,.06); color:var(--ink); }
+
+.filters{ display:flex; align-items:center; gap:10px; margin-top:20px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+.filters::-webkit-scrollbar{ display:none; }
+.chip{
+  flex:none; display:inline-flex; align-items:center; gap:8px;
+  padding:9px 17px; border-radius:999px; border:1px solid var(--line);
+  font-size:13.5px; color:var(--ink-2); white-space:nowrap;
+  transition:background .3s var(--ease), color .3s var(--ease), border-color .3s var(--ease);
+}
+.chip:hover{ border-color:var(--ink); }
+.chip .c{ font-size:11px; color:var(--taupe); transition:color .3s; }
+.chip.is-on{ background:var(--ink); color:var(--paper-2); border-color:var(--ink); }
+.chip.is-on .c{ color:rgba(251,248,243,.55); }
+
+.toolbar{
+  display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap;
+  margin-top:26px; padding-bottom:18px; border-bottom:1px solid var(--line-soft);
+}
+.count{ font-size:13px; color:var(--taupe); }
+.count b{ color:var(--ink); font-weight:500; }
+.selects{ display:flex; gap:10px; }
+.sel{ position:relative; display:flex; align-items:center; }
+.sel select{
+  appearance:none; -webkit-appearance:none; background:transparent;
+  border:1px solid var(--line); border-radius:999px;
+  padding:9px 38px 9px 16px; font-size:13.5px; cursor:pointer;
+  transition:border-color .3s var(--ease);
+}
+.sel select:hover{ border-color:var(--ink); }
+.sel select:focus{ outline:none; border-color:var(--ink); }
+.sel .ico{ position:absolute; right:14px; pointer-events:none; width:14px; height:14px; color:var(--taupe); }
+
+.empty{ padding:clamp(56px,8vw,104px) 0; text-align:center; }
+.empty h3{ font-family:var(--serif); font-size:clamp(24px,3vw,34px); font-weight:300; letter-spacing:-.02em; }
+.empty p{ margin-top:12px; color:var(--ink-3); }
+.empty .btn{ margin-top:26px; }
+
+/* ============================================================
+   editions archive
+   ============================================================ */
+.year{ display:grid; grid-template-columns:minmax(0,132px) 1fr; gap:clamp(20px,4vw,56px); padding-block:clamp(36px,4.5vw,60px); border-top:1px solid var(--line-soft); }
+.year__n{ font-family:var(--serif); font-size:clamp(38px,4.6vw,62px); font-weight:200; line-height:1; letter-spacing:-.03em; color:var(--ink); position:sticky; top:calc(var(--hdr) + 28px); }
+.year__c{ margin-top:12px; font-size:11px; font-weight:500; letter-spacing:.18em; text-transform:uppercase; color:var(--taupe); }
+
+.ecard{ display:block; }
+.ecard .cover{ transition:transform .7s var(--ease-out), box-shadow .7s var(--ease-out); }
+.ecard:hover .cover{ transform:translateY(-8px); box-shadow:0 2px 4px rgba(20,26,23,.10), 0 34px 56px -30px rgba(20,26,23,.55); }
+.ecard__t{ margin-top:18px; font-family:var(--serif); font-size:21px; font-weight:400; letter-spacing:-.02em; line-height:1.2; transition:color .3s var(--ease); }
+.ecard:hover .ecard__t{ color:var(--gold); }
+.ecard__d{ margin-top:7px; font-size:12.5px; color:var(--taupe); }
+.ecard__m{ margin-top:4px; font-size:12.5px; color:var(--ink-3); }
+
+/* ============================================================
+   detail pages
+   ============================================================ */
+.back{ display:inline-flex; align-items:center; gap:9px; font-size:13px; color:var(--ink-3); padding-block:clamp(22px,3vw,34px); transition:color .3s, gap .3s; }
+.back:hover{ color:var(--ink); gap:13px; }
+.detail{ display:grid; grid-template-columns:minmax(0,404px) 1fr; gap:clamp(32px,6vw,84px); align-items:start; padding-bottom:clamp(48px,6vw,80px); }
+.detail__meta{ display:flex; flex-wrap:wrap; gap:10px 22px; margin-top:22px; }
+.detail__meta span{ display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-3); }
+.detail__meta .ico{ color:var(--gold); width:15px; height:15px; }
+.detail__desc{ margin-top:24px; }
+.detail__act{ display:flex; flex-wrap:wrap; gap:12px; margin-top:32px; }
+.detail__sticky{ position:sticky; top:calc(var(--hdr) + 24px); }
+
+.toc{ margin-top:clamp(40px,5vw,60px); }
+.toc__h{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; padding-bottom:14px; border-bottom:1px solid var(--ink); }
+.toc__h .t{ font-size:11px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; }
+.toc li a{
+  display:grid; grid-template-columns:34px 1fr auto; gap:18px; align-items:center;
+  padding:18px 0; border-bottom:1px solid var(--line-soft); transition:padding-left .4s var(--ease-out);
+}
+.toc li a:hover{ padding-left:8px; }
+.toc .n{ font-size:12px; font-weight:500; color:var(--taupe); letter-spacing:.06em; font-variant-numeric:tabular-nums; }
+.toc li .t{ font-family:var(--serif); font-size:18.5px; font-weight:400; line-height:1.3; letter-spacing:-.01em; text-transform:none; }
+.toc .s{ margin-top:4px; font-size:12.5px; color:var(--taupe); }
+.toc li a:hover .t{ color:var(--gold); }
+.toc__h .t{ font-family:var(--sans); }
+.toc .go{ display:inline-flex; align-items:center; gap:8px; font-size:12.5px; color:var(--ink-3); white-space:nowrap; }
+.toc li a:hover .go{ color:var(--ink); }
+
+/* ---- material preview reader ---- */
+.reader{ display:flex; flex-direction:column; gap:18px; }
+.reader__stage{ position:relative; }
+.reader__nav{ display:flex; align-items:center; justify-content:center; gap:18px; }
+.reader__nav .n{ font-size:12.5px; color:var(--taupe); font-variant-numeric:tabular-nums; letter-spacing:.08em; min-width:52px; text-align:center; }
+.reader__nav button{ width:40px; height:40px; border-radius:50%; border:1px solid var(--line); display:grid; place-items:center; transition:border-color .3s, background .3s, color .3s; }
+.reader__nav button:hover:not(:disabled){ border-color:var(--ink); background:var(--ink); color:var(--paper-2); }
+.reader__nav button:disabled{ opacity:.32; cursor:not-allowed; }
+.thumbs{ display:flex; gap:12px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+.thumbs::-webkit-scrollbar{ display:none; }
+.thumbs button{ flex:none; width:66px; border:1px solid transparent; padding:2px; border-radius:3px; transition:border-color .3s var(--ease), opacity .3s; opacity:.55; }
+.thumbs button:hover{ opacity:1; }
+.thumbs button.is-on{ border-color:var(--ink); opacity:1; }
+.thumbs .page{ box-shadow:none; }
+
+.note{ margin-top:26px; padding:18px 20px; background:var(--paper-2); border-left:2px solid var(--gold); font-size:13.5px; line-height:1.6; color:var(--ink-2); }
+.note b{ font-weight:500; color:var(--ink); }
+
+/* ============================================================
+   about
+   ============================================================ */
+.prose{ max-width:64ch; }
+.prose p{ font-size:clamp(16px,1.2vw,18px); line-height:1.72; color:var(--ink-2); }
+.prose p+p{ margin-top:1.35em; }
+.prose h2{ font-family:var(--serif); font-size:clamp(24px,2.6vw,32px); font-weight:300; letter-spacing:-.02em; margin-top:2em; margin-bottom:.6em; }
+.prose .first{ font-family:var(--serif); font-size:clamp(21px,2.2vw,26px); font-weight:300; line-height:1.5; letter-spacing:-.015em; color:var(--ink); }
+.creed{ display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line-soft); margin-top:clamp(40px,5vw,64px); border-block:1px solid var(--line-soft); }
+.creed div{ background:var(--paper); padding:clamp(24px,2.6vw,34px); }
+.creed h3{ font-family:var(--serif); font-size:22px; font-weight:400; letter-spacing:-.015em; margin-top:14px; }
+.creed p{ margin-top:10px; font-size:14px; line-height:1.6; color:var(--ink-3); }
+.creed .k{ font-size:11px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:var(--gold); }
+
+/* ============================================================
+   closing band + footer
+   ============================================================ */
+.band{ background:var(--forest); color:var(--paper-2); padding-block:clamp(56px,7vw,96px); }
+.band__in{ display:grid; grid-template-columns:1.15fr 1fr; gap:clamp(28px,5vw,72px); align-items:end; }
+.band h2{ max-width:12ch; color:#FCFAF5; }
+.band p{ color:rgba(251,248,243,.66); font-size:16px; line-height:1.65; max-width:44ch; }
+.band__cta{ display:flex; align-items:center; justify-content:space-between; gap:24px; margin-top:26px; }
+.circ{ width:56px; height:56px; flex:none; border-radius:50%; border:1px solid rgba(251,248,243,.3); display:grid; place-items:center; color:var(--paper-2); transition:background .4s var(--ease), color .4s var(--ease), border-color .4s; }
+.circ:hover{ background:var(--paper-2); color:var(--ink); border-color:var(--paper-2); }
+
+.foot{ background:var(--forest); color:rgba(251,248,243,.6); padding-block:clamp(40px,5vw,64px) 32px; border-top:1px solid var(--line-dark); }
+.foot__in{ display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:clamp(24px,3vw,48px); }
+.foot .mark__word{ color:var(--paper-2); }
+.foot__blurb{ margin-top:18px; font-size:14px; line-height:1.6; max-width:34ch; }
+.foot h4{ font-size:11px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:rgba(251,248,243,.4); margin-bottom:16px; }
+.foot li+li{ margin-top:11px; }
+.foot li a{ font-size:14px; transition:color .3s var(--ease); }
+.foot li a:hover{ color:var(--paper-2); }
+.foot__base{
+  display:flex; justify-content:space-between; align-items:center; gap:18px; flex-wrap:wrap;
+  margin-top:clamp(36px,4vw,56px); padding-top:24px; border-top:1px solid var(--line-dark);
+  font-size:12.5px; color:rgba(251,248,243,.42);
+}
+
+/* ============================================================
+   search overlay
+   ============================================================ */
+.ovl{
+  position:fixed; inset:0; z-index:100; background:rgba(245,241,234,.97);
+  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  opacity:0; visibility:hidden; transition:opacity .3s var(--ease), visibility .3s;
+  display:flex; flex-direction:column;
+}
+body.search-open .ovl{ opacity:1; visibility:visible; }
+.ovl__top{ display:flex; align-items:center; gap:20px; height:var(--hdr); border-bottom:1px solid var(--line-soft); }
+.ovl__top .search{ flex:1; margin-top:0; }
+.ovl__top .search input{ background:transparent; border-color:transparent; padding-left:44px; font-size:17px; }
+.ovl__top .search input:focus{ border-color:transparent; background:transparent; }
+.ovl__top .search .ico{ left:12px; }
+.ovl__body{ flex:1; overflow-y:auto; padding-block:clamp(24px,3vw,40px) 60px; }
+.ovl__sec+.ovl__sec{ margin-top:36px; }
+.ovl__sec h4{ font-size:11px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:var(--taupe); padding-bottom:12px; border-bottom:1px solid var(--line-soft); }
+.res a{ display:grid; grid-template-columns:54px 1fr auto; gap:16px; align-items:center; padding:14px 0; border-bottom:1px solid var(--line-soft); transition:padding-left .4s var(--ease-out); }
+.res a:hover{ padding-left:8px; }
+.res .t{ display:block; font-family:var(--serif); font-size:18px; font-weight:400; letter-spacing:-.01em; line-height:1.3; }
+.res .s{ display:block; margin-top:3px; font-size:12.5px; color:var(--taupe); }
+.res .k{ font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--taupe); }
+.ovl__hint{ margin-top:20px; font-size:13px; color:var(--taupe); }
+.ovl__terms{ display:flex; flex-wrap:wrap; gap:9px; margin-top:16px; }
+
+/* ============================================================
+   motion
+   ============================================================ */
+.rv{ opacity:0; transform:translateY(18px); transition:opacity .8s var(--ease-out), transform .8s var(--ease-out); }
+.rv.in{ opacity:1; transform:none; }
+.rv[data-d="1"]{ transition-delay:.07s; }
+.rv[data-d="2"]{ transition-delay:.14s; }
+.rv[data-d="3"]{ transition-delay:.21s; }
+.rv[data-d="4"]{ transition-delay:.28s; }
+@keyframes riseIn{ from{ opacity:0; transform:translateY(22px); } to{ opacity:1; transform:none; } }
+.hero .eyebrow,.hero h1,.hero .lede,.hero__cta,.hero__terms{ animation:riseIn .95s var(--ease-out) both; }
+.hero h1{ animation-delay:.08s; }
+.hero .lede{ animation-delay:.16s; }
+.hero__cta{ animation-delay:.24s; }
+.hero__terms{ animation-delay:.32s; }
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; scroll-behavior:auto !important; }
+  .rv{ opacity:1; transform:none; }
+}
+
+/* ============================================================
+   responsive — reworked, not squeezed
+   ============================================================ */
+@media (max-width:1140px){
+  .grid-m{ grid-template-columns:repeat(3,1fr); }
+  .grid-e{ grid-template-columns:repeat(3,1fr); }
+  .foot__in{ grid-template-columns:1fr 1fr 1fr; }
+  .foot__brand{ grid-column:1/-1; margin-bottom:12px; }
+}
+@media (max-width:900px){
+  :root{ --hdr:64px; }
+  .nav{ display:none; }
+  .burger{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; }
+  .mast__cta{ display:none; }
+  .latest{ grid-template-columns:1fr; gap:34px; }
+  .latest__cover{ order:-1; width:min(72%,300px); justify-self:start; transform:none; }
+  .latest__cover:hover{ transform:translateY(-4px); }
+  .detail{ grid-template-columns:1fr; gap:30px; }
+  .detail__sticky{ position:static; }
+  .detail__cover{ width:min(66%,286px); }
+  .band__in{ grid-template-columns:1fr; align-items:start; gap:26px; }
+  .creed{ grid-template-columns:1fr; }
+  .grid-c{ grid-template-columns:repeat(2,1fr); }
+  .year{ grid-template-columns:1fr; gap:22px; }
+  .year__n{ position:static; display:flex; align-items:baseline; gap:14px; }
+  .year__c{ margin-top:0; }
+  .hero__rail{ display:none; }
+}
+@media (max-width:720px){
+  .grid-m{ grid-template-columns:repeat(2,1fr); gap:26px 16px; }
+  .grid-e{ grid-template-columns:repeat(2,1fr); gap:28px 16px; }
+  .foot__in{ grid-template-columns:1fr 1fr; }
+  .sechead{ flex-direction:column; align-items:flex-start; gap:14px; }
+  .sechead__aside{ width:100%; justify-content:space-between; }
+  .rail{ grid-auto-columns:minmax(58vw,1fr); margin-inline:calc(var(--gut) * -1); padding-inline:var(--gut); scroll-padding-inline:var(--gut); }
+  .stats{ flex-wrap:wrap; gap:20px 32px; }
+  .toc li a{ grid-template-columns:28px 1fr; gap:14px; }
+  .toc .go{ display:none; }
+  .res a{ grid-template-columns:48px 1fr; }
+  .res .k{ display:none; }
+  .toolbar{ gap:14px; }
+  .detail__cover{ width:min(78%,300px); }
+  .hero__terms{ gap:10px 18px; font-size:10px; }
+  .hero__terms .dash{ display:none; }
+  .page__in{ padding:7cqw 7cqw 5cqw; }
+  .thumbs button{ width:56px; }
+}
+@media (max-width:520px){
+  .grid-c{ grid-template-columns:1fr; }
+  .foot__in{ grid-template-columns:1fr; gap:28px; }
+  .foot__brand{ margin-bottom:0; }
+  .hero__cta .btn{ width:100%; justify-content:center; }
+  .detail__act{ flex-direction:column; align-items:stretch; }
+  .detail__act .btn{ justify-content:center; }
+  .detail__cover{ width:min(84%,280px); }
+  .latest__cover{ width:min(84%,280px); }
+  .mcard__t{ font-size:17px; }
+  .selects{ width:100%; }
+  .sel,.sel select{ flex:1; width:100%; }
+}
+/* --- corrections --- */
+.hero__in{ position:relative; }
+.search .search__clear .ico{ position:static; left:auto; }
+.page__body{ flex:1 1 auto; min-height:0; overflow:hidden; }
+.thumbs .page::after{ display:none; }
+</style>
+</head>
+<body>
+
+<header class="mast" id="mast">
+  <div class="wrap mast__in">
+    <a class="mark" href="#/" aria-label="Higherway — home">
+      <svg class="mark__arc" viewBox="0 0 36 11" aria-hidden="true"><path d="M2 9.2C5 3.6 11 1 18 1s13 2.6 16 8.2"/></svg>
+      <span class="mark__word">Higherway</span>
+    </a>
+
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="#/" data-r="home">Home</a>
+      <a href="#/library" data-r="library">Library</a>
+      <a href="#/editions" data-r="editions">Editions</a>
+      <a href="#/about" data-r="about">About</a>
+    </nav>
+
+    <div class="mast__tools">
+      <button class="iconbtn" id="searchBtn" aria-label="Search Higherway">
+        <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      </button>
+      <a class="btn mast__cta" href="#/library">Explore Library <svg class="ico arw" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a>
+      <button class="iconbtn burger" id="burger" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="drawer" id="drawer">
+  <nav class="drawer__nav" aria-label="Mobile">
+    <a href="#/" data-r="home">Home <span class="n">01</span></a>
+    <a href="#/library" data-r="library">Library <span class="n">02</span></a>
+    <a href="#/editions" data-r="editions">Editions <span class="n">03</span></a>
+    <a href="#/about" data-r="about">About <span class="n">04</span></a>
+  </nav>
+  <a class="btn btn--lg btn--block drawer__cta" href="#/library">Explore the Library <svg class="ico arw" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a>
+  <div class="drawer__foot">
+    <p class="eyebrow">Faith. Guidance. A brighter tomorrow.</p>
+    <p class="small" style="margin-top:10px">Every edition is free to read and free to download.</p>
+  </div>
+</div>
+
+<div class="ovl" id="ovl" role="dialog" aria-modal="true" aria-label="Search Higherway">
+  <div class="wrap ovl__top">
+    <div class="search">
+      <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <input id="ovlInput" type="search" placeholder="Search materials, editions, topics or categories" autocomplete="off" spellcheck="false">
+    </div>
+    <button class="iconbtn" id="ovlClose" aria-label="Close search">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <div class="ovl__body"><div class="wrap" id="ovlBody"></div></div>
+</div>
+
+<main id="app"></main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot__in">
+      <div class="foot__brand">
+        <div class="mark">
+          <svg class="mark__arc" viewBox="0 0 36 11" aria-hidden="true"><path d="M2 9.2C5 3.6 11 1 18 1s13 2.6 16 8.2"/></svg>
+          <span class="mark__word">Higherway</span>
+        </div>
+        <p class="foot__blurb">A digital archive of the Higherway publication. Browse every edition, preview the pages, and download what you need.</p>
+      </div>
+      <div>
+        <h4>Browse</h4>
+        <ul>
+          <li><a href="#/library">All materials</a></li>
+          <li><a href="#/editions">Editions archive</a></li>
+          <li><a href="#/about">About Higherway</a></li>
+        </ul>
+      </div>
+      <div><h4>Categories</h4><ul id="footCats"></ul></div>
+      <div>
+        <h4>Latest edition</h4>
+        <ul id="footLatest"></ul>
+      </div>
+    </div>
+    <div class="foot__base">
+      <span>&copy; <span id="yr"></span> Higherway. Published for the church and its friends.</span>
+      <span>Files are hosted on Google Drive.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ==================================================================
+   ██  HIGHERWAY CONTENT  ██   Everything you manage lives below.
+   ------------------------------------------------------------------
+   1. SITE        — name, tagline, the Drive folder for the whole archive
+   2. CATEGORIES  — the shelves materials are filed under
+   3. EDITIONS    — one entry per printed edition, NEWEST FIRST.
+                    Add each new edition at the top of the array: the first
+                    entry is what the site calls the latest edition.
+   4. MATERIALS   — one entry per article inside an edition. `order` sets its
+                    place in that edition's contents; `editionId` must match
+                    an edition `id` above, and `category` a category `id`.
+   ------------------------------------------------------------------
+   Covers and page previews are drawn by the site, so nothing breaks if
+   you have no artwork yet. To use a real scan instead, set `cover` on an
+   edition/material, or list page image URLs in `previews` (one per page).
+   Every `driveUrl` below is a placeholder — replace each one with the
+   Google Drive share link for that file. They open in a new tab.
+   `scene` picks the drawn artwork: peaks | valley | field | forest | water | tree
+   ================================================================== */
+
+const SITE = {
+  name: 'Higherway',
+  tagline: 'Faith. Guidance. A brighter tomorrow.',
+  driveFolder: 'https://drive.google.com/drive/folders/REPLACE_WITH_YOUR_FOLDER_ID'
+};
+
+/* ---- 2. CATEGORIES ---------------------------------------------- */
+const CATEGORIES = [
+  { id:'faith',            name:'Faith',            blurb:'Trusting God when the road is unclear.' },
+  { id:'family',           name:'Family',           blurb:'Building a home on lasting foundations.' },
+  { id:'youth',            name:'Youth',            blurb:'For the next generation finding its footing.' },
+  { id:'christian-living', name:'Christian Living', blurb:'Ordinary days lived with intention.' },
+  { id:'church',           name:'Church',           blurb:'Life together as the body of Christ.' },
+  { id:'society',          name:'Society',          blurb:'Faithful presence in a changing world.' }
+];
+
+/* ---- 3. EDITIONS ------------------------------------------------- */
+const EDITIONS = [
+  { id:'2026-09', title:'A Deeper Walk',        month:'September', year:2026, scene:'valley',
+    strapline:'Faith · Discipleship · Christian Living', pages:48,
+    description:'Articles on the slow, steady work of walking closely with God — the practices, the setbacks, and the quiet joy of staying the course.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_09/view' },
+
+  { id:'2026-08', title:'Faith in Action',      month:'August', year:2026, scene:'field',
+    strapline:'Faith · Service · Society', pages:44,
+    description:'What belief looks like once it leaves the pew: service, generosity, and the courage to show up where you are needed.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_08/view' },
+
+  { id:'2026-07', title:'A Generous Life',      month:'July', year:2026, scene:'water',
+    strapline:'Stewardship · Family · Christian Living', pages:40,
+    description:'On open hands — with money, with time, with attention — and the freedom that follows when nothing is held too tightly.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_07/view' },
+
+  { id:'2026-06', title:'Rooted in Christ',     month:'June', year:2026, scene:'tree',
+    strapline:'Faith · Scripture · Discipleship', pages:44,
+    description:'Depth over speed. A study of what holds steady underneath a life, and how roots are grown in unhurried seasons.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_06/view' },
+
+  { id:'2026-05', title:'Strength for Today',   month:'May', year:2026, scene:'peaks',
+    strapline:'Endurance · Prayer · Christian Living', pages:36,
+    description:'Written for the tired: daily bread, honest prayer, and grace that arrives in the measure the day requires.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_05/view' },
+
+  { id:'2026-04', title:'Living the Word',      month:'April', year:2026, scene:'forest',
+    strapline:'Scripture · Study · Church', pages:44,
+    description:'How to read Scripture so that it reads you — habits of study that turn familiar passages into daily counsel.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_04/view' },
+
+  { id:'2026-03', title:'A Renewed Mind',       month:'March', year:2026, scene:'field',
+    strapline:'Faith · Youth · Society', pages:40,
+    description:'On attention, anxiety and the renewing of the mind in an age that trades constantly on both.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_03/view' },
+
+  { id:'2026-02', title:'Light in the World',   month:'February', year:2026, scene:'water',
+    strapline:'Witness · Society · Church', pages:36,
+    description:'Quiet witness in ordinary places — at work, among neighbours, and in the conversations nobody plans for.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_02/view' },
+
+  { id:'2025-12', title:'Hope for the Weary',   month:'December', year:2025, scene:'peaks',
+    strapline:'Advent · Hope · Family', pages:40,
+    description:'An Advent edition for households carrying more than they say — waiting, longing, and the promise that meets both.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2025_12/view' },
+
+  { id:'2025-10', title:'The Household of Faith', month:'October', year:2025, scene:'tree',
+    strapline:'Family · Church · Discipleship', pages:36,
+    description:'On raising children, honouring parents, and belonging to a church that acts like a family rather than an audience.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2025_10/view' },
+
+  { id:'2025-08', title:'Set Your Mind Above',  month:'August', year:2025, scene:'valley',
+    strapline:'Faith · Perspective · Christian Living', pages:32,
+    description:'Perspective as a discipline: lifting your eyes when circumstances insist you keep them down.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2025_08/view' },
+
+  { id:'2025-06', title:'Salt and Light',       month:'June', year:2025, scene:'forest',
+    strapline:'Youth · Society · Witness', pages:32,
+    description:'A youth-facing edition on integrity, friendship and holding convictions without losing kindness.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2025_06/view' }
+];
+
+/* ---- 4. MATERIALS ------------------------------------------------
+   `order` sets the position in that edition's table of contents.
+   `deck` is the standfirst shown on the drawn preview page.
+   ------------------------------------------------------------------ */
+const MATERIALS = [
+  { id:'finding-peace', title:"Finding Peace in God's Timing", editionId:'2026-09', category:'faith', pages:6, order:1, scene:'valley',
+    deck:'On waiting well when the answer has not come yet.',
+    description:'A timely reminder that God is never late. Learn how to trust Him through the seasons that ask you to wait.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0901/view' },
+  { id:'walking-in-faith', title:'Walking in Faith', editionId:'2026-09', category:'faith', pages:8, order:2, scene:'peaks',
+    deck:'Faith is measured in steps, not in feelings.',
+    description:'What it means to keep moving when you can only see the next step, and why that is usually enough.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0902/view' },
+  { id:'a-life-of-prayer', title:'A Life of Prayer', editionId:'2026-09', category:'christian-living', pages:5, order:3, scene:'forest',
+    deck:'Building a habit that outlasts your enthusiasm.',
+    description:'Practical counsel for a prayer life that survives busy weeks, dry spells and interruptions.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0903/view' },
+  { id:'the-quiet-hour', title:'The Quiet Hour', editionId:'2026-09', category:'christian-living', pages:4, order:4, scene:'water',
+    deck:'Making room for God before the day makes its claims.',
+    description:'How a small, protected hour reshapes everything that follows it.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0904/view' },
+  { id:'raising-children', title:'Raising Children in a Changing World', editionId:'2026-09', category:'family', pages:7, order:5, scene:'tree',
+    deck:'Passing on convictions in a culture that keeps moving.',
+    description:'Guidance for parents on teaching faith at home without fear, and on trusting God with the outcome.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0905/view' },
+  { id:'when-the-answer-is-wait', title:'When the Answer Is Wait', editionId:'2026-09', category:'faith', pages:5, order:6, scene:'field',
+    deck:'Delay is not denial, and it is rarely wasted.',
+    description:'A study of the long pauses in Scripture and what God was doing inside them.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0906/view' },
+  { id:'serving-where-you-are', title:'Serving Where You Are', editionId:'2026-09', category:'church', pages:6, order:7, scene:'forest',
+    deck:'The ministry in front of you is still ministry.',
+    description:'On finding your place in the local church without waiting for a title.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0907/view' },
+  { id:'a-deeper-walk-essay', title:'A Deeper Walk', editionId:'2026-09', category:'christian-living', pages:7, order:8, scene:'valley',
+    deck:'The closing essay of the September edition.',
+    description:'Depth is built quietly, over years. The editorial that gives this edition its name.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0908/view' },
+
+  { id:'faith-in-action', title:'Faith in Action', editionId:'2026-08', category:'faith', pages:6, order:1, scene:'field',
+    deck:'Belief that shows up with its sleeves rolled.',
+    description:'The opening essay on a faith that is demonstrated before it is explained.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0801/view' },
+  { id:'the-good-neighbour', title:'The Good Neighbour', editionId:'2026-08', category:'society', pages:5, order:2, scene:'water',
+    deck:'Proximity is the beginning of compassion.',
+    description:'Rereading a familiar parable with attention to who was close enough to help.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0802/view' },
+  { id:'work-as-worship', title:'Work as Worship', editionId:'2026-08', category:'christian-living', pages:7, order:3, scene:'peaks',
+    deck:'Your Monday is not a lesser calling.',
+    description:'How ordinary work becomes an offering, and what changes when you treat it that way.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0803/view' },
+  { id:'courage-to-speak', title:'The Courage to Speak', editionId:'2026-08', category:'youth', pages:4, order:4, scene:'forest',
+    deck:'Convictions held gently, and held anyway.',
+    description:'For young believers learning to stand for something without standing over anyone.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0804/view' },
+  { id:'hands-that-build', title:'Hands That Build', editionId:'2026-08', category:'church', pages:6, order:5, scene:'tree',
+    deck:'On the unnoticed labour that holds a church together.',
+    description:'A tribute to the volunteers who arrive early, stay late and are rarely named.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0805/view' },
+
+  { id:'open-hands', title:'Open Hands', editionId:'2026-07', category:'christian-living', pages:6, order:1, scene:'water',
+    deck:'Generosity begins long before the giving.',
+    description:'On loosening your grip — and discovering how much lighter the walk becomes.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0701/view' },
+  { id:'money-and-the-heart', title:'Money and the Heart', editionId:'2026-07', category:'family', pages:7, order:2, scene:'field',
+    deck:'What your budget knows about your beliefs.',
+    description:'A candid look at stewardship in the household, without guilt or formulas.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0702/view' },
+  { id:'the-gift-of-time', title:'The Gift of Time', editionId:'2026-07', category:'christian-living', pages:5, order:3, scene:'tree',
+    deck:'The most costly thing you can give away.',
+    description:'Why attention is the currency that matters most to the people around you.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0703/view' },
+  { id:'a-cheerful-giver', title:'A Cheerful Giver', editionId:'2026-07', category:'church', pages:4, order:4, scene:'valley',
+    deck:'Giving that is neither reluctant nor performative.',
+    description:'On generosity as a settled disposition rather than an occasional gesture.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0704/view' },
+
+  { id:'rooted-in-christ', title:'Rooted in Christ', editionId:'2026-06', category:'faith', pages:7, order:1, scene:'tree',
+    deck:'What grows underground decides what stands above it.',
+    description:'The editorial essay on depth, patience and the roots nobody sees.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0601/view' },
+  { id:'unhurried', title:'Unhurried', editionId:'2026-06', category:'christian-living', pages:5, order:2, scene:'forest',
+    deck:'Growth keeps a slower calendar than we do.',
+    description:'On resisting the pressure to rush seasons that are meant to be long.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0602/view' },
+  { id:'the-word-that-holds', title:'The Word That Holds', editionId:'2026-06', category:'faith', pages:6, order:3, scene:'peaks',
+    deck:'Scripture as ballast, not decoration.',
+    description:'How committed reading of the Bible steadies a life under pressure.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0603/view' },
+  { id:'planted-by-water', title:'Planted by Water', editionId:'2026-06', category:'youth', pages:5, order:4, scene:'water',
+    deck:'A young life placed where it can drink deeply.',
+    description:'Counsel for students choosing friendships, habits and a church to grow in.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0604/view' },
+
+  { id:'strength-for-today', title:'Strength for Today', editionId:'2026-05', category:'faith', pages:6, order:1, scene:'peaks',
+    deck:'Grace arrives daily, in the measure required.',
+    description:'For the tired: why tomorrow is not your assignment yet.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0501/view' },
+  { id:'honest-prayer', title:'Honest Prayer', editionId:'2026-05', category:'christian-living', pages:5, order:2, scene:'valley',
+    deck:'God is not offended by the truth of how you feel.',
+    description:'On praying the psalms of complaint, and why they were kept.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0502/view' },
+  { id:'carrying-one-another', title:'Carrying One Another', editionId:'2026-05', category:'church', pages:5, order:3, scene:'forest',
+    deck:'The burden is lighter when it is shared out loud.',
+    description:'How a congregation learns to notice, ask and actually help.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0503/view' },
+
+  { id:'living-the-word', title:'Living the Word', editionId:'2026-04', category:'faith', pages:7, order:1, scene:'forest',
+    deck:'Reading Scripture until it starts reading you.',
+    description:'The editorial essay on study that changes conduct, not only vocabulary.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0401/view' },
+  { id:'how-to-study', title:'How to Study a Passage', editionId:'2026-04', category:'christian-living', pages:6, order:2, scene:'field',
+    deck:'A method simple enough to keep using.',
+    description:'Four questions that turn a familiar chapter into fresh counsel.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0402/view' },
+  { id:'family-devotions', title:'Family Devotions That Last', editionId:'2026-04', category:'family', pages:5, order:3, scene:'tree',
+    deck:'Ten honest minutes beat an hour you never start.',
+    description:'A realistic pattern for households with young children and full evenings.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0403/view' },
+
+  { id:'a-renewed-mind', title:'A Renewed Mind', editionId:'2026-03', category:'faith', pages:6, order:1, scene:'field',
+    deck:'Attention is the ground where character is formed.',
+    description:'On guarding the mind in an age built to capture it.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0301/view' },
+  { id:'anxious-for-nothing', title:'Anxious for Nothing', editionId:'2026-03', category:'youth', pages:5, order:2, scene:'water',
+    deck:'Peace that is practised, not merely wished for.',
+    description:'A pastoral word for young people living under constant comparison.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0302/view' },
+  { id:'what-you-scroll', title:'What You Scroll Becomes You', editionId:'2026-03', category:'society', pages:5, order:3, scene:'peaks',
+    deck:'A small daily diet, compounding quietly.',
+    description:'On feeds, formation and choosing what gets repeated in your head.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0303/view' },
+  { id:'light-in-the-world', title:'Light in the World', editionId:'2026-02', category:'society', pages:6, order:1, scene:'water',
+    deck:'Witness that does not need a stage.',
+    description:'The editorial essay on quiet, credible presence among neighbours and colleagues.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0201/view' },
+  { id:'faith-at-work', title:'Faith at Work', editionId:'2026-02', category:'christian-living', pages:5, order:2, scene:'peaks',
+    deck:'Integrity is noticed before it is discussed.',
+    description:'Handling pressure, honesty and ambition in the workplace.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0202/view' },
+  { id:'a-welcoming-church', title:'A Welcoming Church', editionId:'2026-02', category:'church', pages:5, order:3, scene:'forest',
+    deck:'Hospitality is the first sermon a visitor hears.',
+    description:'Small changes that make a stranger feel expected rather than tolerated.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0203/view' },
+
+  { id:'hope-for-the-weary', title:'Hope for the Weary', editionId:'2025-12', category:'faith', pages:6, order:1, scene:'peaks',
+    deck:'An Advent word for those carrying more than they say.',
+    description:'On waiting through December with honesty rather than performance.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2512_01/view' },
+  { id:'a-table-with-room', title:'A Table With Room', editionId:'2025-12', category:'family', pages:5, order:2, scene:'tree',
+    deck:'Christmas as an invitation rather than a production.',
+    description:'Making space at the table for the people nobody else invited.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2512_02/view' },
+
+  { id:'household-of-faith', title:'The Household of Faith', editionId:'2025-10', category:'church', pages:6, order:1, scene:'tree',
+    deck:'A church that behaves like a family.',
+    description:'On belonging, responsibility and the difference between an audience and a household.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2510_01/view' },
+  { id:'honouring-parents', title:'Honouring Parents in Adulthood', editionId:'2025-10', category:'family', pages:5, order:2, scene:'valley',
+    deck:'The command does not expire when you leave home.',
+    description:'Caring for ageing parents with patience, boundaries and grace.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2510_02/view' },
+
+  { id:'set-your-mind-above', title:'Set Your Mind Above', editionId:'2025-08', category:'faith', pages:6, order:1, scene:'valley',
+    deck:'Perspective is a discipline before it is a feeling.',
+    description:'Lifting your eyes when circumstances insist you keep them down.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2508_01/view' },
+  { id:'contentment', title:'The Long Work of Contentment', editionId:'2025-08', category:'christian-living', pages:5, order:2, scene:'field',
+    deck:'Learned, Paul said — never simply arrived at.',
+    description:'Why contentment is a skill acquired slowly, in both plenty and want.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2508_02/view' },
+
+  { id:'salt-and-light', title:'Salt and Light', editionId:'2025-06', category:'youth', pages:5, order:1, scene:'forest',
+    deck:'Influence that seasons rather than shouts.',
+    description:'For students on integrity, friendship and holding convictions kindly.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2506_01/view' },
+  { id:'friendship-that-forms', title:'Friendship That Forms You', editionId:'2025-06', category:'youth', pages:4, order:2, scene:'water',
+    deck:'You become the room you spend time in.',
+    description:'Choosing friends who make faith easier to keep, not harder.',
+    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2506_02/view' }
+];
+
+/* ==================================================================
+   END OF CONTENT — the code below renders the site.
+   ================================================================== */
+
+/* ---- small helpers ---------------------------------------------- */
+const $  = (s,c)=> (c||document).querySelector(s);
+const $$ = (s,c)=> [...(c||document).querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const hash = s => { let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; };
+const rng = seed => { let s = (seed>>>0) || 7; return () => { s^=s<<13; s^=s>>>17; s^=s<<5; return ((s>>>0)%100000)/100000; }; };
+
+const catOf   = id => CATEGORIES.find(c=>c.id===id) || {id:'',name:'Higherway',blurb:''};
+const edOf    = id => EDITIONS.find(e=>e.id===id);
+const matOf   = id => MATERIALS.find(m=>m.id===id);
+const edLabel = e => e ? (e.month + ' ' + e.year) : '';
+const matsIn  = id => MATERIALS.filter(m=>m.editionId===id).sort((a,b)=>(a.order||0)-(b.order||0));
+/* EDITIONS are authored newest first, so array order is chronological order. */
+const recentMaterials = n => EDITIONS.flatMap(e => matsIn(e.id)).slice(0, n);
+const countIn = id => MATERIALS.filter(m=>m.category===id).length;
+const pagesIn = id => matsIn(id).reduce((t,m)=>t+(m.pages||0),0);
+
+/* ==================================================================
+   drawn artwork — every cover, plate and page is generated here
+   ================================================================== */
+const PALETTES = {
+  peaks:  { sky:['#5A7280','#B29A86','#F3D5A4'], sun:'#FFE7B8', sunY:.60, sunR:44,
+            ridges:['#8A9490','#67736E','#46524D','#2A342F','#161D19'] },
+  valley: { sky:['#3F5A63','#C08C58','#F5DCAC'], sun:'#FFEDC6', sunY:.58, sunR:34,
+            ridges:['#94968A','#6E7268','#4C5248','#2E342C','#171C17'] },
+  field:  { sky:['#7C99A0','#D8B482','#F7E0AC'], sun:'#FFF0CC', sunY:.55, sunR:50,
+            ridges:['#C9A466','#A8813F','#7A5C2A','#4A3A1C','#2A2113'] },
+  forest: { sky:['#2C4038','#6E8462','#B9C193'], sun:'#E8EEC4', sunY:.30, sunR:30,
+            ridges:['#7C8C6C','#5A6A50','#3C4835','#26301F','#141A11'] },
+  water:  { sky:['#3F5C69','#A88A72','#EBCB9A'], sun:'#FFEFCE', sunY:.62, sunR:38,
+            ridges:['#5E6E74','#3E4C52','#2A363A','#1C2528','#121819'] },
+  tree:   { sky:['#4A4058','#B4784E','#F2C88E'], sun:'#FFE6BA', sunY:.66, sunR:40,
+            ridges:['#7A6A58','#574C42','#3A342E','#242220','#14130F'] }
+};
+
+function ridgePath(r, W, base, amp, steps, jagged, bottom){
+  bottom = bottom || 560;
+  const pts=[];
+  for(let i=0;i<=steps;i++) pts.push([ W*i/steps, base - amp*(0.28 + r()*0.72) ]);
+  let d = 'M0,' + pts[0][1].toFixed(1);
+  if(jagged){
+    for(let i=1;i<pts.length;i++) d += ' L' + pts[i][0].toFixed(1) + ',' + pts[i][1].toFixed(1);
+  } else {
+    for(let i=1;i<pts.length;i++){
+      const x0=pts[i-1][0], y0=pts[i-1][1], x1=pts[i][0], y1=pts[i][1], mx=((x0+x1)/2).toFixed(1);
+      d += ' C' + mx + ',' + y0.toFixed(1) + ' ' + mx + ',' + y1.toFixed(1) + ' ' + x1.toFixed(1) + ',' + y1.toFixed(1);
+    }
+  }
+  return d + ' L' + W + ',' + bottom + ' L0,' + bottom + ' Z';
+}
+
+/* Returns an <svg> string for a scene. Slice-cropped, so any aspect works. */
+function art(sceneName, seedKey){
+  const p = PALETTES[sceneName] || PALETTES.peaks;
+  const r = rng(hash(String(seedKey||sceneName)));
+  const W = 400, H = 500, uid = 'a' + hash(String(seedKey||'') + sceneName).toString(36);
+  const sunY = (H * p.sunY).toFixed(0);
+  let b = '<rect width="'+W+'" height="'+H+'" fill="url(#sky'+uid+')"/>';
+  b += '<circle cx="'+(W*(0.32+r()*0.36)).toFixed(0)+'" cy="'+sunY+'" r="'+p.sunR+'" fill="url(#glow'+uid+')"/>';
+
+  if(sceneName==='forest'){
+    b += '<ellipse cx="'+(W*.5)+'" cy="'+(H*.34)+'" rx="'+(W*.46)+'" ry="'+(H*.30)+'" fill="url(#glow'+uid+')"/>';
+    b += '<path d="'+ridgePath(r,W,H*.86,34,5,false,H)+'" fill="'+p.ridges[2]+'"/>';
+    for(let i=0;i<16;i++){
+      const x=W*(i/16)+r()*26, w=5+r()*20, lean=(r()*10-5), top=-H*0.06+H*(r()*0.12);
+      const shade=p.ridges[Math.min(4, 1+Math.floor(r()*4))], op=(0.5+r()*0.45).toFixed(2);
+      b += '<path d="M'+(x-w/2).toFixed(1)+','+H+' L'+(x-w*0.18+lean).toFixed(1)+','+top.toFixed(0)+' L'+(x+w*0.18+lean).toFixed(1)+','+top.toFixed(0)+' L'+(x+w/2).toFixed(1)+','+H+' Z" fill="'+shade+'" opacity="'+op+'"/>';
+      for(let k=0;k<3;k++){
+        const by=top+H*(0.18+k*0.2+r()*0.08), bl=(10+r()*22)*(r()>0.5?1:-1);
+        b += '<path d="M'+(x+lean).toFixed(1)+','+by.toFixed(0)+' l'+bl.toFixed(0)+','+(-8-r()*10).toFixed(0)+'" stroke="'+shade+'" stroke-width="1.6" opacity="'+op+'" fill="none" stroke-linecap="round"/>';
+      }
+    }
+    b += '<rect width="'+W+'" height="'+(H*.46).toFixed(0)+'" fill="url(#canopy'+uid+')"/>';
+  } else if(sceneName==='water'){
+    const hz = H*.70;
+    b += '<rect y="'+hz+'" width="'+W+'" height="'+(H-hz)+'" fill="'+p.ridges[2]+'"/>';
+    for(let i=0;i<16;i++){
+      const y=(hz+4+i*((H-hz)/16)).toFixed(0), w=(10+r()*60).toFixed(0);
+      b += '<rect x="'+(W*.30+r()*W*.34).toFixed(0)+'" y="'+y+'" width="'+w+'" height="1.6" fill="'+p.sun+'" opacity="'+Math.max(0,0.42-i*0.022).toFixed(2)+'"/>';
+    }
+    b += '<path d="'+ridgePath(r,W,hz+2,62,5,true)+'" fill="'+p.ridges[3]+'"/>';
+    b += '<path d="'+ridgePath(r,W,H*.96,40,4,false)+'" fill="'+p.ridges[4]+'"/>';
+  } else if(sceneName==='field'){
+    const hz = H*.66;
+    b += '<path d="'+ridgePath(r,W,hz,26,5,false)+'" fill="'+p.ridges[1]+'" opacity=".8"/>';
+    b += '<rect y="'+hz+'" width="'+W+'" height="'+(H-hz)+'" fill="'+p.ridges[2]+'"/>';
+    b += '<rect y="'+hz+'" width="'+W+'" height="'+(H-hz)+'" fill="url(#fade'+uid+')"/>';
+    for(let i=0;i<70;i++){
+      const x=(r()*W).toFixed(0), y=hz+r()*(H-hz), h2=12+r()*30;
+      b += '<path d="M'+x+','+(y+h2).toFixed(0)+' q'+(r()*8-4).toFixed(1)+','+(-h2/2).toFixed(0)+' 0,'+(-h2).toFixed(0)+'" stroke="'+p.ridges[4]+'" stroke-width="1.3" fill="none" opacity="'+(0.25+r()*0.5).toFixed(2)+'"/>';
+    }
+  } else if(sceneName==='tree'){
+    b += '<path d="'+ridgePath(r,W,H*.80,30,4,false)+'" fill="'+p.ridges[2]+'"/>';
+    b += '<path d="'+ridgePath(r,W,H*.93,26,3,false)+'" fill="'+p.ridges[4]+'"/>';
+    const tx=(W*(0.30+r()*0.32)).toFixed(0), ty=H*.80;
+    b += '<ellipse cx="'+tx+'" cy="'+(ty-150).toFixed(0)+'" rx="72" ry="56" fill="'+p.ridges[4]+'" opacity=".94"/>';
+    b += '<path d="M'+tx+','+ty+' l-4,-104 l-1,-26" stroke="'+p.ridges[4]+'" stroke-width="7" stroke-linecap="round" fill="none"/>';
+    for(let i=0;i<6;i++){
+      const a=-0.45-i*0.34, len=30+r()*26, oy=(ty-104-r()*26).toFixed(0);
+      b += '<path d="M'+(tx-4)+','+oy+' q'+(Math.cos(a)*len*0.6).toFixed(0)+','+(Math.sin(a)*len*0.5).toFixed(0)+' '+(Math.cos(a)*len).toFixed(0)+','+(Math.sin(a)*len*0.9).toFixed(0)+'" stroke="'+p.ridges[4]+'" stroke-width="3.4" fill="none" stroke-linecap="round"/>';
+    }
+  } else if(sceneName==='valley'){
+    b += '<path d="'+ridgePath(r,W,H*.70,96,4,true)+'" fill="'+p.ridges[1]+'"/>';
+    b += '<path d="M'+(W*.44)+','+(H*.62)+' C'+(W*.40)+','+(H*.78)+' '+(W*.30)+','+(H*.86)+' '+(W*.22)+','+H+' L'+(W*.58)+','+H+' C'+(W*.56)+','+(H*.84)+' '+(W*.53)+','+(H*.72)+' '+(W*.52)+','+(H*.62)+' Z" fill="'+p.sun+'" opacity=".24"/>';
+    b += '<path d="M0,'+(H*.60)+' C'+(W*.20)+','+(H*.70)+' '+(W*.30)+','+(H*.92)+' '+(W*.26)+','+H+' L0,'+H+' Z" fill="'+p.ridges[3]+'"/>';
+    b += '<path d="M'+W+','+(H*.56)+' C'+(W*.80)+','+(H*.68)+' '+(W*.68)+','+(H*.90)+' '+(W*.72)+','+H+' L'+W+','+H+' Z" fill="'+p.ridges[4]+'"/>';
+  } else {
+    b += '<path d="'+ridgePath(r,W,H*.66,92,4,true)+'" fill="'+p.ridges[0]+'" opacity=".55"/>';
+    b += '<path d="'+ridgePath(r,W,H*.74,86,5,true)+'" fill="'+p.ridges[2]+'"/>';
+    b += '<path d="'+ridgePath(r,W,H*.86,70,4,true)+'" fill="'+p.ridges[3]+'"/>';
+    b += '<path d="'+ridgePath(r,W,H*.99,46,3,true)+'" fill="'+p.ridges[4]+'"/>';
+  }
+
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><defs>'
+   + '<linearGradient id="sky'+uid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+p.sky[0]+'"/><stop offset=".55" stop-color="'+p.sky[1]+'"/><stop offset="1" stop-color="'+p.sky[2]+'"/></linearGradient>'
+   + '<radialGradient id="glow'+uid+'"><stop offset="0" stop-color="'+p.sun+'"/><stop offset=".45" stop-color="'+p.sun+'" stop-opacity=".55"/><stop offset="1" stop-color="'+p.sun+'" stop-opacity="0"/></radialGradient>'
+   + '<linearGradient id="fade'+uid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+p.sun+'" stop-opacity=".45"/><stop offset="1" stop-color="'+p.sun+'" stop-opacity="0"/></linearGradient>'
+   + '<linearGradient id="canopy'+uid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+p.ridges[4]+'" stop-opacity=".62"/><stop offset="1" stop-color="'+p.ridges[4]+'" stop-opacity="0"/></linearGradient>'
+   + '</defs>' + b
+   + '</svg>';
+}
+
+function heroArt(){
+  const p = PALETTES.peaks, r = rng(hash('higherway-hero')), W = 1440, H = 760, uid = 'hero';
+  let b = '<rect width="'+W+'" height="'+H+'" fill="url(#sky'+uid+')"/>';
+  for(let i=0;i<5;i++){
+    const y = H*(0.30+i*0.055);
+    b += '<rect y="'+y.toFixed(0)+'" width="'+W+'" height="'+(6+r()*16).toFixed(0)+'" fill="#FFE9C0" opacity="'+(0.05+r()*0.06).toFixed(3)+'"/>';
+  }
+  b += '<circle cx="'+(W*0.68).toFixed(0)+'" cy="'+(H*0.42).toFixed(0)+'" r="280" fill="url(#glow'+uid+')"/>';
+  b += '<circle cx="'+(W*0.68).toFixed(0)+'" cy="'+(H*0.42).toFixed(0)+'" r="54" fill="url(#disc)"/>';
+  b += '<rect y="'+(H*0.50).toFixed(0)+'" width="'+W+'" height="'+(H*0.22).toFixed(0)+'" fill="url(#hz)"/>';
+  b += '<path d="'+ridgePath(r,W,H*0.60,150,7,true,H)+'" fill="'+p.ridges[0]+'" opacity=".42"/>';
+  b += '<path d="'+ridgePath(r,W,H*0.72,140,6,true,H)+'" fill="'+p.ridges[2]+'" opacity=".92"/>';
+  b += '<path d="'+ridgePath(r,W,H*0.86,120,5,true,H)+'" fill="'+p.ridges[3]+'"/>';
+  b += '<path d="'+ridgePath(r,W,H*1.02,92,4,true,H)+'" fill="'+p.ridges[4]+'"/>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false"><defs>'
+   + '<linearGradient id="sky'+uid+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22323A"/><stop offset=".34" stop-color="#5E7076"/><stop offset=".62" stop-color="#C69C6A"/><stop offset="1" stop-color="#F7DCA8"/></linearGradient>'
+   + '<radialGradient id="glow'+uid+'"><stop offset="0" stop-color="#FFEFCC" stop-opacity=".85"/><stop offset=".35" stop-color="#FFDFA8" stop-opacity=".38"/><stop offset="1" stop-color="#FFDFA8" stop-opacity="0"/></radialGradient>'
+   + '<radialGradient id="disc"><stop offset="0" stop-color="#FFFBF0"/><stop offset=".72" stop-color="#FFF4DC" stop-opacity=".92"/><stop offset="1" stop-color="#FFF0CE" stop-opacity="0"/></radialGradient>'
+   + '<linearGradient id="hz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE3B0" stop-opacity="0"/><stop offset="1" stop-color="#FFDCA4" stop-opacity=".30"/></linearGradient>'
+   + '</defs>' + b + '</svg>';
+}
+
+/* ==================================================================
+   components
+   ================================================================== */
+const ARC = '<svg viewBox="0 0 36 11" aria-hidden="true"><path d="M2 9.2C5 3.6 11 1 18 1s13 2.6 16 8.2"/></svg>';
+const ARW = '<svg class="ico arw" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg>';
+const DRIVE = '<svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M8.6 3h6.8l5.6 9.7-3.4 5.9H5.4L2 12.7 8.6 3Z" stroke="currentColor" stroke-width="1.3"/><path d="M8.6 3 2 12.7h6.8L15.4 3H8.6Z" fill="#D8B25F" stroke="none"/></svg>';
+const EXT = '<svg class="ico" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
+
+function coverHTML(e, cls){
+  const artHTML = e.cover
+    ? '<img src="'+esc(e.cover)+'" alt="Cover of the '+esc(edLabel(e))+' edition, '+esc(e.title)+'" loading="lazy">'
+    : art(e.scene, e.id);
+  return '<div class="cover '+(cls||'')+'">'
+    + '<div class="cover__art">'+artHTML+'</div><div class="cover__veil"></div>'
+    + '<div class="cover__type">'
+      + '<div class="cover__mark">'+ARC+'<span class="cover__wm">Higherway</span></div>'
+      + '<div class="cover__date">'+esc(edLabel(e))+'</div>'
+      + '<div class="cover__ttl">'+esc(e.title)+'</div>'
+      + '<div class="cover__foot"><div class="r"></div><div class="t">'+esc(e.strapline||SITE.tagline)+'</div></div>'
+    + '</div></div>';
+}
+
+function plateHTML(m){
+  const e = edOf(m.editionId);
+  const artHTML = m.cover
+    ? '<img src="'+esc(m.cover)+'" alt="" loading="lazy">'
+    : art(m.scene || (e && e.scene) || 'peaks', m.id);
+  return '<div class="plate">'
+    + '<div class="plate__art">'+artHTML+'</div><div class="plate__veil"></div>'
+    + '<div class="plate__wm">'+ARC+'<span>Higherway</span></div>'
+    + '<div class="plate__cat">'+esc(catOf(m.category).name)+'</div></div>';
+}
+
+/* ---- the drawn scanned page -------------------------------------- */
+const PROSE = [
+  'There is a kind of trust that only grows in the waiting, when the outcome is still hidden and the heart has nothing left to hold but a promise.',
+  'Scripture rarely hurries. Its long silences are not empty; they are the seasons in which character is quietly assembled.',
+  'We are formed less by the decisions we agonise over than by the small repeated habits nobody applauds.',
+  'The question is not whether God is at work, but whether we are willing to keep walking while the work is still unfinished.',
+  'Faithfulness looks unremarkable from the outside. It is the same steps, taken again, on a morning that feels like every other morning.',
+  'A settled life is not one free of pressure. It is one whose roots have gone deep enough to hold when the pressure comes.',
+  'Consider the households around you: ordinary people, carrying ordinary weight, kept by a grace that arrives daily and never early.',
+  'Prayer is not a performance to be perfected. It is a conversation to be continued, however clumsily it begins.',
+  'What we give our attention to, we slowly become. This is not a threat but an invitation to choose well.',
+  'The path narrows before it opens. Those who have walked it will tell you the narrow stretch was where they learned to depend.'
+];
+function prose(seed, n){
+  const r = rng(hash(seed)); const out = [];
+  for(let i=0;i<n;i++) out.push(PROSE[Math.floor(r()*PROSE.length)]);
+  return out;
+}
+
+function pageHTML(m, i){
+  const e = edOf(m.editionId);
+  if(m.previews && m.previews[i])
+    return '<div class="page"><img src="'+esc(m.previews[i])+'" alt="Page '+(i+1)+' of '+esc(m.title)+'" loading="lazy"></div>';
+  const first = i===0;
+  const seed = m.id + ':' + i;
+  const para = prose(seed, first ? 4 : 6);
+  let bodyHTML = para.map((t,k) =>
+    '<p>' + ((first && k===0) ? '<span class="dc">'+esc(t[0])+'</span>'+esc(t.slice(1)) : esc(t)) + '</p>'
+  ).join('');
+  const band = first
+    ? '<div class="page__band">' + (m.cover ? '<img src="'+esc(m.cover)+'" alt="">' : art(m.scene || (e&&e.scene) || 'peaks', m.id+'band')) + '</div>'
+    : '';
+  return '<div class="page"><div class="page__in">'
+    + '<div class="page__rh"><span>Higherway</span><span>'+esc(edLabel(e))+'</span></div>'
+    + (first
+        ? '<div class="page__cat">'+esc(catOf(m.category).name)+'</div>'
+          + '<h3 class="page__h">'+esc(m.title)+'</h3>'
+          + (m.deck ? '<p class="page__deck">'+esc(m.deck)+'</p>' : '')
+          + band
+          + '<div class="page__body">'+bodyHTML+'</div>'
+        : '<div class="page__body page__body--cols" style="margin-top:6cqw">'+bodyHTML+'</div>')
+    + '<div class="page__pn">'+(i+1)+'</div>'
+    + '</div></div>';
+}
+
+/* ---- cards -------------------------------------------------------- */
+function materialCard(m){
+  const e = edOf(m.editionId);
+  return '<a class="mcard" href="#/material/'+esc(m.id)+'">'
+    + '<div class="mcard__fig">'+plateHTML(m)+'</div>'
+    + '<h3 class="mcard__t">'+esc(m.title)+'</h3>'
+    + '<div class="mcard__m"><span>'+esc(edLabel(e))+'</span><i class="dot"></i><span>'+m.pages+' pages</span></div>'
+    + '</a>';
+}
+function editionCard(e){
+  const n = matsIn(e.id).length;
+  return '<a class="ecard" href="#/edition/'+esc(e.id)+'">'
+    + coverHTML(e)
+    + '<h3 class="ecard__t">'+esc(e.title)+'</h3>'
+    + '<div class="ecard__d">'+esc(edLabel(e))+'</div>'
+    + '<div class="ecard__m">'+n+' material'+(n===1?'':'s')+' · '+e.pages+' pages</div>'
+    + '</a>';
+}
+
+/* ==================================================================
+   views
+   ================================================================== */
+function viewHome(){
+  const latest = EDITIONS[0];
+  const n = matsIn(latest.id).length;
+  return ''
+  + '<section class="hero">'
+    + '<div class="hero__scene">'+heroArt()+'</div>'
+    + '<div class="wrap hero__in">'
+      + '<p class="eyebrow eyebrow--light">Faith. Guidance. A brighter tomorrow.</p>'
+      + '<h1 class="display d1">Wisdom for a more faithful life.</h1>'
+      + '<p class="lede">Higherway is a collection of inspired teachings, practical insights and biblical perspectives to help you grow in faith and live a purposeful life. Every edition is free to read and free to download.</p>'
+      + '<div class="hero__cta">'
+        + '<a class="btn btn--light btn--lg" href="#/edition/'+latest.id+'">View the latest edition '+ARW+'</a>'
+        + '<a class="btn btn--onDark btn--lg" href="#/library">Browse the library</a>'
+      + '</div>'
+      + '<p class="hero__rail">A brighter tomorrow always</p>'
+    + '</div>'
+    + '<div class="wrap hero__terms"><span>Inspire</span><span class="dash">—</span><span>Encourage</span><span class="dash">—</span><span>Build</span><span class="dash">—</span><span>Go further</span></div>'
+  + '</section>'
+
+  + '<section class="sec sec--paper2"><div class="wrap latest">'
+    + '<div class="rv">'
+      + '<p class="eyebrow">Latest edition</p>'
+      + '<h2 class="display d2" style="margin-top:14px">'+esc(edLabel(latest))+'</h2>'
+      + '<p class="display d3" style="margin-top:6px;color:var(--taupe)">'+esc(latest.title)+'</p>'
+      + '<p class="lede" style="margin-top:20px">'+esc(latest.description)+'</p>'
+      + '<div class="stats">'
+        + '<div><div class="n">'+n+'</div><div class="l">Materials</div></div>'
+        + '<div><div class="n">'+latest.pages+'</div><div class="l">Pages</div></div>'
+        + '<div><div class="n">Free</div><div class="l">To download</div></div>'
+      + '</div>'
+      + '<div style="margin-top:30px"><a class="btn btn--lg" href="#/edition/'+latest.id+'">View this edition '+ARW+'</a></div>'
+    + '</div>'
+    + '<a class="latest__cover rv" data-d="1" href="#/edition/'+latest.id+'" aria-label="Open the '+esc(edLabel(latest))+' edition">'+coverHTML(latest)+'</a>'
+  + '</div></section>'
+
+  + '<section class="sec"><div class="wrap">'
+    + '<div class="sechead rv">'
+      + '<div><p class="eyebrow">Recently added</p><h2 class="display d3 sechead__t">Fresh from the press</h2></div>'
+      + '<div class="sechead__aside">'
+        + '<button class="railbtn" data-rail="-1" aria-label="Scroll left"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>'
+        + '<button class="railbtn" data-rail="1" aria-label="Scroll right"><svg class="ico" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button>'
+        + '<a class="tlink" href="#/library" style="margin-left:8px">View all '+ARW+'</a>'
+      + '</div>'
+    + '</div>'
+    + '<div class="rail rv" id="rail">'+recentMaterials(8).map(materialCard).join('')+'</div>'
+  + '</div></section>'
+
+  + '<section class="sec sec--tight"><div class="wrap">'
+    + '<div class="sechead rv"><div><p class="eyebrow">Browse by category</p><h2 class="display d3 sechead__t">Find what you need</h2></div></div>'
+    + '<div class="grid-c rv" data-d="1">'
+      + CATEGORIES.map((c,i)=>'<a class="ctile" href="#/library?cat='+c.id+'">'
+        + '<div class="ctile__top"><span class="ctile__n">'+String(i+1).padStart(2,'0')+'</span>'
+        + '<span class="small">'+countIn(c.id)+'</span></div>'
+        + '<div class="ctile__t">'+esc(c.name)+'</div>'
+        + '<p class="ctile__d">'+esc(c.blurb)+'</p></a>').join('')
+    + '</div>'
+  + '</div></section>'
+
+  + '<section class="band"><div class="wrap band__in">'
+    + '<div><h2 class="display d2">Same truths. A brighter tomorrow.</h2></div>'
+    + '<div>'
+      + '<p>Explore our growing collection of materials and let Higherway be part of your journey in faith. Nothing to sign up for — open an edition, read a few pages, and take the PDF with you.</p>'
+      + '<div class="band__cta"><a class="btn btn--light" href="#/editions">See every edition '+ARW+'</a>'
+      + '<a class="circ" href="#/library" aria-label="Explore the library"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div>'
+    + '</div>'
+  + '</div></section>';
+}
+
+/* ---- library ------------------------------------------------------ */
+const LIB = { q:'', cat:'all', ed:'all', sort:'newest' };
+
+function libMatches(){
+  const q = LIB.q.trim().toLowerCase();
+  let list = MATERIALS.map((m,i)=>({ m, i }));
+  if(LIB.cat !== 'all') list = list.filter(x => x.m.category === LIB.cat);
+  if(LIB.ed  !== 'all') list = list.filter(x => x.m.editionId === LIB.ed);
+  if(q) list = list.filter(x => {
+    const e = edOf(x.m.editionId);
+    return (x.m.title+' '+x.m.description+' '+(x.m.deck||'')+' '+catOf(x.m.category).name+' '+edLabel(e)+' '+(e?e.title:'')).toLowerCase().includes(q);
+  });
+  const rank = m => edIndexOf(m.editionId)*100 + (m.order||0);
+  if(LIB.sort === 'newest')      list.sort((a,b)=> rank(a.m) - rank(b.m));
+  else if(LIB.sort === 'oldest') list.sort((a,b)=> rank(b.m) - rank(a.m));
+  else if(LIB.sort === 'title')  list.sort((a,b)=> a.m.title.localeCompare(b.m.title));
+  else if(LIB.sort === 'short')  list.sort((a,b)=> a.m.pages - b.m.pages);
+  return list.map(x => x.m);
+}
+const edIndexOf = id => { const i = EDITIONS.findIndex(e=>e.id===id); return i<0 ? 999 : i; };
+
+function libResultsHTML(){
+  const list = libMatches();
+  if(!list.length) return '<div class="empty"><h3>Nothing matches that yet</h3>'
+    + '<p>Try a different word, or clear the filters to see the whole collection.</p>'
+    + '<button class="btn" id="libReset">Show all materials</button></div>';
+  return '<div class="grid-m">'+list.map(materialCard).join('')+'</div>';
+}
+function libCountHTML(){
+  const n = libMatches().length;
+  const parts = [];
+  if(LIB.cat!=='all') parts.push(catOf(LIB.cat).name);
+  if(LIB.ed!=='all')  parts.push(edLabel(edOf(LIB.ed)));
+  if(LIB.q.trim())    parts.push('“'+esc(LIB.q.trim())+'”');
+  return '<b>'+n+'</b> material'+(n===1?'':'s')+(parts.length ? ' in ' + esc(parts.join(' · ')) : ' in the collection');
+}
+
+function viewLibrary(){
+  return ''
+  + '<div class="wrap pagehead">'
+    + '<p class="eyebrow">Library</p>'
+    + '<h1 class="display d2">Explore the Higherway library</h1>'
+    + '<p class="lede">Browse by edition or category to find what you need. Preview any material, then download the PDF from Google Drive.</p>'
+    + '<div class="search">'
+      + '<svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>'
+      + '<input id="libQ" type="search" placeholder="Search materials, topics or editions" value="'+esc(LIB.q)+'" autocomplete="off">'
+      + (LIB.q ? '<button class="search__clear" id="libClear" aria-label="Clear search"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>' : '')
+    + '</div>'
+    + '<div class="filters" role="group" aria-label="Filter by category">'
+      + '<button class="chip'+(LIB.cat==='all'?' is-on':'')+'" data-cat="all">All <span class="c">'+MATERIALS.length+'</span></button>'
+      + CATEGORIES.map(c=>'<button class="chip'+(LIB.cat===c.id?' is-on':'')+'" data-cat="'+c.id+'">'+esc(c.name)+' <span class="c">'+countIn(c.id)+'</span></button>').join('')
+    + '</div>'
+    + '<div class="toolbar">'
+      + '<p class="count" id="libCount">'+libCountHTML()+'</p>'
+      + '<div class="selects">'
+        + '<div class="sel"><select id="libEd" aria-label="Filter by edition"><option value="all">All editions</option>'
+          + EDITIONS.map(e=>'<option value="'+e.id+'"'+(LIB.ed===e.id?' selected':'')+'>'+esc(edLabel(e))+' — '+esc(e.title)+'</option>').join('')
+          + '</select><svg class="ico" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>'
+        + '<div class="sel"><select id="libSort" aria-label="Sort materials">'
+          + '<option value="newest">Newest first</option><option value="oldest">Oldest first</option>'
+          + '<option value="title">A–Z</option><option value="short">Shortest first</option>'
+          + '</select><svg class="ico" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>'
+      + '</div>'
+    + '</div>'
+  + '</div>'
+  + '<section class="sec sec--tight" style="padding-top:clamp(26px,3vw,38px)"><div class="wrap" id="libResults">'+libResultsHTML()+'</div></section>';
+}
+
+function libRefresh(){
+  const r = $('#libResults'); if(r) r.innerHTML = libResultsHTML();
+  const c = $('#libCount');   if(c) c.innerHTML = libCountHTML();
+  $$('.chip[data-cat]').forEach(b => b.classList.toggle('is-on', b.dataset.cat === LIB.cat));
+  const qs = new URLSearchParams();
+  if(LIB.cat!=='all') qs.set('cat', LIB.cat);
+  if(LIB.ed !=='all') qs.set('ed',  LIB.ed);
+  if(LIB.q.trim())    qs.set('q',   LIB.q.trim());
+  if(LIB.sort!=='newest') qs.set('sort', LIB.sort);
+  const str = qs.toString();
+  history.replaceState(null, '', '#/library' + (str ? '?'+str : ''));
+  observe();
+}
+
+/* ---- editions archive --------------------------------------------- */
+function viewEditions(){
+  const years = [...new Set(EDITIONS.map(e=>e.year))].sort((a,b)=>b-a);
+  return ''
+  + '<div class="wrap pagehead">'
+    + '<p class="eyebrow">Editions</p>'
+    + '<h1 class="display d2">Every edition, from the first to the latest</h1>'
+    + '<p class="lede">Higherway is published as a series of editions. Each one gathers a set of materials around a single theme. Open an edition to read its contents or download it whole.</p>'
+  + '</div>'
+  + '<div class="wrap" style="padding-bottom:clamp(48px,6vw,88px)">'
+    + years.map(y=>{
+        const list = EDITIONS.filter(e=>e.year===y);
+        return '<section class="year rv">'
+          + '<div><h2 class="year__n">'+y+'</h2><p class="year__c">'+list.length+' edition'+(list.length===1?'':'s')+'</p></div>'
+          + '<div class="grid-e">'+list.map(editionCard).join('')+'</div>'
+        + '</section>';
+      }).join('')
+  + '</div>';
+}
+
+/* ---- edition detail ------------------------------------------------ */
+function viewEdition(id){
+  const e = edOf(id);
+  if(!e) return viewMissing('That edition is not in the archive.');
+  const list = matsIn(e.id);
+  return ''
+  + '<div class="wrap"><a class="back" href="#/editions"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> Back to editions</a></div>'
+  + '<div class="wrap detail">'
+    + '<div class="detail__sticky detail__cover">'+coverHTML(e)+'</div>'
+    + '<div>'
+      + '<p class="eyebrow eyebrow--gold">Edition</p>'
+      + '<h1 class="display d2" style="margin-top:12px">'+esc(edLabel(e))+'</h1>'
+      + '<p class="display d3" style="margin-top:4px;color:var(--taupe)">'+esc(e.title)+'</p>'
+      + '<div class="detail__meta">'
+        + '<span><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>'+list.length+' materials</span>'
+        + '<span><svg class="ico" viewBox="0 0 24 24"><path d="M6 4h9l3 3v13H6z"/><path d="M15 4v3h3"/></svg>'+e.pages+' pages</span>'
+        + '<span><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>'+esc(edLabel(e))+'</span>'
+      + '</div>'
+      + '<p class="lede detail__desc">'+esc(e.description)+'</p>'
+      + '<div class="detail__act">'
+        + '<a class="btn btn--lg" href="'+esc(e.driveUrl)+'" target="_blank" rel="noopener">'+DRIVE+' Download full edition '+EXT+'</a>'
+        + (list.length ? '<a class="btn btn--ghost btn--lg" href="#/material/'+esc(list[0].id)+'">Preview first material</a>' : '')
+      + '</div>'
+      + (list.length ? '<div class="toc">'
+          + '<div class="toc__h"><span class="t">Materials in this edition</span><span class="t" style="color:var(--taupe)">'+list.length+'</span></div>'
+          + '<ul>'+list.map((m,i)=>'<li><a href="#/material/'+esc(m.id)+'">'
+              + '<span class="n">'+String(i+1).padStart(2,'0')+'</span>'
+              + '<span><span class="t">'+esc(m.title)+'</span><span class="s" style="display:block">'+esc(catOf(m.category).name)+' &middot; '+m.pages+' pages</span></span>'
+              + '<span class="go">View preview '+ARW+'</span></a></li>').join('')+'</ul>'
+        + '</div>' : '')
+    + '</div>'
+  + '</div>';
+}
+
+/* ---- material preview ---------------------------------------------- */
+let READER = { id:null, page:0 };
+
+function viewMaterial(id){
+  const m = matOf(id);
+  if(!m) return viewMissing('That material is not in the archive.');
+  const e = edOf(m.editionId);
+  const list = matsIn(m.editionId);
+  const pos = list.findIndex(x=>x.id===m.id);
+  const more = MATERIALS.filter(x => x.id!==m.id && x.category===m.category).slice(0,4);
+  READER = { id:m.id, page:0 };
+  return ''
+  + '<div class="wrap"><a class="back" href="#/edition/'+esc(m.editionId)+'"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> Back to '+esc(edLabel(e))+'</a></div>'
+  + '<div class="wrap detail">'
+    + '<div class="reader">'
+      + '<div class="reader__stage" id="stage">'+pageHTML(m,0)+'</div>'
+      + '<div class="reader__nav">'
+        + '<button id="pPrev" aria-label="Previous page" disabled><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>'
+        + '<span class="n" id="pNum">1 / '+m.pages+'</span>'
+        + '<button id="pNext" aria-label="Next page"'+(m.pages<2?' disabled':'')+'><svg class="ico" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button>'
+      + '</div>'
+      + '<div class="thumbs" id="thumbs">'
+        + Array.from({length:m.pages}, (_,i)=>'<button data-p="'+i+'" class="'+(i===0?'is-on':'')+'" aria-label="Page '+(i+1)+'">'+pageHTML(m,i)+'</button>').join('')
+      + '</div>'
+    + '</div>'
+    + '<div>'
+      + '<p class="eyebrow eyebrow--gold">'+esc(catOf(m.category).name)+'</p>'
+      + '<h1 class="display d2" style="margin-top:12px">'+esc(m.title)+'</h1>'
+      + (m.deck ? '<p class="display d4 i" style="margin-top:14px;color:var(--taupe)">'+esc(m.deck)+'</p>' : '')
+      + '<div class="detail__meta">'
+        + '<span><svg class="ico" viewBox="0 0 24 24"><path d="M6 4h9l3 3v13H6z"/><path d="M15 4v3h3"/></svg>'+m.pages+' pages</span>'
+        + '<span><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><a href="#/edition/'+esc(m.editionId)+'" style="border-bottom:1px solid var(--line)">'+esc(edLabel(e))+' &mdash; '+esc(e.title)+'</a></span>'
+        + '<span>Material '+(pos+1)+' of '+list.length+'</span>'
+      + '</div>'
+      + '<p class="lede detail__desc">'+esc(m.description)+'</p>'
+      + '<div class="detail__act">'
+        + '<a class="btn btn--lg" href="'+esc(m.driveUrl)+'" target="_blank" rel="noopener">'+DRIVE+' Download on Google Drive '+EXT+'</a>'
+        + '<a class="btn btn--ghost btn--lg" href="'+esc(e.driveUrl)+'" target="_blank" rel="noopener">Get the whole edition</a>'
+      + '</div>'
+      + '<p class="note"><b>About this preview.</b> These pages show the layout and length of the printed material. The scanned PDF on Google Drive is the full document.</p>'
+      + (more.length ? '<div class="toc" style="margin-top:clamp(36px,4vw,52px)">'
+          + '<div class="toc__h"><span class="t">More in '+esc(catOf(m.category).name)+'</span></div>'
+          + '<ul>'+more.map(x=>'<li><a href="#/material/'+esc(x.id)+'">'
+              + '<span class="n">'+x.pages+'p</span>'
+              + '<span><span class="t">'+esc(x.title)+'</span><span class="s" style="display:block">'+esc(edLabel(edOf(x.editionId)))+'</span></span>'
+              + '<span class="go">Preview '+ARW+'</span></a></li>').join('')+'</ul>'
+        + '</div>' : '')
+    + '</div>'
+  + '</div>';
+}
+
+/* ---- about ---------------------------------------------------------- */
+function viewAbout(){
+  return ''
+  + '<div class="wrap pagehead">'
+    + '<p class="eyebrow">About</p>'
+    + '<h1 class="display d2">Higherway is a publication before it is a website.</h1>'
+  + '</div>'
+  + '<section class="sec" style="padding-top:0"><div class="wrap"><div class="prose rv">'
+    + '<p class="first">Higherway began as a printed collection of teachings prepared for our congregation — articles written to be read slowly, kept, and passed on. This site is its archive. Every edition we have published is here, scanned in full, free to read and free to download.</p>'
+    + '<h2>What it is for</h2>'
+    + '<p>Most of what we publish is written for an ordinary week: a decision that needs wisdom, a season that has gone quiet, a family working out how to pray together. The articles are short by design. They are meant to be finished in one sitting and returned to later.</p>'
+    + '<p>Nothing here asks you to sign up. Open an edition, look through the pages, and take the PDF if it is useful to you. Share it with anyone.</p>'
+    + '<h2>Where it comes from</h2>'
+    + '<p>Higherway is produced by our local church and written by its pastors, teachers and members. It carries the convictions of that community: that Scripture is trustworthy, that faith is worked out in daily life, and that teaching should be plain enough to be useful.</p>'
+    + '<p>We publish an edition roughly every month. Each one is built around a single theme, with the articles chosen so they can be read together or on their own.</p>'
+    + '<h2>How the archive works</h2>'
+    + '<p>Materials are the individual articles. Editions are the printed collections they belong to. You can browse either way — start from <a href="#/library" style="border-bottom:1px solid var(--line)">the library</a> if you are looking for a subject, or from <a href="#/editions" style="border-bottom:1px solid var(--line)">the editions archive</a> if you want a whole issue. The files themselves are hosted on Google Drive.</p>'
+  + '</div></div></section>'
+  + '<div class="wrap"><div class="creed rv">'
+    + '<div><p class="k">Written for</p><h3>The ordinary week</h3><p>Not conference material. Counsel for Monday, for the school run, for the quiet hour before anyone else is awake.</p></div>'
+    + '<div><p class="k">Kept</p><h3>In print and in full</h3><p>Every edition is scanned complete, page for page, so nothing is lost when the printed copies run out.</p></div>'
+    + '<div><p class="k">Given</p><h3>Freely, to anyone</h3><p>No account, no charge, no restriction on passing it on. If it helps someone, send it to them.</p></div>'
+  + '</div></div>'
+  + '<section class="band" style="margin-top:clamp(48px,6vw,80px)"><div class="wrap band__in">'
+    + '<div><h2 class="display d2">Start with the latest edition.</h2></div>'
+    + '<div><p>'+esc(EDITIONS[0].description)+'</p>'
+      + '<div class="band__cta"><a class="btn btn--light" href="#/edition/'+EDITIONS[0].id+'">Open '+esc(edLabel(EDITIONS[0]))+' '+ARW+'</a></div></div>'
+  + '</div></section>';
+}
+
+function viewMissing(msg){
+  return '<div class="wrap"><div class="empty" style="padding-block:clamp(80px,12vw,160px)">'
+    + '<p class="eyebrow">Not found</p>'
+    + '<h3 style="margin-top:14px">'+esc(msg)+'</h3>'
+    + '<p>It may have been renamed, or the link may be incomplete.</p>'
+    + '<a class="btn" href="#/library">Browse the library '+ARW+'</a>'
+  + '</div></div>';
+}
+
+/* ==================================================================
+   router
+   ================================================================== */
+function parseHash(){
+  const raw = (location.hash || '#/').slice(1);
+  const [path, query] = raw.split('?');
+  const parts = path.split('/').filter(Boolean);
+  return { parts, params: new URLSearchParams(query || '') };
+}
+
+function render(){
+  const { parts, params } = parseHash();
+  const app = $('#app');
+  let route = 'home', html = '';
+
+  if(!parts.length || parts[0] === '')            { html = viewHome(); }
+  else if(parts[0] === 'library'){
+    route = 'library';
+    LIB.cat  = params.get('cat')  || 'all';
+    LIB.ed   = params.get('ed')   || 'all';
+    LIB.q    = params.get('q')    || '';
+    LIB.sort = params.get('sort') || 'newest';
+    html = viewLibrary();
+  }
+  else if(parts[0] === 'editions')                { route='editions'; html = viewEditions(); }
+  else if(parts[0] === 'edition' && parts[1])     { route='editions'; html = viewEdition(decodeURIComponent(parts[1])); }
+  else if(parts[0] === 'material' && parts[1])    { route='library';  html = viewMaterial(decodeURIComponent(parts[1])); }
+  else if(parts[0] === 'about')                   { route='about';    html = viewAbout(); }
+  else                                            { route='';         html = viewMissing('We could not find that page.'); }
+
+  app.innerHTML = html;
+  document.title = titleFor(parts) + ' · Higherway';
+  $$('.nav a, .drawer__nav a').forEach(a => a.classList.toggle('is-on', a.dataset.r === route));
+  closeMenu(); closeSearch();
+  bindView();
+  observe();
+  window.scrollTo({ top:0, behavior:'auto' });
+}
+
+function titleFor(parts){
+  if(!parts.length) return 'Wisdom for a more faithful life';
+  if(parts[0]==='edition'  && edOf(parts[1]))  return edLabel(edOf(parts[1])) + ' — ' + edOf(parts[1]).title;
+  if(parts[0]==='material' && matOf(parts[1])) return matOf(parts[1]).title;
+  return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+}
+
+/* ==================================================================
+   interactions
+   ================================================================== */
+function bindView(){
+  /* recently-added rail */
+  $$('[data-rail]').forEach(b => b.addEventListener('click', () => {
+    const rail = $('#rail'); if(!rail) return;
+    rail.scrollBy({ left: Number(b.dataset.rail) * Math.min(rail.clientWidth * 0.8, 560), behavior:'smooth' });
+  }));
+
+  /* library filters */
+  const q = $('#libQ');
+  if(q){
+    let t;
+    q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => {
+      LIB.q = q.value;
+      const clear = $('#libClear');
+      if(LIB.q && !clear){ q.insertAdjacentHTML('afterend', '<button class="search__clear" id="libClear" aria-label="Clear search"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>'); bindClear(); }
+      if(!LIB.q && clear) clear.remove();
+      libRefresh();
+    }, 180); });
+  }
+  bindClear();
+  $$('.chip[data-cat]').forEach(b => b.addEventListener('click', () => { LIB.cat = b.dataset.cat; libRefresh(); }));
+  const es = $('#libEd');   if(es){ es.value = LIB.ed;   es.addEventListener('change', () => { LIB.ed   = es.value; libRefresh(); }); }
+  const ss = $('#libSort'); if(ss){ ss.value = LIB.sort; ss.addEventListener('change', () => { LIB.sort = ss.value; libRefresh(); }); }
+
+  /* page reader */
+  const stage = $('#stage');
+  if(stage){
+    const m = matOf(READER.id);
+    const go = i => {
+      READER.page = Math.max(0, Math.min(m.pages - 1, i));
+      stage.innerHTML = pageHTML(m, READER.page);
+      $('#pNum').textContent = (READER.page + 1) + ' / ' + m.pages;
+      $('#pPrev').disabled = READER.page === 0;
+      $('#pNext').disabled = READER.page === m.pages - 1;
+      $$('#thumbs button').forEach(b => b.classList.toggle('is-on', Number(b.dataset.p) === READER.page));
+      const on = $('#thumbs button.is-on');
+      if(on) on.scrollIntoView({ block:'nearest', inline:'nearest', behavior:'smooth' });
+    };
+    $('#pPrev').addEventListener('click', () => go(READER.page - 1));
+    $('#pNext').addEventListener('click', () => go(READER.page + 1));
+    $$('#thumbs button').forEach(b => b.addEventListener('click', () => go(Number(b.dataset.p))));
+    stage._go = go;
+  }
+}
+function bindClear(){
+  const c = $('#libClear');
+  if(c) c.addEventListener('click', () => { LIB.q = ''; const q = $('#libQ'); if(q){ q.value=''; q.focus(); } c.remove(); libRefresh(); });
+}
+
+/* reset button inside the empty state is created on every refresh */
+document.addEventListener('click', e => {
+  if(e.target.closest('#libReset')){
+    LIB.q=''; LIB.cat='all'; LIB.ed='all';
+    const q = $('#libQ'); if(q) q.value='';
+    const es = $('#libEd'); if(es) es.value='all';
+    const c = $('#libClear'); if(c) c.remove();
+    libRefresh();
+  }
+});
+
+/* ---- menu ---------------------------------------------------------- */
+function openMenu(){ document.body.classList.add('menu-open','is-locked'); $('#burger').setAttribute('aria-expanded','true'); }
+function closeMenu(){ document.body.classList.remove('menu-open','is-locked'); const b=$('#burger'); if(b) b.setAttribute('aria-expanded','false'); }
+$('#burger').addEventListener('click', () => document.body.classList.contains('menu-open') ? closeMenu() : openMenu());
+
+/* ---- search overlay ------------------------------------------------- */
+function openSearch(){
+  document.body.classList.add('search-open','is-locked');
+  searchResults($('#ovlInput').value);
+  setTimeout(() => $('#ovlInput').focus(), 60);
+}
+function closeSearch(){ document.body.classList.remove('search-open'); if(!document.body.classList.contains('menu-open')) document.body.classList.remove('is-locked'); }
+$('#searchBtn').addEventListener('click', openSearch);
+$('#ovlClose').addEventListener('click', closeSearch);
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){ closeSearch(); closeMenu(); }
+  if(e.key === '/' && !/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)){ e.preventDefault(); openSearch(); }
+  const stage = $('#stage');
+  if(stage && stage._go && !document.body.classList.contains('search-open')){
+    if(e.key === 'ArrowLeft')  stage._go(READER.page - 1);
+    if(e.key === 'ArrowRight') stage._go(READER.page + 1);
+  }
+});
+
+function searchResults(term){
+  const body = $('#ovlBody');
+  const q = (term||'').trim().toLowerCase();
+  if(!q){
+    body.innerHTML = '<p class="ovl__hint">Search by title, topic, author-facing subject or edition.</p>'
+      + '<div class="ovl__terms">'
+      + ['Prayer','Family','Waiting','Generosity','Youth','September 2026','Rooted in Christ']
+          .map(t => '<button class="chip" data-term="'+esc(t)+'">'+esc(t)+'</button>').join('')
+      + '</div>';
+    $$('[data-term]', body).forEach(b => b.addEventListener('click', () => {
+      $('#ovlInput').value = b.dataset.term; searchResults(b.dataset.term);
+    }));
+    return;
+  }
+  const mats = MATERIALS.filter(m => {
+    const e = edOf(m.editionId);
+    return (m.title+' '+m.description+' '+(m.deck||'')+' '+catOf(m.category).name+' '+edLabel(e)+' '+(e?e.title:'')).toLowerCase().includes(q);
+  }).slice(0,12);
+  const eds = EDITIONS.filter(e => (e.title+' '+edLabel(e)+' '+e.description+' '+(e.strapline||'')).toLowerCase().includes(q)).slice(0,6);
+
+  if(!mats.length && !eds.length){
+    body.innerHTML = '<div class="empty"><h3>No results for “'+esc(term)+'”</h3><p>Try a broader word — a theme, a month, or a category name.</p></div>';
+    return;
+  }
+  let html = '';
+  if(eds.length) html += '<div class="ovl__sec"><h4>Editions</h4><div class="res">'
+    + eds.map(e => '<a href="#/edition/'+esc(e.id)+'"><span>'+coverHTML(e,'cover--flat cover--mini')+'</span>'
+        + '<span><span class="t">'+esc(e.title)+'</span><span class="s">'+esc(edLabel(e))+' · '+matsIn(e.id).length+' materials</span></span>'
+        + '<span class="k">Edition</span></a>').join('')
+    + '</div></div>';
+  if(mats.length) html += '<div class="ovl__sec"><h4>Materials</h4><div class="res">'
+    + mats.map(m => '<a href="#/material/'+esc(m.id)+'"><span>'+plateHTML(m)+'</span>'
+        + '<span><span class="t">'+esc(m.title)+'</span><span class="s">'+esc(edLabel(edOf(m.editionId)))+' · '+m.pages+' pages</span></span>'
+        + '<span class="k">'+esc(catOf(m.category).name)+'</span></a>').join('')
+    + '</div></div>';
+  body.innerHTML = html;
+}
+let st;
+$('#ovlInput').addEventListener('input', e => { clearTimeout(st); st = setTimeout(() => searchResults(e.target.value), 140); });
+$('#ovl').addEventListener('click', e => { if(e.target.closest('a')) closeSearch(); });
+
+/* ---- scroll reveal --------------------------------------------------- */
+let io;
+function observe(){
+  if(!('IntersectionObserver' in window)){ $$('.rv').forEach(el => el.classList.add('in')); return; }
+  if(!io) io = new IntersectionObserver(entries => {
+    entries.forEach(en => { if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  }, { rootMargin:'0px 0px -8% 0px', threshold:0.06 });
+  $$('.rv:not(.in)').forEach(el => io.observe(el));
+}
+
+/* ---- masthead shadow on scroll -------------------------------------- */
+const mast = $('#mast');
+const onScroll = () => mast.classList.toggle('is-stuck', window.scrollY > 8);
+window.addEventListener('scroll', onScroll, { passive:true });
+
+/* ---- footer, built from the same data -------------------------------- */
+function buildFooter(){
+  $('#yr').textContent = new Date().getFullYear();
+  $('#footCats').innerHTML = CATEGORIES.map(c => '<li><a href="#/library?cat='+c.id+'">'+esc(c.name)+'</a></li>').join('');
+  $('#footLatest').innerHTML = EDITIONS.slice(0,4).map(e =>
+    '<li><a href="#/edition/'+esc(e.id)+'">'+esc(edLabel(e))+' — '+esc(e.title)+'</a></li>').join('');
+}
+
+/* ---- go --------------------------------------------------------------- */
+window.addEventListener('hashchange', render);
+buildFooter();
+onScroll();
+render();
+</script>
+</body>
+</html>
