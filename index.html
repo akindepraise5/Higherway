@@ -899,7 +899,6 @@ function buildFromRows(rows){
       topicNames:  topics.length ? topics : [UNTAGGED.name],
       topics:      topics.length ? topics.map(slug) : [UNTAGGED.id],
       category:    topics.length ? slug(topics[0]) : UNTAGGED.id,
-      scene:       SCENES[mats.length % SCENES.length],
       row:         mats.length
     });
   }
@@ -922,6 +921,16 @@ function buildFromRows(rows){
   /* Anything still untagged is kept reachable, and kept last. */
   if(counts[UNTAGGED.id])
     cats.push({ id: UNTAGGED.id, name: UNTAGGED.name, blurb: '', count: counts[UNTAGGED.id] });
+
+  /* Each shelf is given its look, and each material is drawn in the look
+     of the shelf it sits on — its own drawing, its topic's colours. */
+  const themes = Object.create(null);
+  cats.forEach(c => { c.theme = topicTheme(c.id); themes[c.id] = c.theme; });
+  mats.forEach(m => {
+    const theme = themes[m.category] || topicTheme(m.category);
+    m.scene   = theme.scene === 'any' ? SCENES[hash(m.id) % SCENES.length] : theme.scene;
+    m.palette = paletteFor(theme, m.id);
+  });
 
   MATERIALS.length  = 0; MATERIALS.push.apply(MATERIALS, mats);
   CATEGORIES.length = 0; CATEGORIES.push.apply(CATEGORIES, cats);
@@ -983,6 +992,101 @@ const PALETTES = {
             ridges:['#7A6A58','#574C42','#3A342E','#242220','#14130F'] }
 };
 
+/* ---- a look for every topic ---------------------------------------
+   Nothing here is a photograph. Each material is drawn from scratch,
+   seeded by its own title, so no two are the same — and coloured by its
+   topic, so everything filed under Faith reads as one shelf, everything
+   under Holiness as another. Add a topic to the spreadsheet and it is
+   given its own scene and its own colours on the next load.
+   ------------------------------------------------------------------ */
+
+/* Dusk hues only: deep blues through greens, brass, clay and plum.
+   No primaries, nothing that would shout next to the paper. */
+const TOPIC_HUES = [206, 194, 178, 158, 140, 122, 104, 86, 64, 44,
+                     28,  14, 352, 334, 314, 292, 272, 250, 232, 218];
+
+const hsl = (h, s, l) => 'hsl(' + Math.round(((h % 360) + 360) % 360) + ','
+  + Math.round(Math.max(0, Math.min(100, s))) + '%,'
+  + Math.round(Math.max(0, Math.min(100, l))) + '%)';
+
+/* The topic decides the scene and the colours. Both come from the topic's
+   own name, so they hold still while the spreadsheet grows. */
+function topicTheme(topicId){
+  const h = hash(String(topicId));
+  return {
+    /* Material with no topic yet has no shelf to match, so it is given a
+       scene of its own instead of sharing one with every other stray. */
+    scene: topicId === UNTAGGED.id ? 'any' : SCENES[(h >>> 3) % SCENES.length],
+    hue:   TOPIC_HUES[h % TOPIC_HUES.length],
+    warm:  24 + ((h >>> 7)  % 14),
+    sat:   18 + ((h >>> 11) % 9),
+    land:  7  + ((h >>> 15) % 7),
+    sunY:  0.54 + ((h >>> 19) % 13) / 100,
+    sunR:  32 + ((h >>> 23) % 18)
+  };
+}
+
+/* The shelf's palette, nudged a few degrees by the title. Two materials
+   on one shelf come out as kin rather than copies. */
+function paletteFor(theme, seedKey){
+  const d = hash(String(seedKey));
+  const hue  = theme.hue  + ((d % 13) - 6);
+  const warm = theme.warm + (((d >>> 4) % 9) - 4);
+  const lift = ((d >>> 8) % 7) - 3;
+  const land = theme.land + ((d >>> 12) % 3);
+  return {
+    sky:  [ hsl(hue, theme.sat, 30 + lift), hsl(warm, 44, 54), hsl(warm + 10, 74, 80) ],
+    sun:  hsl(warm + 12, 96, 88),
+    sunY: theme.sunY + (((d >>> 16) % 9) - 4) / 100,
+    sunR: theme.sunR + ((d >>> 20) % 13) - 6,
+    ridges: [ hsl(hue, land,     55 + lift), hsl(hue, land,     42 + lift),
+              hsl(hue, land + 1, 29 + lift), hsl(hue, land + 2, 18),
+              hsl(hue, land + 3, 10) ]
+  };
+}
+
+/* One quiet motif, chosen by the title, drawn into the sky before the
+   land goes over it. It is what stops two materials on the same shelf
+   from being the same picture. */
+const ACCENTS = ['none','birds','clouds','stars','moon','birds','clouds','stars','none','moon','birds','none'];
+
+function accentHTML(kind, r, W, H, p){
+  let s = '';
+  if(kind === 'birds'){
+    const n = 3 + Math.floor(r()*4), bx = W*(0.10+r()*0.46), by = H*(0.13+r()*0.20);
+    for(let i=0;i<n;i++){
+      const x = bx + i*(13+r()*22), y = by + (r()*46-23), w = (6+r()*7)/2;
+      s += '<path d="M'+x.toFixed(0)+','+y.toFixed(0)
+         + ' q'+w.toFixed(1)+',-'+(w*0.9).toFixed(1)+' '+(w*2).toFixed(1)+',0'
+         + ' q'+w.toFixed(1)+',-'+(w*0.9).toFixed(1)+' '+(w*2).toFixed(1)+',0" stroke="'+p.ridges[4]
+         + '" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="'+(0.32+r()*0.3).toFixed(2)+'"/>';
+    }
+  } else if(kind === 'clouds'){
+    const n = 2 + Math.floor(r()*3);
+    for(let i=0;i<n;i++){
+      /* Three overlapping ellipses make a drawn streak rather than a bar. */
+      const cw = W*(0.16+r()*0.30), cx = r()*(W-cw), cy = H*(0.14+r()*0.30);
+      const op = (0.08+r()*0.11).toFixed(2);
+      for(let k=0;k<3;k++)
+        s += '<ellipse cx="'+(cx+cw*(0.22+k*0.28)).toFixed(0)+'" cy="'+(cy+(r()*7-3.5)).toFixed(0)
+           + '" rx="'+(cw*(0.26+r()*0.16)).toFixed(0)+'" ry="'+(3+r()*4).toFixed(1)
+           + '" fill="'+p.sun+'" opacity="'+op+'"/>';
+    }
+  } else if(kind === 'stars'){
+    const n = 14 + Math.floor(r()*16);
+    for(let i=0;i<n;i++)
+      s += '<circle cx="'+(r()*W).toFixed(0)+'" cy="'+(r()*H*0.40).toFixed(0)+'" r="'+(0.8+r()*1.3).toFixed(1)
+         + '" fill="'+p.sky[2]+'" opacity="'+(0.16+r()*0.4).toFixed(2)+'"/>';
+  } else if(kind === 'moon'){
+    const mr = 10+r()*9, mx = W*(0.12+r()*0.74), my = H*(0.09+r()*0.16), inner = mr*0.74;
+    s += '<path d="M'+mx.toFixed(1)+','+(my-mr).toFixed(1)
+       + ' A'+mr.toFixed(1)+','+mr.toFixed(1)+' 0 1,1 '+mx.toFixed(1)+','+(my+mr).toFixed(1)
+       + ' A'+inner.toFixed(1)+','+mr.toFixed(1)+' 0 1,0 '+mx.toFixed(1)+','+(my-mr).toFixed(1)
+       + ' Z" fill="'+p.sky[2]+'" opacity="'+(0.28+r()*0.14).toFixed(2)+'"/>';
+  }
+  return s;
+}
+
 function ridgePath(r, W, base, amp, steps, jagged, bottom){
   bottom = bottom || 560;
   const pts=[];
@@ -1000,13 +1104,16 @@ function ridgePath(r, W, base, amp, steps, jagged, bottom){
 }
 
 /* Returns an <svg> string for a scene. Slice-cropped, so any aspect works. */
-function art(sceneName, seedKey){
-  const p = PALETTES[sceneName] || PALETTES.peaks;
+/* `palette` is the topic's colours. Without one the six built-in scene
+   palettes are used, which is what the hero still does. */
+function art(sceneName, seedKey, palette){
+  const p = palette || PALETTES[sceneName] || PALETTES.peaks;
   const r = rng(hash(String(seedKey||sceneName)));
   const W = 400, H = 500, uid = 'a' + hash(String(seedKey||'') + sceneName).toString(36);
   const sunY = (H * p.sunY).toFixed(0);
   let b = '<rect width="'+W+'" height="'+H+'" fill="url(#sky'+uid+')"/>';
   b += '<circle cx="'+(W*(0.32+r()*0.36)).toFixed(0)+'" cy="'+sunY+'" r="'+p.sunR+'" fill="url(#glow'+uid+')"/>';
+  b += accentHTML(ACCENTS[hash(String(seedKey||'')+'accent') % ACCENTS.length], r, W, H, p);
 
   if(sceneName==='forest'){
     b += '<ellipse cx="'+(W*.5)+'" cy="'+(H*.34)+'" rx="'+(W*.46)+'" ry="'+(H*.30)+'" fill="url(#glow'+uid+')"/>';
@@ -1022,7 +1129,7 @@ function art(sceneName, seedKey){
     }
     b += '<rect width="'+W+'" height="'+(H*.46).toFixed(0)+'" fill="url(#canopy'+uid+')"/>';
   } else if(sceneName==='water'){
-    const hz = H*.70;
+    const hz = H*(0.64+r()*0.10);
     b += '<rect y="'+hz+'" width="'+W+'" height="'+(H-hz)+'" fill="'+p.ridges[2]+'"/>';
     for(let i=0;i<16;i++){
       const y=(hz+4+i*((H-hz)/16)).toFixed(0), w=(10+r()*60).toFixed(0);
@@ -1031,11 +1138,12 @@ function art(sceneName, seedKey){
     b += '<path d="'+ridgePath(r,W,hz+2,62,5,true)+'" fill="'+p.ridges[3]+'"/>';
     b += '<path d="'+ridgePath(r,W,H*.96,40,4,false)+'" fill="'+p.ridges[4]+'"/>';
   } else if(sceneName==='field'){
-    const hz = H*.66;
+    const hz = H*(0.60+r()*0.12);
     b += '<path d="'+ridgePath(r,W,hz,26,5,false)+'" fill="'+p.ridges[1]+'" opacity=".8"/>';
     b += '<rect y="'+hz+'" width="'+W+'" height="'+(H-hz)+'" fill="'+p.ridges[2]+'"/>';
     b += '<rect y="'+hz+'" width="'+W+'" height="'+(H-hz)+'" fill="url(#fade'+uid+')"/>';
-    for(let i=0;i<70;i++){
+    const blades = 50 + Math.floor(r()*45);
+    for(let i=0;i<blades;i++){
       const x=(r()*W).toFixed(0), y=hz+r()*(H-hz), h2=12+r()*30;
       b += '<path d="M'+x+','+(y+h2).toFixed(0)+' q'+(r()*8-4).toFixed(1)+','+(-h2/2).toFixed(0)+' 0,'+(-h2).toFixed(0)+'" stroke="'+p.ridges[4]+'" stroke-width="1.3" fill="none" opacity="'+(0.25+r()*0.5).toFixed(2)+'"/>';
     }
@@ -1055,10 +1163,18 @@ function art(sceneName, seedKey){
     b += '<path d="M0,'+(H*.60)+' C'+(W*.20)+','+(H*.70)+' '+(W*.30)+','+(H*.92)+' '+(W*.26)+','+H+' L0,'+H+' Z" fill="'+p.ridges[3]+'"/>';
     b += '<path d="M'+W+','+(H*.56)+' C'+(W*.80)+','+(H*.68)+' '+(W*.68)+','+(H*.90)+' '+(W*.72)+','+H+' L'+W+','+H+' Z" fill="'+p.ridges[4]+'"/>';
   } else {
-    b += '<path d="'+ridgePath(r,W,H*.66,92,4,true)+'" fill="'+p.ridges[0]+'" opacity=".55"/>';
-    b += '<path d="'+ridgePath(r,W,H*.74,86,5,true)+'" fill="'+p.ridges[2]+'"/>';
-    b += '<path d="'+ridgePath(r,W,H*.86,70,4,true)+'" fill="'+p.ridges[3]+'"/>';
-    b += '<path d="'+ridgePath(r,W,H*.99,46,3,true)+'" fill="'+p.ridges[4]+'"/>';
+    /* Ranges of hills: how many, how high and how far back all come from
+       the title, so no two skylines repeat. */
+    const layers = 3 + Math.floor(r()*3);
+    const first  = 0.58 + r()*0.14;
+    for(let i=0;i<layers;i++){
+      const t     = layers===1 ? 1 : i/(layers-1);
+      const base  = H*(first + t*(0.99-first));
+      const amp   = 96 - t*52 + (r()*22-11);
+      const steps = 3 + Math.floor(r()*3);
+      const shade = p.ridges[Math.min(4, i===0 ? 0 : 1+Math.floor(t*3.4))];
+      b += '<path d="'+ridgePath(r,W,base,amp,steps,true)+'" fill="'+shade+'"'+(i===0?' opacity=".55"':'')+'/>';
+    }
   }
 
   return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><defs>'
@@ -1116,7 +1232,7 @@ const driveAttrs = m => 'href="' + esc(m.driveUrl) + '" target="_blank" rel="noo
 function coverHTML(m, cls){
   const artHTML = m.cover
     ? '<img src="'+esc(m.cover)+'" alt="Cover of '+esc(m.title)+'" loading="lazy">'
-    : art(m.scene, m.id);
+    : art(m.scene, m.id, m.palette);
   return '<div class="cover '+(cls||'')+'">'
     + '<div class="cover__art">'+artHTML+'</div><div class="cover__veil"></div>'
     + '<div class="cover__type">'
@@ -1127,22 +1243,51 @@ function coverHTML(m, cls){
     + '</div></div>';
 }
 
-function plateHTML(m){
+/* A material filed under more than one topic wears the colours of the
+   shelf you are standing at, so a shelf always reads as one shelf.
+   Away from a shelf it wears the colours of its first topic. */
+function lookFor(m, topicId){
+  if(topicId && topicId !== 'all' && m.topics.indexOf(topicId) > -1){
+    const c = catOf(topicId), theme = c.theme || topicTheme(topicId);
+    return {
+      scene:   theme.scene === 'any' ? SCENES[hash(m.id) % SCENES.length] : theme.scene,
+      palette: paletteFor(theme, m.id),
+      label:   c.name
+    };
+  }
+  return { scene: m.scene, palette: m.palette, label: topicOf(m) };
+}
+
+function plateHTML(m, topicId){
+  const look = lookFor(m, topicId);
   const artHTML = m.cover
     ? '<img src="'+esc(m.cover)+'" alt="" loading="lazy">'
-    : art(m.scene || 'peaks', m.id);
+    : art(look.scene || 'peaks', m.id, look.palette);
   return '<div class="plate">'
     + '<div class="plate__art">'+artHTML+'</div><div class="plate__veil"></div>'
     + '<div class="plate__wm">'+ARC+'<span>Higherway</span></div>'
-    + '<div class="plate__cat">'+esc(topicOf(m))+'</div></div>';
+    + '<div class="plate__cat">'+esc(look.label)+'</div></div>';
+}
+
+/* A topic shown on its own — in search results — is drawn in its own
+   colours, the same ones its materials carry. */
+function topicPlate(c){
+  const theme = c.theme || topicTheme(c.id);
+  return {
+    id: 'topic-' + c.id,
+    scene: theme.scene === 'any' ? 'peaks' : theme.scene,
+    palette: paletteFor(theme, 'topic-' + c.id),
+    topicNames: [c.name]
+  };
 }
 
 /* ---- cards -------------------------------------------------------- */
-function materialCard(m){
+function materialCard(m, topicId){
+  const look = lookFor(m, topicId);
   return '<a class="mcard" '+driveAttrs(m)+'>'
-    + '<div class="mcard__fig">'+plateHTML(m)+'</div>'
+    + '<div class="mcard__fig">'+plateHTML(m, topicId)+'</div>'
     + '<h3 class="mcard__t">'+esc(m.title)+'</h3>'
-    + '<div class="mcard__m"><span>'+esc(m.author || topicOf(m))+'</span><i class="dot"></i><span>Google Drive</span></div>'
+    + '<div class="mcard__m"><span>'+esc(m.author || look.label)+'</span><i class="dot"></i><span>Google Drive</span></div>'
     + '</a>';
 }
 
@@ -1193,7 +1338,7 @@ function viewHome(){
         + '<a class="tlink" href="#/library" style="margin-left:8px">View all '+ARW+'</a>'
       + '</div>'
     + '</div>'
-    + '<div class="rail rv" id="rail">'+recentMaterials(8).map(materialCard).join('')+'</div>'
+    + '<div class="rail rv" id="rail">'+recentMaterials(8).map(m => materialCard(m)).join('')+'</div>'
   + '</div></section>'
 
   + '<section class="sec sec--tight"><div class="wrap">'
@@ -1240,7 +1385,7 @@ function libResultsHTML(){
     + '<button class="btn" id="libReset">Show all materials</button></div>';
   const page = list.slice(0, LIB.shown);
   const left = list.length - page.length;
-  return '<div class="grid-m">'+page.map(materialCard).join('')+'</div>'
+  return '<div class="grid-m">'+page.map(m => materialCard(m, LIB.cat)).join('')+'</div>'
     + (left ? '<div id="libMoreWrap" style="display:flex;justify-content:center;margin-top:clamp(30px,3.4vw,46px)">'
         + '<button class="btn btn--lg" id="libMore">Show more materials <span class="small" style="opacity:.7">'+left+' left</span></button>'
       + '</div>' : '');
@@ -1514,7 +1659,7 @@ function searchResults(term){
   }
   let html = '';
   if(cats.length) html += '<div class="ovl__sec"><h4>Topics</h4><div class="res">'
-    + cats.map(c => '<a href="#/library?cat='+esc(c.id)+'"><span>'+plateHTML({ id:c.id, scene:SCENES[hash(c.id)%SCENES.length], topicNames:[c.name] })+'</span>'
+    + cats.map(c => '<a href="#/library?cat='+esc(c.id)+'"><span>'+plateHTML(topicPlate(c))+'</span>'
         + '<span><span class="t">'+esc(c.name)+'</span><span class="s">'+c.count+' material'+(c.count===1?'':'s')+'</span></span>'
         + '<span class="k">Topic</span></a>').join('')
     + '</div></div>';
