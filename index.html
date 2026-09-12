@@ -641,7 +641,6 @@ body.search-open .ovl{ opacity:1; visibility:visible; }
     <nav class="nav" id="nav" aria-label="Primary">
       <a href="#/" data-r="home">Home</a>
       <a href="#/library" data-r="library">Library</a>
-      <a href="#/editions" data-r="editions">Editions</a>
       <a href="#/about" data-r="about">About</a>
     </nav>
 
@@ -661,13 +660,12 @@ body.search-open .ovl{ opacity:1; visibility:visible; }
   <nav class="drawer__nav" aria-label="Mobile">
     <a href="#/" data-r="home">Home <span class="n">01</span></a>
     <a href="#/library" data-r="library">Library <span class="n">02</span></a>
-    <a href="#/editions" data-r="editions">Editions <span class="n">03</span></a>
-    <a href="#/about" data-r="about">About <span class="n">04</span></a>
+    <a href="#/about" data-r="about">About <span class="n">03</span></a>
   </nav>
   <a class="btn btn--lg btn--block drawer__cta" href="#/library">Explore the Library <svg class="ico arw" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a>
   <div class="drawer__foot">
     <p class="eyebrow">Faith. Guidance. A brighter tomorrow.</p>
-    <p class="small" style="margin-top:10px">Every edition is free to read and free to download.</p>
+    <p class="small" style="margin-top:10px">Every material is free to read and free to download.</p>
   </div>
 </div>
 
@@ -675,7 +673,7 @@ body.search-open .ovl{ opacity:1; visibility:visible; }
   <div class="wrap ovl__top">
     <div class="search">
       <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
-      <input id="ovlInput" type="search" placeholder="Search materials, editions, topics or categories" autocomplete="off" spellcheck="false">
+      <input id="ovlInput" type="search" placeholder="Search materials or topics" autocomplete="off" spellcheck="false">
     </div>
     <button class="iconbtn" id="ovlClose" aria-label="Close search">
       <svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
@@ -694,19 +692,18 @@ body.search-open .ovl{ opacity:1; visibility:visible; }
           <svg class="mark__arc" viewBox="0 0 36 11" aria-hidden="true"><path d="M2 9.2C5 3.6 11 1 18 1s13 2.6 16 8.2"/></svg>
           <span class="mark__word">Higherway</span>
         </div>
-        <p class="foot__blurb">A digital archive of the Higherway publication. Browse every edition, preview the pages, and download what you need.</p>
+        <p class="foot__blurb">A digital archive of the Higherway publication. Browse the collection by topic and download whatever you need, straight from Google Drive.</p>
       </div>
       <div>
         <h4>Browse</h4>
         <ul>
           <li><a href="#/library">All materials</a></li>
-          <li><a href="#/editions">Editions archive</a></li>
           <li><a href="#/about">About Higherway</a></li>
         </ul>
       </div>
-      <div><h4>Categories</h4><ul id="footCats"></ul></div>
+      <div><h4>Topics</h4><ul id="footCats"></ul></div>
       <div>
-        <h4>Latest edition</h4>
+        <h4>Recently added</h4>
         <ul id="footLatest"></ul>
       </div>
     </div>
@@ -719,284 +716,81 @@ body.search-open .ovl{ opacity:1; visibility:visible; }
 
 <script>
 /* ==================================================================
-   ██  HIGHERWAY CONTENT  ██   Everything you manage lives below.
+   ██  HIGHERWAY CONTENT  ██
    ------------------------------------------------------------------
-   1. SITE        — name, tagline, the Drive folder for the whole archive
-   2. CATEGORIES  — the shelves materials are filed under
-   3. EDITIONS    — one entry per printed edition, NEWEST FIRST.
-                    Add each new edition at the top of the array: the first
-                    entry is what the site calls the latest edition.
-   4. MATERIALS   — one entry per article inside an edition. `order` sets its
-                    place in that edition's contents; `editionId` must match
-                    an edition `id` above, and `category` a category `id`.
-   ------------------------------------------------------------------
-   Covers and page previews are drawn by the site, so nothing breaks if
-   you have no artwork yet. To use a real scan instead, set `cover` on an
-   edition/material, or list page image URLs in `previews` (one per page).
-   Every `driveUrl` below is a placeholder — replace each one with the
-   Google Drive share link for that file. They open in a new tab.
-   `scene` picks the drawn artwork: peaks | valley | field | forest | water | tree
+   Nothing on this site is written here. Every material comes from the
+   Higherway Google Spreadsheet, which is the single source of truth.
+
+     Spreadsheet  →  Library  →  Filter by topic  →  Google Drive file
+
+   The sheet needs these columns, in any order, under a header row:
+
+     Title                  the name shown on the site
+     Topics/Tags            one or more topics, separated by commas
+     Drive Link             the Google Drive URL that material opens
+     Author                 optional, shown beneath the title when filled
+     Summary                optional, shown on the card and in search
+
+   Add a row to the sheet and it appears here on the next page load.
+   No rebuild, no database, no backend.
+
+   The sheet must be readable by anyone with the link: in Google Sheets
+   choose Share, then General access, then "Anyone with the link".
    ================================================================== */
 
 const SITE = {
   name: 'Higherway',
   tagline: 'Faith. Guidance. A brighter tomorrow.',
-  driveFolder: 'https://drive.google.com/drive/folders/REPLACE_WITH_YOUR_FOLDER_ID'
+
+  /* The id in the spreadsheet URL, between /d/ and /edit. */
+  sheetId: '1szZo1PYO10RARoQASFCcgx0WgLu63ExJdbKDuGbA7ww',
+
+  /* Name of the tab to read. Leave empty to read the first tab. */
+  sheetTab: '',
+
+  /* Shown on the "could not load" screen so the sheet can be opened. */
+  get sheetUrl(){ return 'https://docs.google.com/spreadsheets/d/' + this.sheetId + '/edit'; }
 };
 
-/* ---- 2. CATEGORIES ---------------------------------------------- */
-const CATEGORIES = [
-  { id:'faith',            name:'Faith',            blurb:'Trusting God when the road is unclear.' },
-  { id:'family',           name:'Family',           blurb:'Building a home on lasting foundations.' },
-  { id:'youth',            name:'Youth',            blurb:'For the next generation finding its footing.' },
-  { id:'christian-living', name:'Christian Living', blurb:'Ordinary days lived with intention.' },
-  { id:'church',           name:'Church',           blurb:'Life together as the body of Christ.' },
-  { id:'society',          name:'Society',          blurb:'Faithful presence in a changing world.' }
-];
+/* Column headings the site understands. Matching ignores case, spaces and
+   punctuation, so "Drive Link (Ctrl + Click)" still matches "drivelink". */
+const COLUMNS = {
+  title:   ['title', 'name', 'nametitle', 'material', 'materialtitle'],
+  topics:  ['topicstags', 'topics', 'topic', 'tags', 'tag', 'category', 'categories', 'topictag'],
+  link:    ['drivelinkctrlclick', 'drivelink', 'googledrivelink', 'link', 'url', 'drive', 'file', 'filelink'],
+  author:  ['author', 'writer', 'by'],
+  summary: ['summary', 'description', 'about', 'notes']
+};
 
-/* ---- 3. EDITIONS ------------------------------------------------- */
-const EDITIONS = [
-  { id:'2026-09', title:'A Deeper Walk',        month:'September', year:2026, scene:'valley',
-    strapline:'Faith · Discipleship · Christian Living', pages:48,
-    description:'Articles on the slow, steady work of walking closely with God — the practices, the setbacks, and the quiet joy of staying the course.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_09/view' },
+/* Topic values that mean "not filed yet". Compared with case, spaces and
+   punctuation removed. A material carrying only these sits under the
+   Uncategorised filter until a real topic is written into the sheet. */
+const PLACEHOLDER_TOPICS = ['reviewmanually', 'review', 'tbd', 'tba', 'na', 'none', 'pending', ''];
 
-  { id:'2026-08', title:'Faith in Action',      month:'August', year:2026, scene:'field',
-    strapline:'Faith · Service · Society', pages:44,
-    description:'What belief looks like once it leaves the pew: service, generosity, and the courage to show up where you are needed.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_08/view' },
+const UNTAGGED = { id: 'uncategorised', name: 'Uncategorised' };
 
-  { id:'2026-07', title:'A Generous Life',      month:'July', year:2026, scene:'water',
-    strapline:'Stewardship · Family · Christian Living', pages:40,
-    description:'On open hands — with money, with time, with attention — and the freedom that follows when nothing is held too tightly.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_07/view' },
+/* Optional one-line descriptions for topic tiles on the home page.
+   A topic without one simply shows its name and its count. */
+const TOPIC_BLURBS = {
+  faith:     'Trusting God when the road is unclear.',
+  prayer:    'Keeping a conversation that outlasts your enthusiasm.',
+  holiness:  'A life set apart, worked out in ordinary days.',
+  peace:     'Rest that does not depend on the circumstances.',
+  identity:  'Who you are before you are anything else.',
+  suffering: 'Counsel for the seasons that ask more than you have.',
+  purpose:   'Why you are here, and what to do about it.',
+  heaven:    'Living now with the end in view.',
+  warfare:   'Standing your ground when the ground is contested.',
+  victory:   'What has already been won, and how to hold it.',
+  gospel:    'The message the whole collection is built on.',
+  love:      'The plainest command, and the hardest.'
+};
 
-  { id:'2026-06', title:'Rooted in Christ',     month:'June', year:2026, scene:'tree',
-    strapline:'Faith · Scripture · Discipleship', pages:44,
-    description:'Depth over speed. A study of what holds steady underneath a life, and how roots are grown in unhurried seasons.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_06/view' },
+/* How many materials the library draws before asking for more. */
+const PAGE_SIZE = 48;
 
-  { id:'2026-05', title:'Strength for Today',   month:'May', year:2026, scene:'peaks',
-    strapline:'Endurance · Prayer · Christian Living', pages:36,
-    description:'Written for the tired: daily bread, honest prayer, and grace that arrives in the measure the day requires.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_05/view' },
-
-  { id:'2026-04', title:'Living the Word',      month:'April', year:2026, scene:'forest',
-    strapline:'Scripture · Study · Church', pages:44,
-    description:'How to read Scripture so that it reads you — habits of study that turn familiar passages into daily counsel.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_04/view' },
-
-  { id:'2026-03', title:'A Renewed Mind',       month:'March', year:2026, scene:'field',
-    strapline:'Faith · Youth · Society', pages:40,
-    description:'On attention, anxiety and the renewing of the mind in an age that trades constantly on both.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_03/view' },
-
-  { id:'2026-02', title:'Light in the World',   month:'February', year:2026, scene:'water',
-    strapline:'Witness · Society · Church', pages:36,
-    description:'Quiet witness in ordinary places — at work, among neighbours, and in the conversations nobody plans for.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2026_02/view' },
-
-  { id:'2025-12', title:'Hope for the Weary',   month:'December', year:2025, scene:'peaks',
-    strapline:'Advent · Hope · Family', pages:40,
-    description:'An Advent edition for households carrying more than they say — waiting, longing, and the promise that meets both.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2025_12/view' },
-
-  { id:'2025-10', title:'The Household of Faith', month:'October', year:2025, scene:'tree',
-    strapline:'Family · Church · Discipleship', pages:36,
-    description:'On raising children, honouring parents, and belonging to a church that acts like a family rather than an audience.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2025_10/view' },
-
-  { id:'2025-08', title:'Set Your Mind Above',  month:'August', year:2025, scene:'valley',
-    strapline:'Faith · Perspective · Christian Living', pages:32,
-    description:'Perspective as a discipline: lifting your eyes when circumstances insist you keep them down.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2025_08/view' },
-
-  { id:'2025-06', title:'Salt and Light',       month:'June', year:2025, scene:'forest',
-    strapline:'Youth · Society · Witness', pages:32,
-    description:'A youth-facing edition on integrity, friendship and holding convictions without losing kindness.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_ED_2025_06/view' }
-];
-
-/* ---- 4. MATERIALS ------------------------------------------------
-   `order` sets the position in that edition's table of contents.
-   `deck` is the standfirst shown on the drawn preview page.
-   ------------------------------------------------------------------ */
-const MATERIALS = [
-  { id:'finding-peace', title:"Finding Peace in God's Timing", editionId:'2026-09', category:'faith', pages:6, order:1, scene:'valley',
-    deck:'On waiting well when the answer has not come yet.',
-    description:'A timely reminder that God is never late. Learn how to trust Him through the seasons that ask you to wait.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0901/view' },
-  { id:'walking-in-faith', title:'Walking in Faith', editionId:'2026-09', category:'faith', pages:8, order:2, scene:'peaks',
-    deck:'Faith is measured in steps, not in feelings.',
-    description:'What it means to keep moving when you can only see the next step, and why that is usually enough.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0902/view' },
-  { id:'a-life-of-prayer', title:'A Life of Prayer', editionId:'2026-09', category:'christian-living', pages:5, order:3, scene:'forest',
-    deck:'Building a habit that outlasts your enthusiasm.',
-    description:'Practical counsel for a prayer life that survives busy weeks, dry spells and interruptions.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0903/view' },
-  { id:'the-quiet-hour', title:'The Quiet Hour', editionId:'2026-09', category:'christian-living', pages:4, order:4, scene:'water',
-    deck:'Making room for God before the day makes its claims.',
-    description:'How a small, protected hour reshapes everything that follows it.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0904/view' },
-  { id:'raising-children', title:'Raising Children in a Changing World', editionId:'2026-09', category:'family', pages:7, order:5, scene:'tree',
-    deck:'Passing on convictions in a culture that keeps moving.',
-    description:'Guidance for parents on teaching faith at home without fear, and on trusting God with the outcome.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0905/view' },
-  { id:'when-the-answer-is-wait', title:'When the Answer Is Wait', editionId:'2026-09', category:'faith', pages:5, order:6, scene:'field',
-    deck:'Delay is not denial, and it is rarely wasted.',
-    description:'A study of the long pauses in Scripture and what God was doing inside them.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0906/view' },
-  { id:'serving-where-you-are', title:'Serving Where You Are', editionId:'2026-09', category:'church', pages:6, order:7, scene:'forest',
-    deck:'The ministry in front of you is still ministry.',
-    description:'On finding your place in the local church without waiting for a title.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0907/view' },
-  { id:'a-deeper-walk-essay', title:'A Deeper Walk', editionId:'2026-09', category:'christian-living', pages:7, order:8, scene:'valley',
-    deck:'The closing essay of the September edition.',
-    description:'Depth is built quietly, over years. The editorial that gives this edition its name.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0908/view' },
-
-  { id:'faith-in-action', title:'Faith in Action', editionId:'2026-08', category:'faith', pages:6, order:1, scene:'field',
-    deck:'Belief that shows up with its sleeves rolled.',
-    description:'The opening essay on a faith that is demonstrated before it is explained.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0801/view' },
-  { id:'the-good-neighbour', title:'The Good Neighbour', editionId:'2026-08', category:'society', pages:5, order:2, scene:'water',
-    deck:'Proximity is the beginning of compassion.',
-    description:'Rereading a familiar parable with attention to who was close enough to help.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0802/view' },
-  { id:'work-as-worship', title:'Work as Worship', editionId:'2026-08', category:'christian-living', pages:7, order:3, scene:'peaks',
-    deck:'Your Monday is not a lesser calling.',
-    description:'How ordinary work becomes an offering, and what changes when you treat it that way.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0803/view' },
-  { id:'courage-to-speak', title:'The Courage to Speak', editionId:'2026-08', category:'youth', pages:4, order:4, scene:'forest',
-    deck:'Convictions held gently, and held anyway.',
-    description:'For young believers learning to stand for something without standing over anyone.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0804/view' },
-  { id:'hands-that-build', title:'Hands That Build', editionId:'2026-08', category:'church', pages:6, order:5, scene:'tree',
-    deck:'On the unnoticed labour that holds a church together.',
-    description:'A tribute to the volunteers who arrive early, stay late and are rarely named.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0805/view' },
-
-  { id:'open-hands', title:'Open Hands', editionId:'2026-07', category:'christian-living', pages:6, order:1, scene:'water',
-    deck:'Generosity begins long before the giving.',
-    description:'On loosening your grip — and discovering how much lighter the walk becomes.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0701/view' },
-  { id:'money-and-the-heart', title:'Money and the Heart', editionId:'2026-07', category:'family', pages:7, order:2, scene:'field',
-    deck:'What your budget knows about your beliefs.',
-    description:'A candid look at stewardship in the household, without guilt or formulas.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0702/view' },
-  { id:'the-gift-of-time', title:'The Gift of Time', editionId:'2026-07', category:'christian-living', pages:5, order:3, scene:'tree',
-    deck:'The most costly thing you can give away.',
-    description:'Why attention is the currency that matters most to the people around you.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0703/view' },
-  { id:'a-cheerful-giver', title:'A Cheerful Giver', editionId:'2026-07', category:'church', pages:4, order:4, scene:'valley',
-    deck:'Giving that is neither reluctant nor performative.',
-    description:'On generosity as a settled disposition rather than an occasional gesture.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0704/view' },
-
-  { id:'rooted-in-christ', title:'Rooted in Christ', editionId:'2026-06', category:'faith', pages:7, order:1, scene:'tree',
-    deck:'What grows underground decides what stands above it.',
-    description:'The editorial essay on depth, patience and the roots nobody sees.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0601/view' },
-  { id:'unhurried', title:'Unhurried', editionId:'2026-06', category:'christian-living', pages:5, order:2, scene:'forest',
-    deck:'Growth keeps a slower calendar than we do.',
-    description:'On resisting the pressure to rush seasons that are meant to be long.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0602/view' },
-  { id:'the-word-that-holds', title:'The Word That Holds', editionId:'2026-06', category:'faith', pages:6, order:3, scene:'peaks',
-    deck:'Scripture as ballast, not decoration.',
-    description:'How committed reading of the Bible steadies a life under pressure.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0603/view' },
-  { id:'planted-by-water', title:'Planted by Water', editionId:'2026-06', category:'youth', pages:5, order:4, scene:'water',
-    deck:'A young life placed where it can drink deeply.',
-    description:'Counsel for students choosing friendships, habits and a church to grow in.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0604/view' },
-
-  { id:'strength-for-today', title:'Strength for Today', editionId:'2026-05', category:'faith', pages:6, order:1, scene:'peaks',
-    deck:'Grace arrives daily, in the measure required.',
-    description:'For the tired: why tomorrow is not your assignment yet.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0501/view' },
-  { id:'honest-prayer', title:'Honest Prayer', editionId:'2026-05', category:'christian-living', pages:5, order:2, scene:'valley',
-    deck:'God is not offended by the truth of how you feel.',
-    description:'On praying the psalms of complaint, and why they were kept.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0502/view' },
-  { id:'carrying-one-another', title:'Carrying One Another', editionId:'2026-05', category:'church', pages:5, order:3, scene:'forest',
-    deck:'The burden is lighter when it is shared out loud.',
-    description:'How a congregation learns to notice, ask and actually help.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0503/view' },
-
-  { id:'living-the-word', title:'Living the Word', editionId:'2026-04', category:'faith', pages:7, order:1, scene:'forest',
-    deck:'Reading Scripture until it starts reading you.',
-    description:'The editorial essay on study that changes conduct, not only vocabulary.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0401/view' },
-  { id:'how-to-study', title:'How to Study a Passage', editionId:'2026-04', category:'christian-living', pages:6, order:2, scene:'field',
-    deck:'A method simple enough to keep using.',
-    description:'Four questions that turn a familiar chapter into fresh counsel.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0402/view' },
-  { id:'family-devotions', title:'Family Devotions That Last', editionId:'2026-04', category:'family', pages:5, order:3, scene:'tree',
-    deck:'Ten honest minutes beat an hour you never start.',
-    description:'A realistic pattern for households with young children and full evenings.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0403/view' },
-
-  { id:'a-renewed-mind', title:'A Renewed Mind', editionId:'2026-03', category:'faith', pages:6, order:1, scene:'field',
-    deck:'Attention is the ground where character is formed.',
-    description:'On guarding the mind in an age built to capture it.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0301/view' },
-  { id:'anxious-for-nothing', title:'Anxious for Nothing', editionId:'2026-03', category:'youth', pages:5, order:2, scene:'water',
-    deck:'Peace that is practised, not merely wished for.',
-    description:'A pastoral word for young people living under constant comparison.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0302/view' },
-  { id:'what-you-scroll', title:'What You Scroll Becomes You', editionId:'2026-03', category:'society', pages:5, order:3, scene:'peaks',
-    deck:'A small daily diet, compounding quietly.',
-    description:'On feeds, formation and choosing what gets repeated in your head.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0303/view' },
-  { id:'light-in-the-world', title:'Light in the World', editionId:'2026-02', category:'society', pages:6, order:1, scene:'water',
-    deck:'Witness that does not need a stage.',
-    description:'The editorial essay on quiet, credible presence among neighbours and colleagues.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0201/view' },
-  { id:'faith-at-work', title:'Faith at Work', editionId:'2026-02', category:'christian-living', pages:5, order:2, scene:'peaks',
-    deck:'Integrity is noticed before it is discussed.',
-    description:'Handling pressure, honesty and ambition in the workplace.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0202/view' },
-  { id:'a-welcoming-church', title:'A Welcoming Church', editionId:'2026-02', category:'church', pages:5, order:3, scene:'forest',
-    deck:'Hospitality is the first sermon a visitor hears.',
-    description:'Small changes that make a stranger feel expected rather than tolerated.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_0203/view' },
-
-  { id:'hope-for-the-weary', title:'Hope for the Weary', editionId:'2025-12', category:'faith', pages:6, order:1, scene:'peaks',
-    deck:'An Advent word for those carrying more than they say.',
-    description:'On waiting through December with honesty rather than performance.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2512_01/view' },
-  { id:'a-table-with-room', title:'A Table With Room', editionId:'2025-12', category:'family', pages:5, order:2, scene:'tree',
-    deck:'Christmas as an invitation rather than a production.',
-    description:'Making space at the table for the people nobody else invited.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2512_02/view' },
-
-  { id:'household-of-faith', title:'The Household of Faith', editionId:'2025-10', category:'church', pages:6, order:1, scene:'tree',
-    deck:'A church that behaves like a family.',
-    description:'On belonging, responsibility and the difference between an audience and a household.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2510_01/view' },
-  { id:'honouring-parents', title:'Honouring Parents in Adulthood', editionId:'2025-10', category:'family', pages:5, order:2, scene:'valley',
-    deck:'The command does not expire when you leave home.',
-    description:'Caring for ageing parents with patience, boundaries and grace.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2510_02/view' },
-
-  { id:'set-your-mind-above', title:'Set Your Mind Above', editionId:'2025-08', category:'faith', pages:6, order:1, scene:'valley',
-    deck:'Perspective is a discipline before it is a feeling.',
-    description:'Lifting your eyes when circumstances insist you keep them down.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2508_01/view' },
-  { id:'contentment', title:'The Long Work of Contentment', editionId:'2025-08', category:'christian-living', pages:5, order:2, scene:'field',
-    deck:'Learned, Paul said — never simply arrived at.',
-    description:'Why contentment is a skill acquired slowly, in both plenty and want.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2508_02/view' },
-
-  { id:'salt-and-light', title:'Salt and Light', editionId:'2025-06', category:'youth', pages:5, order:1, scene:'forest',
-    deck:'Influence that seasons rather than shouts.',
-    description:'For students on integrity, friendship and holding convictions kindly.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2506_01/view' },
-  { id:'friendship-that-forms', title:'Friendship That Forms You', editionId:'2025-06', category:'youth', pages:4, order:2, scene:'water',
-    deck:'You become the room you spend time in.',
-    description:'Choosing friends who make faith easier to keep, not harder.',
-    driveUrl:'https://drive.google.com/file/d/REPLACE_MAT_2506_02/view' }
-];
+/* The six drawn scenes, handed out in turn so no two neighbours match. */
+const SCENES = ['peaks', 'valley', 'field', 'forest', 'water', 'tree'];
 
 /* ==================================================================
    END OF CONTENT — the code below renders the site.
@@ -1005,20 +799,172 @@ const MATERIALS = [
 /* ---- small helpers ---------------------------------------------- */
 const $  = (s,c)=> (c||document).querySelector(s);
 const $$ = (s,c)=> [...(c||document).querySelectorAll(s)];
-const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const hash = s => { let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; };
 const rng = seed => { let s = (seed>>>0) || 7; return () => { s^=s<<13; s^=s>>>17; s^=s<<5; return ((s>>>0)%100000)/100000; }; };
+const slug = s => String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60) || 'item';
+const key  = s => String(s).toLowerCase().replace(/[^a-z0-9]/g,'');
 
-const catOf   = id => CATEGORIES.find(c=>c.id===id) || {id:'',name:'Higherway',blurb:''};
-const edOf    = id => EDITIONS.find(e=>e.id===id);
-const matOf   = id => MATERIALS.find(m=>m.id===id);
-const edLabel = e => e ? (e.month + ' ' + e.year) : '';
-const matsIn  = id => MATERIALS.filter(m=>m.editionId===id).sort((a,b)=>(a.order||0)-(b.order||0));
-/* EDITIONS are authored newest first, so array order is chronological order. */
-const recentMaterials = n => EDITIONS.flatMap(e => matsIn(e.id)).slice(0, n);
-const countIn = id => MATERIALS.filter(m=>m.category===id).length;
-const pagesIn = id => matsIn(id).reduce((t,m)=>t+(m.pages||0),0);
+/* ==================================================================
+   the spreadsheet
+   ================================================================== */
 
+/* Filled in by loadSheet(). Every view reads these, so they are emptied
+   and refilled in place rather than reassigned. */
+const MATERIALS  = [];
+const CATEGORIES = [];
+
+const CACHE_KEY = 'higherway.sheet.v1';
+
+function sheetCsvUrl(){
+  const base = 'https://docs.google.com/spreadsheets/d/' + SITE.sheetId + '/gviz/tq?tqx=out:csv';
+  return base + (SITE.sheetTab ? '&sheet=' + encodeURIComponent(SITE.sheetTab) : '') + '&_=' + Date.now();
+}
+
+/* A CSV reader that honours quoted fields, escaped quotes and newlines
+   inside cells — all of which Google Sheets will happily produce. */
+function parseCSV(text){
+  const rows = []; let row = [], field = '', quoted = false;
+  for(let i = 0; i < text.length; i++){
+    const c = text[i];
+    if(quoted){
+      if(c === '"'){ if(text[i+1] === '"'){ field += '"'; i++; } else quoted = false; }
+      else field += c;
+    }
+    else if(c === '"') quoted = true;
+    else if(c === ','){ row.push(field); field = ''; }
+    else if(c === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+    else if(c !== '\r') field += c;
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+
+/* Finds the header row and maps each column the site wants onto its index. */
+function mapColumns(rows){
+  for(let r = 0; r < Math.min(rows.length, 10); r++){
+    const heads = rows[r].map(key);
+    const idx = {};
+    for(const field in COLUMNS){
+      const i = heads.findIndex(h => h && COLUMNS[field].indexOf(h) > -1);
+      if(i > -1) idx[field] = i;
+    }
+    if(idx.title != null && idx.link != null) return { header: r, idx: idx };
+  }
+  return null;
+}
+
+const isPlaceholderTopic = t => PLACEHOLDER_TOPICS.indexOf(key(t)) > -1;
+
+function splitTopics(cell){
+  return String(cell || '')
+    .split(/[,;|\/]/)
+    .map(t => t.trim().replace(/\s+/g, ' '))
+    .filter(t => t && !isPlaceholderTopic(t));
+}
+
+/* Drive links are used exactly as the sheet gives them. The only thing
+   checked is that the cell really holds one. */
+const isLink = u => /^https?:\/\//i.test(String(u || '').trim());
+
+function buildFromRows(rows){
+  const map = mapColumns(rows);
+  if(!map) throw new Error('The spreadsheet needs a header row with a Title column and a Drive Link column.');
+
+  const idx = map.idx;
+  const cell = (row, field) => idx[field] == null ? '' : String(row[idx[field]] || '').trim();
+
+  const mats = [];
+  const seen = Object.create(null);
+
+  for(let r = map.header + 1; r < rows.length; r++){
+    const row = rows[r];
+    const title = cell(row, 'title');
+    const link  = cell(row, 'link');
+    if(!title || !isLink(link)) continue;
+
+    /* Two materials may share a title, so ids are made unique by counting. */
+    const base = slug(title);
+    let id = base, n = 1;
+    while(seen[id]) id = base + '-' + (++n);
+    seen[id] = 1;
+
+    const topics = splitTopics(cell(row, 'topics'));
+    mats.push({
+      id:          id,
+      title:       title,
+      author:      cell(row, 'author'),
+      description: cell(row, 'summary'),
+      driveUrl:    link,
+      topicNames:  topics.length ? topics : [UNTAGGED.name],
+      topics:      topics.length ? topics.map(slug) : [UNTAGGED.id],
+      category:    topics.length ? slug(topics[0]) : UNTAGGED.id,
+      scene:       SCENES[mats.length % SCENES.length],
+      row:         mats.length
+    });
+  }
+
+  if(!mats.length) throw new Error('The spreadsheet was read, but no row had both a title and a Drive link.');
+
+  /* Topics become the library filters, most used first, so the chip row
+     opens on the shelves that actually hold something. */
+  const counts = Object.create(null), names = Object.create(null);
+  mats.forEach(m => m.topics.forEach((id, i) => {
+    counts[id] = (counts[id] || 0) + 1;
+    if(!names[id]) names[id] = m.topicNames[i];
+  }));
+
+  const cats = Object.keys(counts)
+    .filter(id => id !== UNTAGGED.id)
+    .sort((a,b) => counts[b] - counts[a] || names[a].localeCompare(names[b]))
+    .map(id => ({ id: id, name: names[id], blurb: TOPIC_BLURBS[id] || '', count: counts[id] }));
+
+  /* Anything still untagged is kept reachable, and kept last. */
+  if(counts[UNTAGGED.id])
+    cats.push({ id: UNTAGGED.id, name: UNTAGGED.name, blurb: '', count: counts[UNTAGGED.id] });
+
+  MATERIALS.length  = 0; MATERIALS.push.apply(MATERIALS, mats);
+  CATEGORIES.length = 0; CATEGORIES.push.apply(CATEGORIES, cats);
+}
+
+async function fetchSheet(){
+  /* Browsers refuse to fetch anything from a page opened straight off the
+     disk, so the site has to be served over http:// or https://. */
+  if(location.protocol === 'file:')
+    throw new Error('This page was opened as a file on your computer, and browsers will not let a file read the spreadsheet. Put the site on a web address — any host will do — and the library fills itself in.');
+
+  let res;
+  try{
+    res = await fetch(sheetCsvUrl(), { credentials:'omit', cache:'no-store' });
+  }catch(e){
+    throw new Error('The spreadsheet could not be reached. Check the connection, and that the sheet is shared with anyone who has the link.');
+  }
+  if(!res.ok) throw new Error('The spreadsheet could not be reached (error ' + res.status + '). Check that it is shared with anyone who has the link.');
+  const text = await res.text();
+  if(/^\s*</.test(text)) throw new Error('Google returned a sign-in page instead of the sheet. Set its sharing to "Anyone with the link".');
+  return text;
+}
+
+function readCache(){  try{ return localStorage.getItem(CACHE_KEY) || ''; }catch(e){ return ''; } }
+function writeCache(t){ try{ localStorage.setItem(CACHE_KEY, t); }catch(e){} }
+
+/* Loads the sheet. A copy kept from the last visit draws the site at once;
+   the fresh copy replaces it the moment it arrives, so a material added to
+   the spreadsheet appears without anything being rebuilt. */
+async function loadSheet(onReady){
+  let drawn = false;
+  const cached = readCache();
+  if(cached){
+    try{ buildFromRows(parseCSV(cached)); onReady(); drawn = true; }catch(e){}
+  }
+  try{
+    const text = await fetchSheet();
+    if(text !== cached || !drawn){ buildFromRows(parseCSV(text)); onReady(); drawn = true; }
+    writeCache(text);
+  }catch(err){
+    if(!drawn) throw err;
+  }
+}
 /* ==================================================================
    drawn artwork — every cover, plate and page is generated here
    ================================================================== */
@@ -1154,92 +1100,49 @@ const ARW = '<svg class="ico arw" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6
 const DRIVE = '<svg class="ico" viewBox="0 0 24 24" fill="none"><path d="M8.6 3h6.8l5.6 9.7-3.4 5.9H5.4L2 12.7 8.6 3Z" stroke="currentColor" stroke-width="1.3"/><path d="M8.6 3 2 12.7h6.8L15.4 3H8.6Z" fill="#D8B25F" stroke="none"/></svg>';
 const EXT = '<svg class="ico" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8.5 8.5M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 
-function coverHTML(e, cls){
-  const artHTML = e.cover
-    ? '<img src="'+esc(e.cover)+'" alt="Cover of the '+esc(edLabel(e))+' edition, '+esc(e.title)+'" loading="lazy">'
-    : art(e.scene, e.id);
+
+/* ---- reading the loaded data --------------------------------------- */
+const catOf = id => CATEGORIES.find(c => c.id === id) || { id:'', name:'Higherway', blurb:'', count:0 };
+const matOf = id => MATERIALS.find(m => m.id === id);
+const countIn = id => CATEGORIES.reduce((n,c) => c.id === id ? c.count : n, 0);
+const topicOf = m => (m.topicNames && m.topicNames[0]) || UNTAGGED.name;
+/* The sheet is read top to bottom, so the last rows are the newest additions. */
+const recentMaterials = n => MATERIALS.slice(-n).reverse();
+const haystack = m => (m.title + ' ' + m.description + ' ' + m.author + ' ' + m.topicNames.join(' ')).toLowerCase();
+
+/* Opening a material means opening its Google Drive file, nothing else. */
+const driveAttrs = m => 'href="' + esc(m.driveUrl) + '" target="_blank" rel="noopener"';
+
+function coverHTML(m, cls){
+  const artHTML = m.cover
+    ? '<img src="'+esc(m.cover)+'" alt="Cover of '+esc(m.title)+'" loading="lazy">'
+    : art(m.scene, m.id);
   return '<div class="cover '+(cls||'')+'">'
     + '<div class="cover__art">'+artHTML+'</div><div class="cover__veil"></div>'
     + '<div class="cover__type">'
       + '<div class="cover__mark">'+ARC+'<span class="cover__wm">Higherway</span></div>'
-      + '<div class="cover__date">'+esc(edLabel(e))+'</div>'
-      + '<div class="cover__ttl">'+esc(e.title)+'</div>'
-      + '<div class="cover__foot"><div class="r"></div><div class="t">'+esc(e.strapline||SITE.tagline)+'</div></div>'
+      + '<div class="cover__date">'+esc(topicOf(m))+'</div>'
+      + '<div class="cover__ttl">'+esc(m.title)+'</div>'
+      + '<div class="cover__foot"><div class="r"></div><div class="t">'+esc(m.author || SITE.tagline)+'</div></div>'
     + '</div></div>';
 }
 
 function plateHTML(m){
-  const e = edOf(m.editionId);
   const artHTML = m.cover
     ? '<img src="'+esc(m.cover)+'" alt="" loading="lazy">'
-    : art(m.scene || (e && e.scene) || 'peaks', m.id);
+    : art(m.scene || 'peaks', m.id);
   return '<div class="plate">'
     + '<div class="plate__art">'+artHTML+'</div><div class="plate__veil"></div>'
     + '<div class="plate__wm">'+ARC+'<span>Higherway</span></div>'
-    + '<div class="plate__cat">'+esc(catOf(m.category).name)+'</div></div>';
-}
-
-/* ---- the drawn scanned page -------------------------------------- */
-const PROSE = [
-  'There is a kind of trust that only grows in the waiting, when the outcome is still hidden and the heart has nothing left to hold but a promise.',
-  'Scripture rarely hurries. Its long silences are not empty; they are the seasons in which character is quietly assembled.',
-  'We are formed less by the decisions we agonise over than by the small repeated habits nobody applauds.',
-  'The question is not whether God is at work, but whether we are willing to keep walking while the work is still unfinished.',
-  'Faithfulness looks unremarkable from the outside. It is the same steps, taken again, on a morning that feels like every other morning.',
-  'A settled life is not one free of pressure. It is one whose roots have gone deep enough to hold when the pressure comes.',
-  'Consider the households around you: ordinary people, carrying ordinary weight, kept by a grace that arrives daily and never early.',
-  'Prayer is not a performance to be perfected. It is a conversation to be continued, however clumsily it begins.',
-  'What we give our attention to, we slowly become. This is not a threat but an invitation to choose well.',
-  'The path narrows before it opens. Those who have walked it will tell you the narrow stretch was where they learned to depend.'
-];
-function prose(seed, n){
-  const r = rng(hash(seed)); const out = [];
-  for(let i=0;i<n;i++) out.push(PROSE[Math.floor(r()*PROSE.length)]);
-  return out;
-}
-
-function pageHTML(m, i){
-  const e = edOf(m.editionId);
-  if(m.previews && m.previews[i])
-    return '<div class="page"><img src="'+esc(m.previews[i])+'" alt="Page '+(i+1)+' of '+esc(m.title)+'" loading="lazy"></div>';
-  const first = i===0;
-  const seed = m.id + ':' + i;
-  const para = prose(seed, first ? 4 : 6);
-  let bodyHTML = para.map((t,k) =>
-    '<p>' + ((first && k===0) ? '<span class="dc">'+esc(t[0])+'</span>'+esc(t.slice(1)) : esc(t)) + '</p>'
-  ).join('');
-  const band = first
-    ? '<div class="page__band">' + (m.cover ? '<img src="'+esc(m.cover)+'" alt="">' : art(m.scene || (e&&e.scene) || 'peaks', m.id+'band')) + '</div>'
-    : '';
-  return '<div class="page"><div class="page__in">'
-    + '<div class="page__rh"><span>Higherway</span><span>'+esc(edLabel(e))+'</span></div>'
-    + (first
-        ? '<div class="page__cat">'+esc(catOf(m.category).name)+'</div>'
-          + '<h3 class="page__h">'+esc(m.title)+'</h3>'
-          + (m.deck ? '<p class="page__deck">'+esc(m.deck)+'</p>' : '')
-          + band
-          + '<div class="page__body">'+bodyHTML+'</div>'
-        : '<div class="page__body page__body--cols" style="margin-top:6cqw">'+bodyHTML+'</div>')
-    + '<div class="page__pn">'+(i+1)+'</div>'
-    + '</div></div>';
+    + '<div class="plate__cat">'+esc(topicOf(m))+'</div></div>';
 }
 
 /* ---- cards -------------------------------------------------------- */
 function materialCard(m){
-  const e = edOf(m.editionId);
-  return '<a class="mcard" href="#/material/'+esc(m.id)+'">'
+  return '<a class="mcard" '+driveAttrs(m)+'>'
     + '<div class="mcard__fig">'+plateHTML(m)+'</div>'
     + '<h3 class="mcard__t">'+esc(m.title)+'</h3>'
-    + '<div class="mcard__m"><span>'+esc(edLabel(e))+'</span><i class="dot"></i><span>'+m.pages+' pages</span></div>'
-    + '</a>';
-}
-function editionCard(e){
-  const n = matsIn(e.id).length;
-  return '<a class="ecard" href="#/edition/'+esc(e.id)+'">'
-    + coverHTML(e)
-    + '<h3 class="ecard__t">'+esc(e.title)+'</h3>'
-    + '<div class="ecard__d">'+esc(edLabel(e))+'</div>'
-    + '<div class="ecard__m">'+n+' material'+(n===1?'':'s')+' · '+e.pages+' pages</div>'
+    + '<div class="mcard__m"><span>'+esc(m.author || topicOf(m))+'</span><i class="dot"></i><span>Google Drive</span></div>'
     + '</a>';
 }
 
@@ -1247,18 +1150,18 @@ function editionCard(e){
    views
    ================================================================== */
 function viewHome(){
-  const latest = EDITIONS[0];
-  const n = matsIn(latest.id).length;
+  const latest = MATERIALS[MATERIALS.length - 1];
+  const tiles  = CATEGORIES.filter(c => c.id !== UNTAGGED.id).slice(0, 12);
   return ''
   + '<section class="hero">'
     + '<div class="hero__scene">'+heroArt()+'</div>'
     + '<div class="wrap hero__in">'
       + '<p class="eyebrow eyebrow--light">Faith. Guidance. A brighter tomorrow.</p>'
       + '<h1 class="display d1">Wisdom for a more faithful life.</h1>'
-      + '<p class="lede">Higherway is a collection of inspired teachings, practical insights and biblical perspectives to help you grow in faith and live a purposeful life. Every edition is free to read and free to download.</p>'
+      + '<p class="lede">Higherway is a collection of inspired teachings, practical insights and biblical perspectives to help you grow in faith and live a purposeful life. Every material is free to read and free to download.</p>'
       + '<div class="hero__cta">'
-        + '<a class="btn btn--light btn--lg" href="#/edition/'+latest.id+'">View the latest edition '+ARW+'</a>'
-        + '<a class="btn btn--onDark btn--lg" href="#/library">Browse the library</a>'
+        + '<a class="btn btn--light btn--lg" href="#/library">Browse the library '+ARW+'</a>'
+        + '<a class="btn btn--onDark btn--lg" href="#/about">About Higherway</a>'
       + '</div>'
       + '<p class="hero__rail">A brighter tomorrow always</p>'
     + '</div>'
@@ -1267,18 +1170,18 @@ function viewHome(){
 
   + '<section class="sec sec--paper2"><div class="wrap latest">'
     + '<div class="rv">'
-      + '<p class="eyebrow">Latest edition</p>'
-      + '<h2 class="display d2" style="margin-top:14px">'+esc(edLabel(latest))+'</h2>'
-      + '<p class="display d3" style="margin-top:6px;color:var(--taupe)">'+esc(latest.title)+'</p>'
-      + '<p class="lede" style="margin-top:20px">'+esc(latest.description)+'</p>'
+      + '<p class="eyebrow">Latest addition</p>'
+      + '<h2 class="display d2" style="margin-top:14px">'+esc(latest.title)+'</h2>'
+      + '<p class="display d3" style="margin-top:6px;color:var(--taupe)">'+esc(topicOf(latest))+'</p>'
+      + '<p class="lede" style="margin-top:20px">'+esc(latest.description || 'The most recent material added to the Higherway collection. Open it to read the full document on Google Drive.')+'</p>'
       + '<div class="stats">'
-        + '<div><div class="n">'+n+'</div><div class="l">Materials</div></div>'
-        + '<div><div class="n">'+latest.pages+'</div><div class="l">Pages</div></div>'
+        + '<div><div class="n">'+MATERIALS.length+'</div><div class="l">Materials</div></div>'
+        + '<div><div class="n">'+CATEGORIES.filter(c=>c.id!==UNTAGGED.id).length+'</div><div class="l">Topics</div></div>'
         + '<div><div class="n">Free</div><div class="l">To download</div></div>'
       + '</div>'
-      + '<div style="margin-top:30px"><a class="btn btn--lg" href="#/edition/'+latest.id+'">View this edition '+ARW+'</a></div>'
+      + '<div style="margin-top:30px"><a class="btn btn--lg" '+driveAttrs(latest)+'>'+DRIVE+' Open on Google Drive '+EXT+'</a></div>'
     + '</div>'
-    + '<a class="latest__cover rv" data-d="1" href="#/edition/'+latest.id+'" aria-label="Open the '+esc(edLabel(latest))+' edition">'+coverHTML(latest)+'</a>'
+    + '<a class="latest__cover rv" data-d="1" '+driveAttrs(latest)+' aria-label="Open '+esc(latest.title)+' on Google Drive">'+coverHTML(latest)+'</a>'
   + '</div></section>'
 
   + '<section class="sec"><div class="wrap">'
@@ -1294,60 +1197,59 @@ function viewHome(){
   + '</div></section>'
 
   + '<section class="sec sec--tight"><div class="wrap">'
-    + '<div class="sechead rv"><div><p class="eyebrow">Browse by category</p><h2 class="display d3 sechead__t">Find what you need</h2></div></div>'
+    + '<div class="sechead rv"><div><p class="eyebrow">Browse by topic</p><h2 class="display d3 sechead__t">Find what you need</h2></div>'
+      + '<div class="sechead__aside"><a class="tlink" href="#/library">Every topic '+ARW+'</a></div></div>'
     + '<div class="grid-c rv" data-d="1">'
-      + CATEGORIES.map((c,i)=>'<a class="ctile" href="#/library?cat='+c.id+'">'
+      + tiles.map((c,i)=>'<a class="ctile" href="#/library?cat='+esc(c.id)+'">'
         + '<div class="ctile__top"><span class="ctile__n">'+String(i+1).padStart(2,'0')+'</span>'
-        + '<span class="small">'+countIn(c.id)+'</span></div>'
+        + '<span class="small">'+c.count+'</span></div>'
         + '<div class="ctile__t">'+esc(c.name)+'</div>'
-        + '<p class="ctile__d">'+esc(c.blurb)+'</p></a>').join('')
+        + (c.blurb ? '<p class="ctile__d">'+esc(c.blurb)+'</p>' : '')+'</a>').join('')
     + '</div>'
   + '</div></section>'
 
   + '<section class="band"><div class="wrap band__in">'
     + '<div><h2 class="display d2">Same truths. A brighter tomorrow.</h2></div>'
     + '<div>'
-      + '<p>Explore our growing collection of materials and let Higherway be part of your journey in faith. Nothing to sign up for — open an edition, read a few pages, and take the PDF with you.</p>'
-      + '<div class="band__cta"><a class="btn btn--light" href="#/editions">See every edition '+ARW+'</a>'
+      + '<p>Explore our growing collection of materials and let Higherway be part of your journey in faith. Nothing to sign up for — pick a topic, open a material, and take the file with you.</p>'
+      + '<div class="band__cta"><a class="btn btn--light" href="#/library">Browse every material '+ARW+'</a>'
       + '<a class="circ" href="#/library" aria-label="Explore the library"><svg class="ico" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div>'
     + '</div>'
   + '</div></section>';
 }
 
 /* ---- library ------------------------------------------------------ */
-const LIB = { q:'', cat:'all', ed:'all', sort:'newest' };
+const LIB = { q:'', cat:'all', sort:'recent', shown:PAGE_SIZE };
 
 function libMatches(){
   const q = LIB.q.trim().toLowerCase();
-  let list = MATERIALS.map((m,i)=>({ m, i }));
-  if(LIB.cat !== 'all') list = list.filter(x => x.m.category === LIB.cat);
-  if(LIB.ed  !== 'all') list = list.filter(x => x.m.editionId === LIB.ed);
-  if(q) list = list.filter(x => {
-    const e = edOf(x.m.editionId);
-    return (x.m.title+' '+x.m.description+' '+(x.m.deck||'')+' '+catOf(x.m.category).name+' '+edLabel(e)+' '+(e?e.title:'')).toLowerCase().includes(q);
-  });
-  const rank = m => edIndexOf(m.editionId)*100 + (m.order||0);
-  if(LIB.sort === 'newest')      list.sort((a,b)=> rank(a.m) - rank(b.m));
-  else if(LIB.sort === 'oldest') list.sort((a,b)=> rank(b.m) - rank(a.m));
-  else if(LIB.sort === 'title')  list.sort((a,b)=> a.m.title.localeCompare(b.m.title));
-  else if(LIB.sort === 'short')  list.sort((a,b)=> a.m.pages - b.m.pages);
-  return list.map(x => x.m);
+  let list = MATERIALS.slice();
+  if(LIB.cat !== 'all') list = list.filter(m => m.topics.indexOf(LIB.cat) > -1);
+  if(q) list = list.filter(m => haystack(m).includes(q));
+  if(LIB.sort === 'recent')      list.sort((a,b) => b.row - a.row);
+  else if(LIB.sort === 'oldest') list.sort((a,b) => a.row - b.row);
+  else if(LIB.sort === 'title')  list.sort((a,b) => a.title.localeCompare(b.title));
+  else if(LIB.sort === 'ztitle') list.sort((a,b) => b.title.localeCompare(a.title));
+  return list;
 }
-const edIndexOf = id => { const i = EDITIONS.findIndex(e=>e.id===id); return i<0 ? 999 : i; };
 
 function libResultsHTML(){
   const list = libMatches();
   if(!list.length) return '<div class="empty"><h3>Nothing matches that yet</h3>'
     + '<p>Try a different word, or clear the filters to see the whole collection.</p>'
     + '<button class="btn" id="libReset">Show all materials</button></div>';
-  return '<div class="grid-m">'+list.map(materialCard).join('')+'</div>';
+  const page = list.slice(0, LIB.shown);
+  const left = list.length - page.length;
+  return '<div class="grid-m">'+page.map(materialCard).join('')+'</div>'
+    + (left ? '<div id="libMoreWrap" style="display:flex;justify-content:center;margin-top:clamp(30px,3.4vw,46px)">'
+        + '<button class="btn btn--lg" id="libMore">Show more materials <span class="small" style="opacity:.7">'+left+' left</span></button>'
+      + '</div>' : '');
 }
 function libCountHTML(){
   const n = libMatches().length;
   const parts = [];
-  if(LIB.cat!=='all') parts.push(catOf(LIB.cat).name);
-  if(LIB.ed!=='all')  parts.push(edLabel(edOf(LIB.ed)));
-  if(LIB.q.trim())    parts.push('“'+esc(LIB.q.trim())+'”');
+  if(LIB.cat !== 'all') parts.push(catOf(LIB.cat).name);
+  if(LIB.q.trim())      parts.push('“'+LIB.q.trim()+'”');
   return '<b>'+n+'</b> material'+(n===1?'':'s')+(parts.length ? ' in ' + esc(parts.join(' · ')) : ' in the collection');
 }
 
@@ -1356,25 +1258,22 @@ function viewLibrary(){
   + '<div class="wrap pagehead">'
     + '<p class="eyebrow">Library</p>'
     + '<h1 class="display d2">Explore the Higherway library</h1>'
-    + '<p class="lede">Browse by edition or category to find what you need. Preview any material, then download the PDF from Google Drive.</p>'
+    + '<p class="lede">Every material published by Higherway, filed by topic. Pick a shelf or search for a subject, then open the file on Google Drive.</p>'
     + '<div class="search">'
       + '<svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>'
-      + '<input id="libQ" type="search" placeholder="Search materials, topics or editions" value="'+esc(LIB.q)+'" autocomplete="off">'
+      + '<input id="libQ" type="search" placeholder="Search materials or topics" value="'+esc(LIB.q)+'" autocomplete="off">'
       + (LIB.q ? '<button class="search__clear" id="libClear" aria-label="Clear search"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>' : '')
     + '</div>'
-    + '<div class="filters" role="group" aria-label="Filter by category">'
+    + '<div class="filters" role="group" aria-label="Filter by topic">'
       + '<button class="chip'+(LIB.cat==='all'?' is-on':'')+'" data-cat="all">All <span class="c">'+MATERIALS.length+'</span></button>'
-      + CATEGORIES.map(c=>'<button class="chip'+(LIB.cat===c.id?' is-on':'')+'" data-cat="'+c.id+'">'+esc(c.name)+' <span class="c">'+countIn(c.id)+'</span></button>').join('')
+      + CATEGORIES.map(c=>'<button class="chip'+(LIB.cat===c.id?' is-on':'')+'" data-cat="'+esc(c.id)+'">'+esc(c.name)+' <span class="c">'+c.count+'</span></button>').join('')
     + '</div>'
     + '<div class="toolbar">'
       + '<p class="count" id="libCount">'+libCountHTML()+'</p>'
       + '<div class="selects">'
-        + '<div class="sel"><select id="libEd" aria-label="Filter by edition"><option value="all">All editions</option>'
-          + EDITIONS.map(e=>'<option value="'+e.id+'"'+(LIB.ed===e.id?' selected':'')+'>'+esc(edLabel(e))+' — '+esc(e.title)+'</option>').join('')
-          + '</select><svg class="ico" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>'
         + '<div class="sel"><select id="libSort" aria-label="Sort materials">'
-          + '<option value="newest">Newest first</option><option value="oldest">Oldest first</option>'
-          + '<option value="title">A–Z</option><option value="short">Shortest first</option>'
+          + '<option value="recent">Recently added</option><option value="oldest">Oldest first</option>'
+          + '<option value="title">A–Z</option><option value="ztitle">Z–A</option>'
           + '</select><svg class="ico" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></div>'
       + '</div>'
     + '</div>'
@@ -1387,147 +1286,58 @@ function libRefresh(){
   const c = $('#libCount');   if(c) c.innerHTML = libCountHTML();
   $$('.chip[data-cat]').forEach(b => b.classList.toggle('is-on', b.dataset.cat === LIB.cat));
   const qs = new URLSearchParams();
-  if(LIB.cat!=='all') qs.set('cat', LIB.cat);
-  if(LIB.ed !=='all') qs.set('ed',  LIB.ed);
-  if(LIB.q.trim())    qs.set('q',   LIB.q.trim());
-  if(LIB.sort!=='newest') qs.set('sort', LIB.sort);
+  if(LIB.cat !== 'all')    qs.set('cat', LIB.cat);
+  if(LIB.q.trim())         qs.set('q', LIB.q.trim());
+  if(LIB.sort !== 'recent')qs.set('sort', LIB.sort);
   const str = qs.toString();
   history.replaceState(null, '', '#/library' + (str ? '?'+str : ''));
+  bindMore();
   observe();
 }
 
-/* ---- editions archive --------------------------------------------- */
-function viewEditions(){
-  const years = [...new Set(EDITIONS.map(e=>e.year))].sort((a,b)=>b-a);
-  return ''
-  + '<div class="wrap pagehead">'
-    + '<p class="eyebrow">Editions</p>'
-    + '<h1 class="display d2">Every edition, from the first to the latest</h1>'
-    + '<p class="lede">Higherway is published as a series of editions. Each one gathers a set of materials around a single theme. Open an edition to read its contents or download it whole.</p>'
-  + '</div>'
-  + '<div class="wrap" style="padding-bottom:clamp(48px,6vw,88px)">'
-    + years.map(y=>{
-        const list = EDITIONS.filter(e=>e.year===y);
-        return '<section class="year rv">'
-          + '<div><h2 class="year__n">'+y+'</h2><p class="year__c">'+list.length+' edition'+(list.length===1?'':'s')+'</p></div>'
-          + '<div class="grid-e">'+list.map(editionCard).join('')+'</div>'
-        + '</section>';
-      }).join('')
-  + '</div>';
-}
-
-/* ---- edition detail ------------------------------------------------ */
-function viewEdition(id){
-  const e = edOf(id);
-  if(!e) return viewMissing('That edition is not in the archive.');
-  const list = matsIn(e.id);
-  return ''
-  + '<div class="wrap"><a class="back" href="#/editions"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> Back to editions</a></div>'
-  + '<div class="wrap detail">'
-    + '<div class="detail__sticky detail__cover">'+coverHTML(e)+'</div>'
-    + '<div>'
-      + '<p class="eyebrow eyebrow--gold">Edition</p>'
-      + '<h1 class="display d2" style="margin-top:12px">'+esc(edLabel(e))+'</h1>'
-      + '<p class="display d3" style="margin-top:4px;color:var(--taupe)">'+esc(e.title)+'</p>'
-      + '<div class="detail__meta">'
-        + '<span><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>'+list.length+' materials</span>'
-        + '<span><svg class="ico" viewBox="0 0 24 24"><path d="M6 4h9l3 3v13H6z"/><path d="M15 4v3h3"/></svg>'+e.pages+' pages</span>'
-        + '<span><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>'+esc(edLabel(e))+'</span>'
-      + '</div>'
-      + '<p class="lede detail__desc">'+esc(e.description)+'</p>'
-      + '<div class="detail__act">'
-        + '<a class="btn btn--lg" href="'+esc(e.driveUrl)+'" target="_blank" rel="noopener">'+DRIVE+' Download full edition '+EXT+'</a>'
-        + (list.length ? '<a class="btn btn--ghost btn--lg" href="#/material/'+esc(list[0].id)+'">Preview first material</a>' : '')
-      + '</div>'
-      + (list.length ? '<div class="toc">'
-          + '<div class="toc__h"><span class="t">Materials in this edition</span><span class="t" style="color:var(--taupe)">'+list.length+'</span></div>'
-          + '<ul>'+list.map((m,i)=>'<li><a href="#/material/'+esc(m.id)+'">'
-              + '<span class="n">'+String(i+1).padStart(2,'0')+'</span>'
-              + '<span><span class="t">'+esc(m.title)+'</span><span class="s" style="display:block">'+esc(catOf(m.category).name)+' &middot; '+m.pages+' pages</span></span>'
-              + '<span class="go">View preview '+ARW+'</span></a></li>').join('')+'</ul>'
-        + '</div>' : '')
-    + '</div>'
-  + '</div>';
-}
-
-/* ---- material preview ---------------------------------------------- */
-let READER = { id:null, page:0 };
-
-function viewMaterial(id){
-  const m = matOf(id);
-  if(!m) return viewMissing('That material is not in the archive.');
-  const e = edOf(m.editionId);
-  const list = matsIn(m.editionId);
-  const pos = list.findIndex(x=>x.id===m.id);
-  const more = MATERIALS.filter(x => x.id!==m.id && x.category===m.category).slice(0,4);
-  READER = { id:m.id, page:0 };
-  return ''
-  + '<div class="wrap"><a class="back" href="#/edition/'+esc(m.editionId)+'"><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg> Back to '+esc(edLabel(e))+'</a></div>'
-  + '<div class="wrap detail">'
-    + '<div class="reader">'
-      + '<div class="reader__stage" id="stage">'+pageHTML(m,0)+'</div>'
-      + '<div class="reader__nav">'
-        + '<button id="pPrev" aria-label="Previous page" disabled><svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>'
-        + '<span class="n" id="pNum">1 / '+m.pages+'</span>'
-        + '<button id="pNext" aria-label="Next page"'+(m.pages<2?' disabled':'')+'><svg class="ico" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg></button>'
-      + '</div>'
-      + '<div class="thumbs" id="thumbs">'
-        + Array.from({length:m.pages}, (_,i)=>'<button data-p="'+i+'" class="'+(i===0?'is-on':'')+'" aria-label="Page '+(i+1)+'">'+pageHTML(m,i)+'</button>').join('')
-      + '</div>'
-    + '</div>'
-    + '<div>'
-      + '<p class="eyebrow eyebrow--gold">'+esc(catOf(m.category).name)+'</p>'
-      + '<h1 class="display d2" style="margin-top:12px">'+esc(m.title)+'</h1>'
-      + (m.deck ? '<p class="display d4 i" style="margin-top:14px;color:var(--taupe)">'+esc(m.deck)+'</p>' : '')
-      + '<div class="detail__meta">'
-        + '<span><svg class="ico" viewBox="0 0 24 24"><path d="M6 4h9l3 3v13H6z"/><path d="M15 4v3h3"/></svg>'+m.pages+' pages</span>'
-        + '<span><svg class="ico" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><a href="#/edition/'+esc(m.editionId)+'" style="border-bottom:1px solid var(--line)">'+esc(edLabel(e))+' &mdash; '+esc(e.title)+'</a></span>'
-        + '<span>Material '+(pos+1)+' of '+list.length+'</span>'
-      + '</div>'
-      + '<p class="lede detail__desc">'+esc(m.description)+'</p>'
-      + '<div class="detail__act">'
-        + '<a class="btn btn--lg" href="'+esc(m.driveUrl)+'" target="_blank" rel="noopener">'+DRIVE+' Download on Google Drive '+EXT+'</a>'
-        + '<a class="btn btn--ghost btn--lg" href="'+esc(e.driveUrl)+'" target="_blank" rel="noopener">Get the whole edition</a>'
-      + '</div>'
-      + '<p class="note"><b>About this preview.</b> These pages show the layout and length of the printed material. The scanned PDF on Google Drive is the full document.</p>'
-      + (more.length ? '<div class="toc" style="margin-top:clamp(36px,4vw,52px)">'
-          + '<div class="toc__h"><span class="t">More in '+esc(catOf(m.category).name)+'</span></div>'
-          + '<ul>'+more.map(x=>'<li><a href="#/material/'+esc(x.id)+'">'
-              + '<span class="n">'+x.pages+'p</span>'
-              + '<span><span class="t">'+esc(x.title)+'</span><span class="s" style="display:block">'+esc(edLabel(edOf(x.editionId)))+'</span></span>'
-              + '<span class="go">Preview '+ARW+'</span></a></li>').join('')+'</ul>'
-        + '</div>' : '')
-    + '</div>'
-  + '</div>';
+/* The collection is large, so the grid draws a page at a time and extends
+   itself as you reach the bottom. The button works on its own if the
+   browser has no IntersectionObserver. */
+function bindMore(){
+  const btn = $('#libMore');
+  if(!btn) return;
+  const grow = () => { LIB.shown += PAGE_SIZE; libRefresh(); };
+  btn.addEventListener('click', grow);
+  if('IntersectionObserver' in window){
+    const io = new IntersectionObserver(entries => {
+      if(entries.some(e => e.isIntersecting)){ io.disconnect(); grow(); }
+    }, { rootMargin:'600px 0px' });
+    io.observe($('#libMoreWrap'));
+  }
 }
 
 /* ---- about ---------------------------------------------------------- */
 function viewAbout(){
+  const top = CATEGORIES.filter(c => c.id !== UNTAGGED.id).slice(0,3).map(c => c.name);
   return ''
   + '<div class="wrap pagehead">'
     + '<p class="eyebrow">About</p>'
     + '<h1 class="display d2">Higherway is a publication before it is a website.</h1>'
   + '</div>'
   + '<section class="sec" style="padding-top:0"><div class="wrap"><div class="prose rv">'
-    + '<p class="first">Higherway began as a printed collection of teachings prepared for our congregation — articles written to be read slowly, kept, and passed on. This site is its archive. Every edition we have published is here, scanned in full, free to read and free to download.</p>'
+    + '<p class="first">Higherway began as a printed collection of teachings prepared for our congregation — articles written to be read slowly, kept, and passed on. This site is its archive. Everything we have published is here, scanned in full, free to read and free to download.</p>'
     + '<h2>What it is for</h2>'
     + '<p>Most of what we publish is written for an ordinary week: a decision that needs wisdom, a season that has gone quiet, a family working out how to pray together. The articles are short by design. They are meant to be finished in one sitting and returned to later.</p>'
-    + '<p>Nothing here asks you to sign up. Open an edition, look through the pages, and take the PDF if it is useful to you. Share it with anyone.</p>'
+    + '<p>Nothing here asks you to sign up. Open a material, read it through, and take the file if it is useful to you. Share it with anyone.</p>'
     + '<h2>Where it comes from</h2>'
     + '<p>Higherway is produced by our local church and written by its pastors, teachers and members. It carries the convictions of that community: that Scripture is trustworthy, that faith is worked out in daily life, and that teaching should be plain enough to be useful.</p>'
-    + '<p>We publish an edition roughly every month. Each one is built around a single theme, with the articles chosen so they can be read together or on their own.</p>'
     + '<h2>How the archive works</h2>'
-    + '<p>Materials are the individual articles. Editions are the printed collections they belong to. You can browse either way — start from <a href="#/library" style="border-bottom:1px solid var(--line)">the library</a> if you are looking for a subject, or from <a href="#/editions" style="border-bottom:1px solid var(--line)">the editions archive</a> if you want a whole issue. The files themselves are hosted on Google Drive.</p>'
+    + '<p>The collection holds <b>'+MATERIALS.length+' materials</b> filed under '+CATEGORIES.filter(c=>c.id!==UNTAGGED.id).length+' topics'+(top.length ? ' — ' + esc(top.join(', ')) + ' among them' : '')+'. Start from <a href="#/library" style="border-bottom:1px solid var(--line)">the library</a>, narrow it to a topic, and open whatever you need. The files themselves are hosted on Google Drive, and the index of them is kept in a single spreadsheet, so the library here is never out of step with what has been published.</p>'
   + '</div></div></section>'
   + '<div class="wrap"><div class="creed rv">'
     + '<div><p class="k">Written for</p><h3>The ordinary week</h3><p>Not conference material. Counsel for Monday, for the school run, for the quiet hour before anyone else is awake.</p></div>'
-    + '<div><p class="k">Kept</p><h3>In print and in full</h3><p>Every edition is scanned complete, page for page, so nothing is lost when the printed copies run out.</p></div>'
+    + '<div><p class="k">Kept</p><h3>In print and in full</h3><p>Every material is scanned complete, page for page, so nothing is lost when the printed copies run out.</p></div>'
     + '<div><p class="k">Given</p><h3>Freely, to anyone</h3><p>No account, no charge, no restriction on passing it on. If it helps someone, send it to them.</p></div>'
   + '</div></div>'
   + '<section class="band" style="margin-top:clamp(48px,6vw,80px)"><div class="wrap band__in">'
-    + '<div><h2 class="display d2">Start with the latest edition.</h2></div>'
-    + '<div><p>'+esc(EDITIONS[0].description)+'</p>'
-      + '<div class="band__cta"><a class="btn btn--light" href="#/edition/'+EDITIONS[0].id+'">Open '+esc(edLabel(EDITIONS[0]))+' '+ARW+'</a></div></div>'
+    + '<div><h2 class="display d2">Start anywhere in the collection.</h2></div>'
+    + '<div><p>Every material is free, and every one of them opens straight onto the file itself. Pick a topic and see what is there.</p>'
+      + '<div class="band__cta"><a class="btn btn--light" href="#/library">Open the library '+ARW+'</a></div></div>'
   + '</div></section>';
 }
 
@@ -1537,6 +1347,26 @@ function viewMissing(msg){
     + '<h3 style="margin-top:14px">'+esc(msg)+'</h3>'
     + '<p>It may have been renamed, or the link may be incomplete.</p>'
     + '<a class="btn" href="#/library">Browse the library '+ARW+'</a>'
+  + '</div></div>';
+}
+
+/* Shown while the spreadsheet is on its way, and if it never arrives. */
+function viewLoading(){
+  return '<div class="wrap"><div class="empty" style="padding-block:clamp(90px,14vw,180px)">'
+    + '<p class="eyebrow">Higherway</p>'
+    + '<h3 style="margin-top:14px">Opening the library</h3>'
+    + '<p>Reading the collection from the Higherway spreadsheet.</p>'
+  + '</div></div>';
+}
+function viewError(err){
+  return '<div class="wrap"><div class="empty" style="padding-block:clamp(80px,12vw,160px)">'
+    + '<p class="eyebrow">Library unavailable</p>'
+    + '<h3 style="margin-top:14px">The collection could not be loaded</h3>'
+    + '<p>'+esc(err && err.message ? err.message : String(err))+'</p>'
+    + '<div class="detail__act" style="justify-content:center">'
+      + '<button class="btn" id="retry">Try again</button>'
+      + '<a class="btn btn--ghost" href="'+esc(SITE.sheetUrl)+'" target="_blank" rel="noopener">Open the spreadsheet '+EXT+'</a>'
+    + '</div>'
   + '</div></div>';
 }
 
@@ -1555,20 +1385,29 @@ function render(){
   const app = $('#app');
   let route = 'home', html = '';
 
-  if(!parts.length || parts[0] === '')            { html = viewHome(); }
+  /* The spreadsheet may still be in flight if someone follows a link early. */
+  if(!MATERIALS.length){ app.innerHTML = viewLoading(); return; }
+
+  if(!parts.length || parts[0] === ''){ html = viewHome(); }
   else if(parts[0] === 'library'){
     route = 'library';
-    LIB.cat  = params.get('cat')  || 'all';
-    LIB.ed   = params.get('ed')   || 'all';
-    LIB.q    = params.get('q')    || '';
-    LIB.sort = params.get('sort') || 'newest';
+    const cat = params.get('cat') || 'all';
+    LIB.cat   = (cat === 'all' || CATEGORIES.some(c => c.id === cat)) ? cat : 'all';
+    LIB.q     = params.get('q') || '';
+    LIB.sort  = params.get('sort') || 'recent';
+    LIB.shown = PAGE_SIZE;
     html = viewLibrary();
   }
-  else if(parts[0] === 'editions')                { route='editions'; html = viewEditions(); }
-  else if(parts[0] === 'edition' && parts[1])     { route='editions'; html = viewEdition(decodeURIComponent(parts[1])); }
-  else if(parts[0] === 'material' && parts[1])    { route='library';  html = viewMaterial(decodeURIComponent(parts[1])); }
-  else if(parts[0] === 'about')                   { route='about';    html = viewAbout(); }
-  else                                            { route='';         html = viewMissing('We could not find that page.'); }
+  else if(parts[0] === 'about'){ route = 'about'; html = viewAbout(); }
+  /* Links kept from the earlier structure land in the library rather than
+     on a dead end. A material link opens the file it always pointed at. */
+  else if(parts[0] === 'material' && matOf(decodeURIComponent(parts[1] || ''))){
+    location.replace(matOf(decodeURIComponent(parts[1])).driveUrl); return;
+  }
+  else if(parts[0] === 'editions' || parts[0] === 'edition' || parts[0] === 'material'){
+    location.hash = '#/library'; return;
+  }
+  else { route = ''; html = viewMissing('We could not find that page.'); }
 
   app.innerHTML = html;
   document.title = titleFor(parts) + ' · Higherway';
@@ -1581,8 +1420,7 @@ function render(){
 
 function titleFor(parts){
   if(!parts.length) return 'Wisdom for a more faithful life';
-  if(parts[0]==='edition'  && edOf(parts[1]))  return edLabel(edOf(parts[1])) + ' — ' + edOf(parts[1]).title;
-  if(parts[0]==='material' && matOf(parts[1])) return matOf(parts[1]).title;
+  if(parts[0] === 'library' && LIB.cat !== 'all') return catOf(LIB.cat).name + ' — Library';
   return parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
 }
 
@@ -1601,7 +1439,7 @@ function bindView(){
   if(q){
     let t;
     q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => {
-      LIB.q = q.value;
+      LIB.q = q.value; LIB.shown = PAGE_SIZE;
       const clear = $('#libClear');
       if(LIB.q && !clear){ q.insertAdjacentHTML('afterend', '<button class="search__clear" id="libClear" aria-label="Clear search"><svg class="ico" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>'); bindClear(); }
       if(!LIB.q && clear) clear.remove();
@@ -1609,41 +1447,26 @@ function bindView(){
     }, 180); });
   }
   bindClear();
-  $$('.chip[data-cat]').forEach(b => b.addEventListener('click', () => { LIB.cat = b.dataset.cat; libRefresh(); }));
-  const es = $('#libEd');   if(es){ es.value = LIB.ed;   es.addEventListener('change', () => { LIB.ed   = es.value; libRefresh(); }); }
-  const ss = $('#libSort'); if(ss){ ss.value = LIB.sort; ss.addEventListener('change', () => { LIB.sort = ss.value; libRefresh(); }); }
+  bindMore();
+  $$('.chip[data-cat]').forEach(b => b.addEventListener('click', () => {
+    LIB.cat = b.dataset.cat; LIB.shown = PAGE_SIZE; libRefresh();
+  }));
+  const ss = $('#libSort');
+  if(ss){ ss.value = LIB.sort; ss.addEventListener('change', () => { LIB.sort = ss.value; LIB.shown = PAGE_SIZE; libRefresh(); }); }
 
-  /* page reader */
-  const stage = $('#stage');
-  if(stage){
-    const m = matOf(READER.id);
-    const go = i => {
-      READER.page = Math.max(0, Math.min(m.pages - 1, i));
-      stage.innerHTML = pageHTML(m, READER.page);
-      $('#pNum').textContent = (READER.page + 1) + ' / ' + m.pages;
-      $('#pPrev').disabled = READER.page === 0;
-      $('#pNext').disabled = READER.page === m.pages - 1;
-      $$('#thumbs button').forEach(b => b.classList.toggle('is-on', Number(b.dataset.p) === READER.page));
-      const on = $('#thumbs button.is-on');
-      if(on) on.scrollIntoView({ block:'nearest', inline:'nearest', behavior:'smooth' });
-    };
-    $('#pPrev').addEventListener('click', () => go(READER.page - 1));
-    $('#pNext').addEventListener('click', () => go(READER.page + 1));
-    $$('#thumbs button').forEach(b => b.addEventListener('click', () => go(Number(b.dataset.p))));
-    stage._go = go;
-  }
+  const retry = $('#retry');
+  if(retry) retry.addEventListener('click', boot);
 }
 function bindClear(){
   const c = $('#libClear');
-  if(c) c.addEventListener('click', () => { LIB.q = ''; const q = $('#libQ'); if(q){ q.value=''; q.focus(); } c.remove(); libRefresh(); });
+  if(c) c.addEventListener('click', () => { LIB.q = ''; LIB.shown = PAGE_SIZE; const q = $('#libQ'); if(q){ q.value=''; q.focus(); } c.remove(); libRefresh(); });
 }
 
 /* reset button inside the empty state is created on every refresh */
 document.addEventListener('click', e => {
   if(e.target.closest('#libReset')){
-    LIB.q=''; LIB.cat='all'; LIB.ed='all';
-    const q = $('#libQ'); if(q) q.value='';
-    const es = $('#libEd'); if(es) es.value='all';
+    LIB.q = ''; LIB.cat = 'all'; LIB.shown = PAGE_SIZE;
+    const q = $('#libQ'); if(q) q.value = '';
     const c = $('#libClear'); if(c) c.remove();
     libRefresh();
   }
@@ -1666,47 +1489,39 @@ $('#ovlClose').addEventListener('click', closeSearch);
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape'){ closeSearch(); closeMenu(); }
   if(e.key === '/' && !/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)){ e.preventDefault(); openSearch(); }
-  const stage = $('#stage');
-  if(stage && stage._go && !document.body.classList.contains('search-open')){
-    if(e.key === 'ArrowLeft')  stage._go(READER.page - 1);
-    if(e.key === 'ArrowRight') stage._go(READER.page + 1);
-  }
 });
 
 function searchResults(term){
   const body = $('#ovlBody');
   const q = (term||'').trim().toLowerCase();
   if(!q){
-    body.innerHTML = '<p class="ovl__hint">Search by title, topic, author-facing subject or edition.</p>'
+    const suggestions = CATEGORIES.filter(c => c.id !== UNTAGGED.id).slice(0,7).map(c => c.name);
+    body.innerHTML = '<p class="ovl__hint">Search by title or by topic.</p>'
       + '<div class="ovl__terms">'
-      + ['Prayer','Family','Waiting','Generosity','Youth','September 2026','Rooted in Christ']
-          .map(t => '<button class="chip" data-term="'+esc(t)+'">'+esc(t)+'</button>').join('')
+      + suggestions.map(t => '<button class="chip" data-term="'+esc(t)+'">'+esc(t)+'</button>').join('')
       + '</div>';
     $$('[data-term]', body).forEach(b => b.addEventListener('click', () => {
       $('#ovlInput').value = b.dataset.term; searchResults(b.dataset.term);
     }));
     return;
   }
-  const mats = MATERIALS.filter(m => {
-    const e = edOf(m.editionId);
-    return (m.title+' '+m.description+' '+(m.deck||'')+' '+catOf(m.category).name+' '+edLabel(e)+' '+(e?e.title:'')).toLowerCase().includes(q);
-  }).slice(0,12);
-  const eds = EDITIONS.filter(e => (e.title+' '+edLabel(e)+' '+e.description+' '+(e.strapline||'')).toLowerCase().includes(q)).slice(0,6);
+  const cats = CATEGORIES.filter(c => c.name.toLowerCase().includes(q)).slice(0,6);
+  const mats = MATERIALS.filter(m => haystack(m).includes(q)).slice(0,12);
 
-  if(!mats.length && !eds.length){
-    body.innerHTML = '<div class="empty"><h3>No results for “'+esc(term)+'”</h3><p>Try a broader word — a theme, a month, or a category name.</p></div>';
+  if(!mats.length && !cats.length){
+    body.innerHTML = '<div class="empty"><h3>No results for “'+esc(term)+'”</h3><p>Try a broader word — a theme, a subject, or a topic name.</p></div>';
     return;
   }
   let html = '';
-  if(eds.length) html += '<div class="ovl__sec"><h4>Editions</h4><div class="res">'
-    + eds.map(e => '<a href="#/edition/'+esc(e.id)+'"><span>'+coverHTML(e,'cover--flat cover--mini')+'</span>'
-        + '<span><span class="t">'+esc(e.title)+'</span><span class="s">'+esc(edLabel(e))+' · '+matsIn(e.id).length+' materials</span></span>'
-        + '<span class="k">Edition</span></a>').join('')
+  if(cats.length) html += '<div class="ovl__sec"><h4>Topics</h4><div class="res">'
+    + cats.map(c => '<a href="#/library?cat='+esc(c.id)+'"><span>'+plateHTML({ id:c.id, scene:SCENES[hash(c.id)%SCENES.length], topicNames:[c.name] })+'</span>'
+        + '<span><span class="t">'+esc(c.name)+'</span><span class="s">'+c.count+' material'+(c.count===1?'':'s')+'</span></span>'
+        + '<span class="k">Topic</span></a>').join('')
     + '</div></div>';
   if(mats.length) html += '<div class="ovl__sec"><h4>Materials</h4><div class="res">'
-    + mats.map(m => '<a href="#/material/'+esc(m.id)+'"><span>'+plateHTML(m)+'</span>'
-        + '<span><span class="t">'+esc(m.title)+'</span><span class="s">'+esc(edLabel(edOf(m.editionId)))+' · '+m.pages+' pages</span></span>'
-        + '<span class="k">'+esc(catOf(m.category).name)+'</span></a>').join('')
+    + mats.map(m => '<a '+driveAttrs(m)+'><span>'+plateHTML(m)+'</span>'
+        + '<span><span class="t">'+esc(m.title)+'</span><span class="s">'+esc(m.topicNames.join(' · '))+'</span></span>'
+        + '<span class="k">Drive</span></a>').join('')
     + '</div></div>';
   body.innerHTML = html;
 }
@@ -1732,16 +1547,37 @@ window.addEventListener('scroll', onScroll, { passive:true });
 /* ---- footer, built from the same data -------------------------------- */
 function buildFooter(){
   $('#yr').textContent = new Date().getFullYear();
-  $('#footCats').innerHTML = CATEGORIES.map(c => '<li><a href="#/library?cat='+c.id+'">'+esc(c.name)+'</a></li>').join('');
-  $('#footLatest').innerHTML = EDITIONS.slice(0,4).map(e =>
-    '<li><a href="#/edition/'+esc(e.id)+'">'+esc(edLabel(e))+' — '+esc(e.title)+'</a></li>').join('');
+  $('#footCats').innerHTML = CATEGORIES.filter(c => c.id !== UNTAGGED.id).slice(0,6)
+    .map(c => '<li><a href="#/library?cat='+esc(c.id)+'">'+esc(c.name)+'</a></li>').join('');
+  $('#footLatest').innerHTML = recentMaterials(4)
+    .map(m => '<li><a '+driveAttrs(m)+'>'+esc(m.title)+'</a></li>').join('');
 }
 
 /* ---- go --------------------------------------------------------------- */
 window.addEventListener('hashchange', render);
-buildFooter();
+
+async function boot(){
+  $('#app').innerHTML = viewLoading();
+  let first = true;
+  try{
+    await loadSheet(() => {
+      buildFooter();
+      /* A later refresh from the sheet must not throw the reader back to
+         the top of the page, so the scroll position is put back. */
+      const y = first ? 0 : window.scrollY;
+      render();
+      if(!first) window.scrollTo(0, y);
+      first = false;
+    });
+  }catch(err){
+    $('#app').innerHTML = viewError(err);
+    bindView();
+  }
+}
+
+$('#yr').textContent = new Date().getFullYear();
 onScroll();
-render();
+boot();
 </script>
 </body>
 </html>
