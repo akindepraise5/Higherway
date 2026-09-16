@@ -3,7 +3,7 @@
 Living record of where Higherway v2 stands. Update it in the same change as the work.
 
 **Updated:** 2026-09-16
-**Now:** Phase 0 — scaffold green (lint, typecheck, test, build all pass); shadcn and CI remaining
+**Now:** Phase 1 running for real — database live, 651 materials imported, backfill in progress
 **Branch:** work happens on `v2`; `main` keeps serving the current site until v2 matches it
 
 ---
@@ -13,7 +13,9 @@ Living record of where Higherway v2 stands. Update it in the same change as the 
 | | |
 |---|---|
 | Docs | `CLAUDE.md`, `ARCHITECTURE.md`, `STATUS.md` written |
-| Code | Next.js 16.3 scaffold on the `v2` branch, verified green. `main` still serves v1 |
+| Code | Phases 0 and 1 on the `v2` branch. `main` still serves v1 |
+| Database | Live on Neon. 8 tables, `pg_trgm` 1.6 and `vector` 0.8.6, 651 materials, 69 categories |
+| Files | Moving into R2 bucket `higherway`, served from `cdn-higherway.mavilletech.com` |
 | Materials | 651 in the spreadsheet, all with a valid Drive link, ~3.5 GB |
 | Categories | 69 real topics found; 367 materials (56%) have none |
 | Duplicates | 62 exact-title groups covering 132 rows; 69 groups ignoring case and punctuation |
@@ -26,8 +28,10 @@ Living record of where Higherway v2 stands. Update it in the same change as the 
 Free accounts — dummy values sit in `.env.example` until these arrive. None of them
 block the start of the work.
 
-- [ ] Neon database
-- [ ] Cloudflare R2 bucket + credentials
+- [x] Neon database — live, migrated
+- [x] Cloudflare R2 bucket + credentials — live, receiving files
+- [x] Resend API key
+- [x] Owner email for the seeded account
 - [ ] Trigger.dev
 - [ ] Resend API key
 - [ ] PostHog
@@ -100,7 +104,10 @@ Notes for whoever picks this up:
       repeat (one appears three times)
 - [x] `scripts/import-sheet.ts` — seeds records and categories. Idempotent:
       matches on Drive file id, so re-running imports only what is new.
-      **Written but never run** — needs `DATABASE_URL`.
+      **Run 2026-09-16**: 651 materials and 69 categories imported, 327 category
+      links across 284 materials, 367 left Uncategorised. Filename titles cleaned
+      (`2018-07-Classics-The-Essence-of-True-Christianity` → "The Essence of True
+      Christianity"), and the title appearing three times got three distinct URLs.
 - [x] `lib/pdf` — renders pages to WebP and pulls out embedded text. **Verified
       on real archive files**: a born-digital sample gave 13,256 characters of
       text and needs no OCR at all; a phone-photo sample gave none, as expected.
