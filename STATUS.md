@@ -443,10 +443,49 @@ the dialog is what stops it being needed again.
 - [ ] Held-back handling: duplicates, and files changed in Drive since import
 
 ### Phase 7 — Launch
+
+**Blocking — `main` cannot point at v2 until these are done:**
+
+- [ ] `npx trigger.dev@latest deploy`. The `dev` worker runs tasks on one
+      machine only. Without a deploy, a material added in production uploads to
+      R2, queues a run, and is never processed — and the form will look as
+      though it worked.
+- [ ] Every environment variable set on Vercel, including `TRIGGER_SECRET_KEY`,
+      `TRIGGER_PROJECT_REF` and `NEXT_PUBLIC_SITE_URL`. The last one is guarded:
+      a production build without it fails loudly rather than publishing
+      localhost URLs for Google to crawl.
+- [ ] R2 serving from `cdn-higherway.mavilletech.com`. Every page image and
+      every download comes from it.
+- [ ] **Exercise the admin area in a browser.** None of it has been clicked —
+      not the add drawer, the topic picker, the pencil editor, the account menu,
+      the reader, or the duplicate review. It typechecks and its queries are
+      verified against the real database, which is not the same thing.
+- [ ] **No end-to-end tests exist.** `tests/e2e` is empty and Playwright has
+      nothing to run. CLAUDE.md names three flows: invite → set password → sign
+      in; upload → duplicate flagged → review; search → open reader → download.
+
+**Functional gap worth deciding on before launch:**
+
+- [ ] **A new upload gets no OCR.** `ingestPdf` takes a PDF's embedded text and
+      nothing more, so a photographed document arrives with *no* searchable text
+      until someone runs `pnpm ocr:local` on a Mac. Server-side OCR — tesseract
+      on the worker, or Google Cloud Vision — is designed (§7) and unbuilt. For
+      an archive whose purpose is being findable, this is the largest hole.
+- [ ] **Nothing tells the admin when processing finishes.** The drawer says "it
+      is being read now" and closes; the material appears on the next refresh.
+      No polling, no realtime.
+- [ ] Hybrid search. The library still filters by title and topic only.
+
+**Then:**
+
 - [ ] Analytics: Vercel, PostHog, Search Console
-- [ ] Performance budget, accessibility pass, e2e tests
-- [ ] Custom domain on R2, verified sending domain
+- [ ] Performance budget, accessibility pass
+- [ ] Verified sending domain for invitations
+- [ ] 83 duplicate pairs reviewed, 367 materials filed
 - [ ] Cut `main` over from v1
+
+`pnpm build` passes: 80 static pages, every route resolving, proxy middleware
+building.
 
 ### After launch
 - [ ] Public submissions `/submit` with Turnstile (schema already supports it)
