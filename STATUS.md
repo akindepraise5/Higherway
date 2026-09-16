@@ -219,9 +219,19 @@ Still to do, now unblocked:
   the database rather than re-running the recogniser over it. The archive now
   holds 2,223 pages of text out of 2,228: 1,162 read by Vision at an average
   quality of 0.979, and 1,066 taken straight from the PDFs.
-- `pnpm fix:names` — running. The backfill was started before `putObject`
-  learned to set the download name, so everything from that point landed
-  without the header. Idempotent, so re-running costs nothing.
+- [x] `pnpm fix:names` — **done**: 624 objects renamed, none failed, so a
+  download now saves under the material's title rather than `original.pdf`.
+- **A second `--force` re-read is running**, to carry de-hyphenation into the
+  stored text. The first attempt **hung after roughly 491 of 1,162 pages** —
+  alive at 0% CPU, no sockets, no error — because the R2 client had no
+  timeouts and an `await` could never settle. Fixed at the client, so the same
+  silence cannot strand a Trigger task. Resumable by design: `--force` re-reads
+  Vision's own pages, so the restart only repeats work already done.
+
+  Worth knowing when reading progress: `material_pages` has no `updated_at`, so
+  `created_at` stays at the backfill's timestamp however many times the text is
+  rewritten. Judge progress by the text itself — a page that has been re-read
+  no longer ends a line with a hyphen.
 - [x] `pnpm scan:duplicates` — **done**, now that the text had settled. 628
   materials compared, 625 with usable text, **87 pairs raised: 49 likely, 38
   possible, every one `pending`**. Nothing was decided automatically, which is
