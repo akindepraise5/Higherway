@@ -54,6 +54,7 @@ export type IngestResult =
 export async function ingestPdf({
   bytes,
   title,
+  author,
   source,
   actorId,
   sourceUrl,
@@ -61,6 +62,12 @@ export async function ingestPdf({
 }: {
   bytes: Uint8Array
   title: string
+  /**
+   * Optional, and unknown for most of this archive. Whoever adds a material is
+   * the person most likely to know, so it is asked for at the door rather than
+   * only on the edit screen — but an empty answer is a real one.
+   */
+  author?: string
   source: IngestSource
   actorId: string
   /** Recorded in the trail so an imported material can be traced to its link. */
@@ -122,6 +129,11 @@ export async function ingestPdf({
       .values({
         slug,
         title: clean,
+        // Empty becomes null, not "". An empty string is a value that passes
+        // every "is it set?" check and then reads as a blank byline, and it
+        // would split the author list into "unattributed" and "attributed to
+        // nothing".
+        author: author?.trim() || null,
         status: "processing",
         source,
         sha256,

@@ -18,6 +18,8 @@ export type ProcessMaterialPayload = {
   /** Where the browser put the file — `staging/<uploadId>.pdf`. */
   stagingKey: string
   title: string
+  /** Optional, and usually unknown for a scan. Empty means "not recorded". */
+  author?: string
   source: IngestSource
   /** Who uploaded it, so the audit trail names a person and not a job. */
   actorId: string
@@ -35,6 +37,7 @@ export const processMaterial = task({
     const result = await ingestPdf({
       bytes,
       title: payload.title,
+      author: payload.author,
       source: payload.source,
       actorId: payload.actorId,
       sourceUrl: payload.sourceUrl,

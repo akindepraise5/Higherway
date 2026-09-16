@@ -83,6 +83,8 @@ export async function startUpload(): Promise<
 export async function finishUpload(input: {
   uploadId: string
   title: string
+  /** Optional. Most of this archive is unattributed, so it is never required. */
+  author?: string
   /** Empty is a real answer: it means Uncategorised. */
   categoryIds?: string[]
 }): Promise<UploadResult> {
@@ -104,6 +106,7 @@ export async function finishUpload(input: {
   const handle = await tasks.trigger<typeof processMaterial>("process-material", {
     stagingKey: key,
     title,
+    author: input.author?.trim() || undefined,
     source: "admin_upload",
     actorId: session.user.id,
     categoryIds: cleanCategoryIds(input.categoryIds),
@@ -128,6 +131,7 @@ export async function finishUpload(input: {
 export async function importFromUrl(input: {
   url: string
   title?: string
+  author?: string
   categoryIds?: string[]
 }): Promise<UploadResult> {
   const session = await requireSession()
@@ -198,6 +202,7 @@ export async function importFromUrl(input: {
   const handle = await tasks.trigger<typeof processMaterial>("process-material", {
     stagingKey: key,
     title,
+    author: input.author?.trim() || undefined,
     source: "url_import",
     actorId: session.user.id,
     sourceUrl: target.toString(),

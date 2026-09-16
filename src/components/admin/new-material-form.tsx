@@ -47,6 +47,7 @@ export function NewMaterialForm({
 
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState("")
+  const [author, setAuthor] = useState("")
   const [url, setUrl] = useState("")
 
   const [chosen, setChosen] = useState<string[]>([])
@@ -69,6 +70,7 @@ export function NewMaterialForm({
     setNotice({ ok: true, text: message })
     setFile(null)
     setTitle("")
+    setAuthor("")
     setUrl("")
     setChosen([])
     router.refresh()
@@ -124,7 +126,12 @@ export function NewMaterialForm({
     }
 
     working("Handing it over…")
-    const result = await finishUpload({ uploadId: ticket.uploadId, title, categoryIds: chosen })
+    const result = await finishUpload({
+      uploadId: ticket.uploadId,
+      title,
+      author,
+      categoryIds: chosen,
+    })
     working(null)
     if (result.ok) succeeded(result.message)
     else setNotice({ ok: false, text: result.error })
@@ -138,6 +145,7 @@ export function NewMaterialForm({
     const result = await importFromUrl({
       url,
       title: title.trim() || undefined,
+      author: author.trim() || undefined,
       categoryIds: chosen,
     })
     working(null)
@@ -235,6 +243,21 @@ export function NewMaterialForm({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder={mode === "link" ? "Taken from the link if left empty" : "What it is called"}
+          className="mt-1.5 w-full rounded-[4px] border border-line bg-paper-2 px-3.5 py-2.5 text-[14.5px] outline-none transition-colors focus:border-ink"
+        />
+
+        {/* Optional, and asked for here rather than only on the edit screen:
+            whoever is adding the material is the person most likely to know,
+            and "I will fill that in later" is how 367 materials ended up with
+            no topic. Readers follow authors, so it is worth a field. */}
+        <label htmlFor="new-author" className="mt-5 block text-[13px] text-ink-2">
+          Author <span className="text-taupe">(optional)</span>
+        </label>
+        <input
+          id="new-author"
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+          placeholder="Leave empty if it is not credited"
           className="mt-1.5 w-full rounded-[4px] border border-line bg-paper-2 px-3.5 py-2.5 text-[14.5px] outline-none transition-colors focus:border-ink"
         />
 
