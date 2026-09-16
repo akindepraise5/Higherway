@@ -64,6 +64,20 @@ Roughly 0.5–1.5s a page.
 holds nothing, and is finished. While the queue asked for empty text, five blank pages
 came back every single run — "read 5 … still waiting 5", for ever.
 
+### `pnpm ocr:status`
+Read-only. Says what has no text and *why*, from anywhere — no Mac, no waiting.
+
+It separates three different problems that all look like "no text":
+
+- **waiting for a recogniser** — rendered, never read. `pnpm ocr:local` fixes it.
+- **no page image** — the render failed or never ran, so no recogniser can ever help.
+  This is a rendering problem wearing an OCR costume.
+- **no pages at all** — ingest never finished. A different failure again.
+
+Use it before starting a re-read, to see whether one is warranted. Until server-side
+OCR exists, this is also how you find a photographed upload that arrived with nothing
+searchable in it.
+
 ### `pnpm fix:hyphens [--engine <name>] [--apply]`
 Rejoins words broken across a line in **stored** text. Needs no re-reading: it is a pure
 transformation over text that already exists.

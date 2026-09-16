@@ -272,6 +272,31 @@ Still to do, now unblocked:
   `re-consecrated` and the rest, one page each, summing to exactly 40. Not one
   broken word survives. **The stored text is final.**
 
+- [x] **The archive is fully read: 2,228 of 2,228 pages have text (100%)** —
+  1,066 taken straight from the PDFs, 1,162 read by Vision, 7 scoring below 0.5
+  and worth a human look. Nothing is waiting for a recogniser.
+
+  `pnpm ocr:status` reports this from anywhere, read-only, in a second. It
+  exists because the only way to learn what was outstanding used to be to *run*
+  `ocr:local`, which needs a Mac and twenty minutes. It separates three problems
+  that all present as "no text": waiting for a recogniser, having no page image
+  (a rendering failure, which no recogniser can help), and having no pages at
+  all (ingest never finished).
+
+  A caveat on the number, since this session was full of measurements that
+  flattered themselves: `ocr:local`'s own footer printed "still waiting 5" when
+  the third re-read ended. Those 5 no longer exist by direct query, and the
+  arithmetic leaves no room for them — 1,162 + 1,066 is exactly 2,228. I have
+  not explained where they went, only confirmed they are not there now.
+
+- [ ] **3 live materials still have no pages at all**, all `staged`, all from
+  the backfill and all already understood: `5 keys for successful building`
+  (Drive returns 404), `Youths Without Blemish` (Drive served a sign-in page,
+  not a PDF) and `marks standard handbook for mechanical engineers` (never
+  uploaded, and appears to have strayed into the Drive folder). `resolve:stuck`
+  deliberately left them alone — each needs a person to supply the file or
+  remove the row, which is a judgement, not a script's decision.
+
 - [x] **De-hyphenation never reached embedded text** — fixed. It lived inside
   `readingOrder`, and text taken from a PDF's own text layer bypasses that path
   entirely; `--force` excludes `text_layer` by design, so no amount of

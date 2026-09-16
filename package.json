@@ -19,6 +19,7 @@
     "import:sheet": "tsx --env-file=.env.local scripts/import-sheet.ts",
     "backfill": "tsx --env-file=.env.local scripts/backfill.ts",
     "ocr:local": "tsx --env-file=.env.local scripts/ocr-local.ts",
+    "ocr:status": "tsx --env-file=.env.local scripts/ocr-status.ts",
     "fix:names": "tsx --env-file=.env.local scripts/fix-download-names.ts",
     "reinvite": "tsx --env-file=.env.local scripts/reinvite-owner.ts",
     "scan:duplicates": "tsx --env-file=.env.local scripts/scan-duplicates.ts",
