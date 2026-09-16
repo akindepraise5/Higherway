@@ -243,6 +243,26 @@ Still to do, now unblocked:
     The measure that can actually reach zero is
     `text ~ '[[:alnum:]]-\n[a-z]'` — a trailing hyphen with a continuation
     line beneath it.
+  - And **do not invent an ordering**. `ocr-local.ts` selects its queue with no
+    `ORDER BY`, so Postgres returns rows in unspecified order. I built a
+    `row_number() over (order by p.id)` "walk position" on top of that, declared
+    the run had passed 153 dirty pages, and called it conclusive. It was
+    nothing of the kind. The follow-up "damage is accelerating" was the same
+    error compounded: counting `dirty AND pos <= done` while `done` rises
+    widens the window over a fixed set, so the number climbs whether or not
+    anything is wrong.
+
+    Only order-independent totals mean anything here. By that measure the run
+    was working the whole time: vision pages with a joinable split went 259 →
+    232 while I was busy proving it broken.
+
+- [ ] **De-hyphenation never reaches embedded text.** It lives inside
+  `readingOrder`, and text taken from a PDF's own text layer bypasses that path
+  entirely — it comes straight from `extractText`. 32 pages carry joinable
+  splits that no amount of re-reading will fix, because `--force` excludes
+  `text_layer` by design. The fix is to lift `joinHyphenated` out of
+  `readingOrder` into its own pure function applied to both paths, which also
+  makes it testable without column geometry.
 - [x] `pnpm scan:duplicates` — **done**, now that the text had settled. 628
   materials compared, 625 with usable text, **87 pairs raised: 49 likely, 38
   possible, every one `pending`**. Nothing was decided automatically, which is
