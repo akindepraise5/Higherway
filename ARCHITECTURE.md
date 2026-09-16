@@ -140,44 +140,62 @@ higherway/
 ├── CLAUDE.md               how to work in this repo (read first)
 ├── ARCHITECTURE.md         this file — the source of truth
 ├── STATUS.md               what is done, in progress, and next
+├── trigger.config.ts       background jobs; mupdf and sharp are external (§6)
+├── drizzle.config.ts  next.config.ts  biome.json  playwright.config.ts
 ├── docs/
 │   └── legacy/index.html   the v1 site, kept for reference
 ├── scripts/                one-off and local-only jobs (run on a Mac)
 │   ├── import-sheet.ts     seed records + categories from the Google Sheet
 │   ├── backfill.ts         download every Drive file → R2 → process
-│   └── ocr-local.ts        re-read the queue with macOS Vision
+│   ├── ocr-local.ts        re-read the queue with macOS Vision
+│   ├── vision-ocr.swift    the Vision call itself (VNRecognizeTextRequest)
+│   ├── scan-duplicates.ts  score every pair, write duplicate_pairs (§8)
+│   ├── resolve-stuck.ts    settle what the backfill left staged
+│   ├── fix-download-names.ts   re-set Content-Disposition on stored objects
+│   ├── undo-merge.ts       rebuild a category merged by mistake
+│   └── reinvite-owner.ts   re-issue the first owner invitation
 ├── src/
+│   ├── proxy.ts            route guards — Next 16's name for middleware
 │   ├── app/
 │   │   ├── (public)/       home, library, topics/[slug], m/[slug], about
-│   │   │   └── @modal/     intercepting route: a material opens in a drawer
-│   │   ├── (auth)/         login, invite/[token], forgot + reset password
-│   │   ├── admin/          dashboard, materials, categories, duplicates,
-│   │   │                   sync, submissions, users, activity
-│   │   ├── api/            auth, upload URLs, search
-│   │   ├── sitemap.ts, robots.ts, opengraph-image.tsx
+│   │   ├── admin/          overview, materials (+ [id], new), categories,
+│   │   │                   duplicates, users, activity, profile
+│   │   ├── sign-in/        not in a route group: proxy.ts matches /sign-in
+│   │   ├── invite/[token]/ accepting an invitation, then setting a password
+│   │   ├── api/auth/[...all]/   the Better Auth handler
+│   │   └── layout.tsx  sitemap.ts  robots.ts  icon.svg  apple-icon.tsx
+│   │       opengraph-image.tsx
 │   ├── components/
 │   │   ├── ui/             shadcn primitives
-│   │   ├── public/         site components
+│   │   ├── public/         site components, including the cover artwork (§9)
 │   │   ├── admin/          panel components
-│   │   └── cover/          the generated cover artwork (§9)
+│   │   └── auth/           the sign-in shell and form
 │   ├── db/
+│   │   ├── index.ts        Neon HTTP — reads only
+│   │   ├── tx.ts           pooled WebSocket — every mutation (§11, §13)
 │   │   ├── schema/         Drizzle tables, one file per area
 │   │   ├── migrations/
 │   │   └── seed.ts         categories + the first owner account
 │   ├── lib/                pure, testable modules — no database access
 │   │   ├── art/            cover generation (seeded, deterministic)
 │   │   ├── dedupe/         fingerprints, title normalising, scoring
-│   │   ├── ocr/            engine interface + implementations
+│   │   ├── import/         the guard on an imported link (§6)
 │   │   ├── pdf/            render pages, extract embedded text
-│   │   ├── text/           clean, chunk, shingle, quality score
-│   │   ├── search/         query building, rank fusion
-│   │   ├── drive/          Google Drive reads (never writes)
-│   │   ├── r2/             storage keys, presigned URLs
-│   │   └── mail/           Resend templates
-│   ├── server/
-│   │   └── services/       every mutation lives here, each writes an audit entry
-│   └── trigger/            Trigger.dev tasks
+│   │   ├── r2/             storage keys and download names
+│   │   ├── sheet/          the v1 CSV parser
+│   │   └── text/           clean, chunk, shingle, quality score
+│   ├── server/             the database, the network, the environment
+│   │   ├── ingest.ts       one pipeline, whatever the source (§6)
+│   │   ├── audit.ts        writes the trail — activity.ts only reads it
+│   │   ├── services/       every mutation, each audited in its own transaction
+│   │   ├── r2/             the storage client
+│   │   ├── embed/          local embeddings
+│   │   └── materials/ categories/ duplicates/ users/ auth/   read queries
+│   └── trigger/            Trigger.dev tasks (process-material)
 └── tests/
+    ├── unit/               vitest — though most unit tests sit beside
+    │                       the module they cover, as `*.test.ts`
+    └── e2e/                playwright
 ```
 
 **`lib/` is pure.** No database, no network, no environment variables. That is what makes
@@ -555,3 +573,8 @@ GOOGLE_CLOUD_VISION_KEY           optional — server-side OCR, 1,000 pages/mont
 | 2026-09-16 | Roles are strictly nested: Owner ⊃ Admin ⊃ Editor | Simple to explain, simple to check |
 | 2026-09-16 | shadcn's semantic tokens are mapped onto the Higherway palette in `globals.css` | A generated component is on-brand immediately, with no per-component overrides. `--background` is paper, `--primary` is ink, `--ring` is gold, the sidebar is forest |
 | 2026-09-16 | Geist removed from `layout.tsx`; the faces stay Newsreader + Instrument Sans | `shadcn init` adds Geist bound to `--font-sans`, which silently replaces the v1 typography. **Re-running init reintroduces this — check `layout.tsx` and the `@theme inline` block afterwards** |
+| 2026-09-16 | PDF processing runs as a Trigger.dev task, not inside the request that uploads the file | Owner's decision, and it keeps §3 and §6 honest rather than quietly deviating from them. Processing in-request was defensible on the measurements — 1.68 pages per document at 0.4–0.6s a page — but it would have put rendering on a function timeout, and the largest files are 13 MB photographs. The cost is that adding a material does nothing until `TRIGGER_SECRET_KEY` exists, so the form says so instead of accepting a file it would leave in staging |
+| 2026-09-16 | One ingestion path for every source (`src/server/ingest.ts`) | An uploaded material, an imported link and a backfilled file should be indistinguishable afterwards. The pipeline runs its slow work *outside* the transaction and takes two short transactions around it — `src/db/tx.ts` pools three connections, so a transaction spanning a 13 MB upload would block every other mutation behind a file transfer |
+| 2026-09-16 | `mupdf` and `sharp` are in `build.external` for Trigger.dev | A WASM module and a native binary cannot be bundled. Left out, the task builds and then fails at runtime, which is the worst order to discover it |
+| 2026-09-16 | Filing and unfiling are separate audit actions (`material.categorise` / `material.uncategorise`) | One action for two opposite events meant no reader could tell "added to Faith" from "removed from Faith", and the trail could not answer who removed something. An undo must never wear the name of the thing it undid — the same reason `category.unmerge` exists |
+| 2026-09-16 | The 27 materials the backfill left stuck are archived as duplicates, not retried | Hashing the bytes proved 24 of them byte-identical to a material already live: the v1 sheet lists the same Drive file twice, and `materials_sha256_live_idx` refused the copy. The index was working; only its failure was being treated as a crash. Byte-identical matches under a *different* title are held back for a person, because naming them is a judgement |
