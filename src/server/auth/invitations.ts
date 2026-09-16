@@ -1,10 +1,10 @@
 "use server"
 
-import { and, eq, gt, isNull } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { db } from "../../db"
 import { invitation, user } from "../../db/schema"
 import { auth } from "../../lib/auth"
-import { hashToken } from "../../lib/invite-token"
+import { classifyInvitation, hashToken, type InviteProblem } from "../../lib/invite-token"
 
 /**
  * Invitations: the only way an account comes into being.
@@ -20,30 +20,55 @@ import { hashToken } from "../../lib/invite-token"
 
 export type AcceptResult = { ok: true } | { ok: false; error: string }
 
-/** An invitation that exists, has not been used, revoked, or run out of time. */
-async function findLive(token: string) {
+type Inspection =
+  | { ok: true; row: typeof invitation.$inferSelect }
+  | { ok: false; problem: InviteProblem }
+
+/**
+ * Finds the invitation behind a link and says exactly why it is unusable.
+ *
+ * This used to be one query demanding every condition at once — right token,
+ * not accepted, not revoked, not expired — so all four failures came back as
+ * the same `null`, and the page could only ever say "This link has expired".
+ *
+ * That hid the commonest real failure. Sending someone a fresh link requires
+ * revoking the old one first, so anyone who opened an *earlier* link found it
+ * withdrawn — and was told it had expired, which it had not. Nobody could
+ * diagnose it from the screen; it took reading the rows.
+ *
+ * Telling the holder of a link which way it failed leaks nothing useful. A
+ * token is 32 random bytes, so only someone who already holds a real link can
+ * reach any answer other than `not_found`.
+ */
+async function inspect(token: string): Promise<Inspection> {
   const [row] = await db
     .select()
     .from(invitation)
-    .where(
-      and(
-        eq(invitation.tokenHash, hashToken(token)),
-        isNull(invitation.acceptedAt),
-        isNull(invitation.revokedAt),
-        gt(invitation.expiresAt, new Date()),
-      ),
-    )
+    .where(eq(invitation.tokenHash, hashToken(token)))
     .limit(1)
 
-  return row ?? null
+  // The decision is pure and lives in lib/, where every branch is tested
+  // without a database. This only fetches the row.
+  const problem = classifyInvitation(row, new Date())
+  if (problem) return { ok: false, problem }
+  // classifyInvitation returns null only for a row that exists.
+  return row ? { ok: true, row } : { ok: false, problem: "not_found" }
 }
 
 /** Whether a link is still good — so the page can say so before asking for a password. */
 export async function checkInvitation(token: string) {
-  const row = await findLive(token)
-  return row
-    ? { valid: true as const, email: row.email, role: row.role }
-    : { valid: false as const }
+  const found = await inspect(token)
+  return found.ok
+    ? { valid: true as const, email: found.row.email, role: found.row.role }
+    : { valid: false as const, problem: found.problem }
+}
+
+/** Short, for a form that failed on submit rather than on arrival. */
+const REFUSED: Record<InviteProblem, string> = {
+  not_found: "That link is not recognised. Check it was copied in full.",
+  accepted: "This invitation has already been used. Sign in instead.",
+  revoked: "This invitation was withdrawn. Use the most recent link you were sent.",
+  expired: "This link has expired. Ask whoever invited you for a new one.",
 }
 
 /**
@@ -60,10 +85,13 @@ export async function acceptInvitation(token: string, password: string): Promise
     return { ok: false, error: "Use at least 10 characters." }
   }
 
-  const invite = await findLive(token)
-  if (!invite) {
-    return { ok: false, error: "That link has expired or has already been used." }
+  // Checked again here, not only when the page loads: the link can be revoked,
+  // or used in another tab, while the form sits open.
+  const found = await inspect(token)
+  if (!found.ok) {
+    return { ok: false, error: REFUSED[found.problem] }
   }
+  const invite = found.row
 
   const [account] = await db.select().from(user).where(eq(user.email, invite.email)).limit(1)
   if (!account) {
