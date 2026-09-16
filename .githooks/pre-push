@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# Runs before every push. The same four checks as .github/workflows/ci.yml and
+# CLAUDE.md's "Definition of done" — run here so a failure costs you a minute
+# now instead of a red CI run, a fix, and a second push.
+#
+# This lives in .githooks/ rather than .git/hooks/ so it is tracked in git and
+# every developer gets it. `pnpm install` points git at this directory via the
+# "prepare" script; to wire it up by hand:
+#
+#     git config core.hooksPath .githooks
+#
+# To push anyway — a work-in-progress branch, or CI is the right place to find
+# out — skip it deliberately:
+#
+#     git push --no-verify
+#
+set -e
+
+echo "pre-push: running the gate (skip with --no-verify)"
+
+echo "  [1/4] lint"
+pnpm lint
+
+echo "  [2/4] typecheck"
+pnpm typecheck
+
+echo "  [3/4] test"
+pnpm test
+
+# Slowest of the four, and the one that catches what the others miss: a route
+# that only fails when it is actually rendered.
+echo "  [4/4] build"
+pnpm build
+
+echo "pre-push: all four passed"

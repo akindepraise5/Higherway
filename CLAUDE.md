@@ -146,3 +146,18 @@ paths through the reader and every dialog.
 Work happens on the `v2` branch with Vercel preview deployments. `main` keeps serving the
 current site until v2 is at least as good. Commit messages say why, not what. Never commit
 `.env*` files other than `.env.example`.
+
+**The gate runs twice, and you should never be the one who finds out from CI.**
+
+| Where | What | When |
+|---|---|---|
+| `.githooks/pre-push` | lint, typecheck, test, build | every `git push`, locally |
+| `.github/workflows/ci.yml` | the same four | every push to `main`/`v2`, every PR |
+
+`pnpm install` points git at `.githooks` for you. Skip the local run deliberately with
+`git push --no-verify` — for a work-in-progress branch, not to get a red build past
+review.
+
+Vercel builds the app on deploy but runs **only** `next build`: it never runs lint,
+typecheck or the tests. It is a deployment, not a gate. Do not treat a green Vercel
+preview as evidence the checks passed.

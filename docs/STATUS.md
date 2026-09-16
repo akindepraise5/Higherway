@@ -548,6 +548,28 @@ materials first.
 - [ ] Sync button, progress, run history
 - [ ] Held-back handling: duplicates, and files changed in Drive since import
 
+### Requested before launch (2026-09-16)
+
+Asked for directly, in the owner's words, and not yet built:
+
+- [ ] **A dedicated "Create category" button** in admin, *alongside* the
+      search-or-create picker rather than replacing it. The picker creates a
+      topic inline while filing a material, which is the right flow when your
+      hands are already on a material; it is the wrong flow when the job you
+      came to do is "set up the topics". Both should exist.
+- [ ] **Category creation and management gated to Owner.** Today's gate needs
+      checking before changing it — a merge already moved 42 materials by
+      accident once, which is the strongest argument for this.
+- [ ] **Author, treated as a first-class field.** Optional, but present on the
+      add *and* edit forms, searchable and filterable on the public site as well
+      as in admin, so a reader can follow an author they like. `materials.author`
+      already exists and library search already matches it; what is missing is
+      the input on the forms, a filter, and somewhere to browse by author.
+- [ ] **Search in the navbar, on every page.** Today search only exists once you
+      have reached the library. It should be reachable anywhere, cover
+      materials, topics *and* authors, and land on a search page rather than
+      making someone navigate to the library first.
+
 ### Phase 7 — Launch
 
 **Blocking — `main` cannot point at v2 until these are done:**
@@ -604,7 +626,30 @@ materials first.
 building.
 
 ### After launch
-- [ ] Public submissions `/submit` with Turnstile (schema already supports it)
+- [ ] **Public submissions `/submit`** with Turnstile (the schema already
+      supports it). Two design constraints, recorded from the owner because they
+      decide whether the page works at all rather than being polish:
+
+      **Short enough that interest survives it.** Anyone who arrives wanting to
+      contribute is doing us a favour, and every field is a chance for them to
+      decide it is not worth the time. Ask for the file and almost nothing else
+      — a title we can correct later beats a form nobody finishes. Everything we
+      would like to know (topic, author, year) either gets inferred, gets filled
+      in by an editor during review, or goes unasked. The review queue already
+      exists to catch what is missing, so the form does not have to.
+
+      **Batch, the way Google Drive does it.** Select forty or fifty files at
+      once, one action, done — not one file, one form, repeated fifty times. The
+      pieces are already in place: uploads are presigned and go browser → R2
+      directly, so a batch is N parallel PUTs with no server in the path and no
+      4.5 MB body limit to worry about. What is missing is a queue in the UI
+      with per-file progress, retry for the one that fails, and one
+      `ingest` job per file rather than per submission.
+
+      Worth thinking through before building: a batch of fifty photographed
+      PDFs is fifty materials with no OCR (server-side OCR is still unbuilt),
+      and duplicate detection is exactly what stops a well-meaning batch
+      re-adding things the archive already holds.
 - [ ] Optional AI suggestions, if the free ones fall short
 - [ ] Text-to-audio, as raised in early planning
 
