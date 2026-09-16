@@ -16,7 +16,7 @@
  */
 
 import { randomUUID } from "node:crypto"
-import { eq, sql } from "drizzle-orm"
+import { eq, inArray, sql } from "drizzle-orm"
 import { duplicatePairs, materials } from "../src/db/schema"
 import { txdb } from "../src/db/tx"
 import { scoreDuplicate } from "../src/lib/dedupe/score"
@@ -169,6 +169,23 @@ async function main() {
     return
   }
 
+  /**
+   * Pairs this scan no longer believes in.
+   *
+   * Without this they linger: still `pending`, still carrying the score they
+   * were given by an older scan with worse evidence. That is how the table came
+   * to hold 87 rows while the scan reported 81 — six stale rows the review page
+   * would have shown as live findings at numbers nothing now computes.
+   *
+   * Only ever pending rows. A pair someone has ruled on is in `settled`, is
+   * excluded from `found` by construction, and must never be touched here: a
+   * decision that reappears as an open question is worse than no scan at all.
+   */
+  const stillFound = new Set(found.map((f) => `${f.a}:${f.b}`))
+  const withdrawn = [...pendingId.entries()]
+    .filter(([key]) => !stillFound.has(key))
+    .map(([, id]) => id)
+
   // One transaction: either the whole scan's findings are recorded or none are.
   let added = 0
   let rescored = 0
@@ -194,9 +211,15 @@ async function main() {
         added++
       }
     }
+
+    if (withdrawn.length > 0) {
+      await tx.delete(duplicatePairs).where(inArray(duplicatePairs.id, withdrawn))
+    }
   })
 
-  console.log(`\n${added} raised, ${rescored} re-scored — review at /admin/duplicates`)
+  console.log(
+    `\n${added} raised, ${rescored} re-scored, ${withdrawn.length} withdrawn — review at /admin/duplicates`,
+  )
 }
 
 main()
