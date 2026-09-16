@@ -34,18 +34,18 @@ export default async function AboutPage() {
           </p>
 
           <h2 className="mb-3 mt-12 text-[clamp(24px,2.6vw,32px)]">What it is for</h2>
-          <p className="text-[clamp(16px,1.2vw,18px)] leading-[1.72] text-ink-2">
+          <p className="font-serif text-[clamp(16px,1.2vw,18px)] leading-[1.72] text-ink-2">
             Most of what we publish is written for an ordinary week: a decision that needs wisdom, a
             season that has gone quiet, a family working out how to pray together. The articles are
             short by design — meant to be finished in one sitting and returned to later.
           </p>
-          <p className="mt-5 text-[clamp(16px,1.2vw,18px)] leading-[1.72] text-ink-2">
+          <p className="mt-5 font-serif text-[clamp(16px,1.2vw,18px)] leading-[1.72] text-ink-2">
             Nothing here asks you to sign up. Open a material, read it through, and take the file if
             it is useful to you. Share it with anyone.
           </p>
 
           <h2 className="mb-3 mt-12 text-[clamp(24px,2.6vw,32px)]">Where it comes from</h2>
-          <p className="text-[clamp(16px,1.2vw,18px)] leading-[1.72] text-ink-2">
+          <p className="font-serif text-[clamp(16px,1.2vw,18px)] leading-[1.72] text-ink-2">
             Higherway is produced by our local church and written by its pastors, teachers and
             members. It carries the convictions of that community: that Scripture is trustworthy,
             that faith is worked out in daily life, and that teaching should be plain enough to be
@@ -53,7 +53,7 @@ export default async function AboutPage() {
           </p>
 
           <h2 className="mb-3 mt-12 text-[clamp(24px,2.6vw,32px)]">How the archive works</h2>
-          <p className="text-[clamp(16px,1.2vw,18px)] leading-[1.72] text-ink-2">
+          <p className="font-serif text-[clamp(16px,1.2vw,18px)] leading-[1.72] text-ink-2">
             The collection holds <b className="font-medium text-ink">{stats.materials} materials</b>{" "}
             filed under {stats.topics} topics
             {named.length ? ` — ${named.join(", ")} among them` : null}. Each one was printed first

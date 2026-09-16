@@ -1,5 +1,6 @@
 import { coverArt } from "../../lib/art/cover"
 import type { Motif, Palette } from "../../lib/art/palette"
+import { titleCase } from "../../lib/text/title-case"
 import { Arc } from "./logo"
 
 /**
@@ -36,6 +37,15 @@ export function Cover({
 }: Props) {
   const art = coverArt({ motif: look.motif, palette: look.palette, seed })
   const isCover = variant === "cover"
+
+  /**
+   * Normalised for display only — the stored title keeps whatever the
+   * publication called it. v1's titles came from filenames, from spreadsheet
+   * cells typed by different people, and from a few written properly, so a
+   * shelf of cards mixed "THE TRIAL OF OUR FAITH" with "A place of surrender".
+   * Doing it here covers every card, rail and cover in one place.
+   */
+  const shown = titleCase(title)
 
   return (
     <div
@@ -80,7 +90,7 @@ export function Cover({
               </span>
             ) : null}
             <h2 className="mt-auto font-serif text-[13cqw] font-light leading-[.98] tracking-[-0.03em]">
-              {title}
+              {shown}
             </h2>
             <div className="mt-[5cqw] w-full">
               <div className="mb-[3.4cqw] h-px bg-[rgba(247,244,238,.32)]" />
@@ -107,7 +117,7 @@ export function Cover({
               <span className="mt-auto" />
             )}
             <h3 className="mt-[2.8cqw] line-clamp-4 font-serif text-[8.4cqw] font-light leading-[1.08] tracking-[-0.025em] break-words">
-              {title}
+              {shown}
             </h3>
           </>
         )}

@@ -201,17 +201,72 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
               <tr key={category.id} className="border-b border-line-soft last:border-0">
                 <td className="px-4 py-3">
                   {editing === category.id ? (
-                    <input
-                      ref={(el) => el?.focus()}
-                      defaultValue={category.name}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          run(() => renameCategory(category.id, e.currentTarget.value))
-                        }
-                        if (e.key === "Escape") setEditing(null)
+                    /**
+                     * Name *and* sub-text together, and that is a fix as much as
+                     * a feature: this was a lone name input, and renameCategory
+                     * writes `blurb: blurb?.trim() || null`. Renaming without
+                     * passing the blurb therefore erased it — silently, with the
+                     * only record of the old text sitting in the audit trail.
+                     * 57 of 69 topics have no sub-text and this would have
+                     * quietly made more of them.
+                     */
+                    <form
+                      onSubmit={(event) => {
+                        event.preventDefault()
+                        const data = new FormData(event.currentTarget)
+                        const name = String(data.get("name") ?? "").trim()
+                        const blurb = String(data.get("blurb") ?? "").trim()
+                        if (name.length < 2) return
+                        run(() => renameCategory(category.id, name, blurb || undefined))
                       }}
-                      className="w-full rounded border border-ink bg-paper-2 px-2 py-1 text-[15px] outline-none"
-                    />
+                      onKeyDown={(event) => {
+                        if (event.key === "Escape") setEditing(null)
+                      }}
+                    >
+                      <label htmlFor={`name-${category.id}`} className="sr-only">
+                        Name
+                      </label>
+                      <input
+                        id={`name-${category.id}`}
+                        name="name"
+                        ref={(el) => el?.focus()}
+                        defaultValue={category.name}
+                        required
+                        minLength={2}
+                        className="w-full rounded border border-ink bg-paper-2 px-2 py-1 text-[15px] outline-none"
+                      />
+
+                      <label htmlFor={`blurb-${category.id}`} className="sr-only">
+                        Sub-text
+                      </label>
+                      <input
+                        id={`blurb-${category.id}`}
+                        name="blurb"
+                        defaultValue={category.blurb ?? ""}
+                        placeholder="A line about this topic — shown on the home page and its own page"
+                        className="mt-1.5 w-full rounded border border-line bg-paper-2 px-2 py-1 text-[12.5px] outline-none focus:border-ink"
+                      />
+
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <button
+                          type="submit"
+                          disabled={pending}
+                          className="rounded-full bg-ink px-3 py-1 text-[12px] font-medium text-paper-2 disabled:opacity-60"
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditing(null)}
+                          className="text-[12px] text-taupe hover:text-ink"
+                        >
+                          Cancel
+                        </button>
+                        <span className="text-[11.5px] text-taupe">
+                          Renaming changes the topic's public URL.
+                        </span>
+                      </div>
+                    </form>
                   ) : (
                     <>
                       <span className="font-serif text-[16px]">{category.name}</span>
@@ -219,7 +274,23 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
                         <span className="mt-0.5 block text-[12.5px] text-taupe">
                           {category.blurb}
                         </span>
-                      ) : null}
+                      ) : (
+                        /* 57 of 69 topics have none, and the gap is invisible
+                           until you look at the home page. Naming it here, where
+                           it can be fixed, beats leaving a silent blank. */
+                        <span className="mt-0.5 block text-[12.5px] text-gold">
+                          No sub-text
+                          {mayManage ? (
+                            <button
+                              type="button"
+                              onClick={() => setEditing(category.id)}
+                              className="ml-1.5 border-b border-gold/40 transition-colors hover:border-gold"
+                            >
+                              add one
+                            </button>
+                          ) : null}
+                        </span>
+                      )}
                     </>
                   )}
                 </td>

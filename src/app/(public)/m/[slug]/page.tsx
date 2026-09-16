@@ -3,6 +3,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Cover } from "../../../../components/public/cover"
 import { Share } from "../../../../components/public/share"
+import { titleCase } from "../../../../lib/text/title-case"
 import { materialBySlug } from "../../../../server/materials/queries"
 
 /**
@@ -83,7 +84,9 @@ export default async function MaterialPage({ params }: { params: Promise<{ slug:
           ) : null}
 
           <Share
-            title={material.title}
+            /* The share panel shows the recipient what they will receive, so it
+               must match the heading above it rather than the stored row. */
+            title={titleCase(material.title)}
             author={material.author ?? undefined}
             topic={topic?.name}
             pageCount={material.pageCount}
@@ -91,7 +94,10 @@ export default async function MaterialPage({ params }: { params: Promise<{ slug:
         </div>
 
         <div>
-          <h1 className="text-[clamp(34px,5vw,62px)]">{material.title}</h1>
+          {/* `Cover` normalises its own title, so without this the card you
+              clicked reads "The Foundation Of Faith" and the page it opens
+              reads whatever the spreadsheet happened to contain. */}
+          <h1 className="text-[clamp(34px,5vw,62px)]">{titleCase(material.title)}</h1>
 
           <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2.5 text-[13px] text-ink-3">
             {material.author ? <span>{material.author}</span> : null}
