@@ -2,12 +2,15 @@ import { eq } from "drizzle-orm"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { CategoryPicker } from "../../../../components/admin/category-picker"
 import { Cover } from "../../../../components/public/cover"
 import { db } from "../../../../db"
 import { categories, materialCategories, materialPages, materials } from "../../../../db/schema"
 import { lookFor } from "../../../../lib/art/palette"
 import { pageKey, publicUrl } from "../../../../lib/r2/keys"
 import { requireSession } from "../../../../lib/session"
+import { exact, timeAgo, who } from "../../../../lib/when"
+import { actionLabel, contributors, materialHistory } from "../../../../server/materials/history"
 
 /**
  * One material, as an admin sees it.
@@ -38,9 +41,9 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
   const [material] = await db.select().from(materials).where(eq(materials.id, id)).limit(1)
   if (!material) notFound()
 
-  const [topics, pages] = await Promise.all([
+  const [topics, pages, allTopics, people, history] = await Promise.all([
     db
-      .select({ name: categories.name, slug: categories.slug })
+      .select({ id: categories.id, name: categories.name, slug: categories.slug })
       .from(materialCategories)
       .innerJoin(categories, eq(categories.id, materialCategories.categoryId))
       .where(eq(materialCategories.materialId, id))
@@ -57,6 +60,12 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
       .from(materialPages)
       .where(eq(materialPages.materialId, id))
       .orderBy(materialPages.pageNumber),
+    db
+      .select({ id: categories.id, name: categories.name })
+      .from(categories)
+      .orderBy(categories.name),
+    contributors(id),
+    materialHistory(id, 12),
   ])
 
   const base = process.env.R2_PUBLIC_BASE_URL ?? ""
@@ -113,21 +122,8 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
             </p>
           ) : null}
 
-          <div className="mt-6 flex flex-wrap gap-2">
-            {topics.length === 0 ? (
-              <span className="rounded-full bg-gold-wash px-3 py-1.5 text-[12.5px] text-gold">
-                Uncategorised
-              </span>
-            ) : (
-              topics.map((t) => (
-                <span
-                  key={t.slug}
-                  className="rounded-full border border-line px-3 py-1.5 text-[12.5px] text-ink-2"
-                >
-                  {t.name}
-                </span>
-              ))
-            )}
+          <div className="mt-6">
+            <CategoryPicker materialId={id} assigned={topics} all={allTopics} />
           </div>
 
           <dl className="mt-8 grid grid-cols-2 gap-px border border-line-soft bg-line-soft sm:grid-cols-4">
@@ -176,6 +172,46 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
               This material has not been processed yet.
             </p>
           ) : null}
+
+          <h2 className="mt-12 text-[11px] font-medium uppercase tracking-[.2em] text-taupe">
+            History
+          </h2>
+
+          {people.length > 0 ? (
+            <p className="mt-3 text-[13px] text-ink-3">
+              Worked on by{" "}
+              {people.map((p, i) => (
+                <span key={p.email ?? i}>
+                  {i > 0 ? ", " : ""}
+                  <span className="text-ink-2">{who(p.name, p.email)}</span>
+                  <span className="text-taupe"> ({p.changes})</span>
+                </span>
+              ))}
+            </p>
+          ) : null}
+
+          {history.length === 0 ? (
+            <p className="mt-3 text-[13.5px] text-ink-3">
+              Nothing has been changed since it was imported.
+            </p>
+          ) : (
+            <ol className="mt-4 border-l border-line-soft">
+              {history.map((h) => (
+                <li key={h.id} className="relative py-2.5 pl-5 text-[13.5px]">
+                  <span className="absolute left-0 top-[18px] h-px w-3 bg-line-soft" />
+                  <span className="text-ink-2">{actionLabel(h.action)}</span>
+                  <span className="text-taupe"> — {who(h.byName, null)}</span>
+                  <time
+                    dateTime={h.at.toISOString()}
+                    title={exact(h.at)}
+                    className="ml-1.5 text-taupe"
+                  >
+                    · {timeAgo(h.at)}
+                  </time>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       </div>
     </>

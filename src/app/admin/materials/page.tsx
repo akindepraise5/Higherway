@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Pagination } from "../../../components/public/pagination"
 import { requireSession } from "../../../lib/session"
+import { exact, timeAgo, who } from "../../../lib/when"
 import {
   ADMIN_PAGE_SIZE,
   adminCounts,
@@ -10,6 +11,7 @@ import {
   asFilter,
   FILTERS,
 } from "../../../server/materials/admin"
+import { actionLabel, lastChanges } from "../../../server/materials/history"
 
 /**
  * The materials list: a working surface, not a showcase.
@@ -63,6 +65,9 @@ export default async function AdminMaterialsPage({
     adminMaterials({ filter, q, sort, page }),
     adminCounts(),
   ])
+
+  // One query for the whole page, after the rows are known.
+  const changes = await lastChanges(result.items.map((m) => m.id))
 
   return (
     <>
@@ -138,6 +143,7 @@ export default async function AdminMaterialsPage({
                 <th className="hidden px-4 py-3 font-medium md:table-cell">Topics</th>
                 <th className="hidden px-4 py-3 font-medium sm:table-cell">Pages</th>
                 <th className="hidden px-4 py-3 font-medium lg:table-cell">Text</th>
+                <th className="hidden px-4 py-3 font-medium lg:table-cell">Last change</th>
                 <th className="px-4 py-3 font-medium">Status</th>
               </tr>
             </thead>
@@ -179,6 +185,21 @@ export default async function AdminMaterialsPage({
                         {m.ocrQuality !== null ? ` · ${Math.round(m.ocrQuality * 100)}%` : ""}
                       </span>
                     )}
+                  </td>
+
+                  <td className="hidden px-4 py-3 lg:table-cell">
+                    {(() => {
+                      const c = changes.get(m.id)
+                      if (!c) return <span className="text-[12.5px] text-taupe">—</span>
+                      return (
+                        <span className="text-[12.5px] text-ink-3" title={exact(c.at)}>
+                          {timeAgo(c.at)}
+                          <span className="block text-taupe">
+                            {actionLabel(c.action)} · {who(c.byName, c.byEmail)}
+                          </span>
+                        </span>
+                      )
+                    })()}
                   </td>
 
                   <td className="px-4 py-3">
