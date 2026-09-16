@@ -33,7 +33,6 @@ block the start of the work.
 - [x] Resend API key
 - [x] Owner email for the seeded account
 - [ ] Trigger.dev
-- [ ] Resend API key
 - [ ] PostHog
 - [ ] Google service account, with **read** access to the Drive folder
 - [x] Drive folder ID — `1Cx9XJ-8lsnvjBxpK59HnYfp_dZZUpb9D` (needed at Phase 6; the
@@ -146,6 +145,13 @@ that phase's migration.
       localhost URLs for Google to crawl
 - [x] Social images via `next/og`, reusing the cover artwork so a shared link
       looks like the material rather than a generic banner
+- [x] Share panel on the material page. It shows what the other person will
+      receive — title, topic, the plain link — before anything is sent, and every
+      option hands off to the reader's own app; nothing is sent from the page and
+      no tracking parameters are added. The link comes from
+      `window.location.href`, so moving to the real domain needs no change here
+- [x] v1's hero rail restored ("A brighter tomorrow always"), hidden below 900px
+      exactly as v1 hid it. The nav's active underline was already carried over
 - [x] Redirects from the old `#/` links. This has to be a small inline script:
       a hash fragment is never sent to the server, so no redirect rule,
       middleware or rewrite can see it. It is the only client JavaScript on the
@@ -185,6 +191,12 @@ The script is idempotent, so re-running it costs nothing.
       sign-in link appears anywhere on the public site
 - [x] Confirmation dialog for destructive actions, requiring the category's name
       to be typed where materials would move or be unfiled
+- [x] `/admin/profile` — your own name and password. Gated at `requireSession`
+      rather than higher: every role may edit their own account, while acting on
+      someone else's stays in People. The name matters because it is what the
+      audit trail and the materials table print against every change that person
+      makes. A password change revokes other sessions, since it is usually a
+      response to the password being seen by someone who should not have it
 
 **Learned the hard way.** Category merge shipped behind a `<select>` that fired
 on change, with no confirmation. A stray click moved 42 materials out of Faith.
@@ -196,10 +208,20 @@ have been unrecoverable. `scripts/undo-merge.ts` performs the reconstruction;
 the dialog is what stops it being needed again.
 
 ### Phase 4 — Managing materials
-- [ ] Materials table: filter, sort, bulk actions
-- [ ] Material editor, per-material history, text-public switch
+- [x] Categories: a search-or-create picker on the material page. It creates a
+      topic inline when nothing matches, because sending an editor to Categories
+      and back is how a material stays unfiled — and 367 of 651 are unfiled. It
+      offers to create only when no topic matches exactly, so a near-duplicate
+      is seen first. CRUD and merge shipped in Phase 3
+- [x] Per-material history and contributor list, and a last-change column on the
+      materials table: what changed, who changed it, when. Read from the audit
+      trail rather than a column on the material — the trail is already written
+      inside the same transaction as every change, so a `lastEditedBy` column
+      would be a second record of the same fact, free to drift from it
+- [ ] Material editor UI. `updateMaterial` and `setTextPublic` exist as audited
+      services, but nothing on the page calls them yet
+- [ ] Bulk actions on the materials table (filter and sort are done)
 - [ ] Upload (presigned) and import by URL, with the safety checks in §6
-- [ ] Categories: CRUD, merge, search-or-create picker
 
 ### Phase 5 — Reading and duplicates
 - [ ] OCR interface; tesseract.js on the worker
@@ -266,3 +288,21 @@ summaries and categories — 10,000 neurons/day covers the backlog in about a da
 their terms forbid training on our content. Gemini and Mistral free tiers rejected:
 both train on free-tier content. Free vision-language models rejected for OCR: none is
 an OCR engine and none is benchmarked on pages like ours.
+
+**2026-09-16 (admin surfaces)** — Category assignment, per-material history, the share
+panel, `/admin/profile` and v1's hero rail. Three mistakes worth recording, because all
+three compiled and two would have gone unnoticed:
+
+- `ACTION_LABEL` was typed `Record<string, string>`, so it happily held five audit
+  actions that do not exist and omitted nine that do. It is typed to the `AuditAction`
+  union now, which makes adding a case a compile error in that file.
+- `setTextPublic` revalidated `/m/<id>`. The public route is keyed by slug, so it was
+  invalidating a path that cannot exist.
+- `contributors` declared `max(created_at)` as `sql<Date>`. A raw `sql<>` fragment has
+  no column mapper, so it arrives as a string — caught by running the query against
+  real data rather than trusting the type. Nothing reads the field yet; it would have
+  thrown the first time anything called `.toISOString()` on it.
+
+The share panel and hero rail were verified in a browser. The admin surfaces were not:
+they need a sign-in, and the one in the tab was a password-manager entry for an
+unrelated account. Their queries were exercised directly against Neon instead.
