@@ -109,6 +109,28 @@ temporary domain buys redirect cleanup for no benefit.
 **No URL is ever hardcoded.** Every address above is an environment variable (§12), so
 changing domain is a DNS change plus a handful of variables, never a code change.
 
+### Moving the bucket or the domain later
+
+The database stores R2 **keys** (`materials/<id>/original.pdf`), never absolute URLs.
+Addresses are built at render time from `R2_PUBLIC_BASE_URL`. So:
+
+| Change | What it takes | Data migration |
+|---|---|---|
+| New public domain | Point the CNAME at the bucket, change `R2_PUBLIC_BASE_URL` | **None** |
+| New bucket | Copy the objects across, change `R2_BUCKET` | **None** — keys are identical |
+| New site domain | Change `NEXT_PUBLIC_SITE_URL`, add redirects | None |
+
+This is why keys are stored rather than URLs, and why the key scheme in
+`lib/r2/keys.ts` is treated as fixed: the addresses can move freely, but a key that
+changes orphans a file.
+
+**The download name is a header, not a key.** A material saves as *The Way of
+Holiness.pdf*, but its key stays `original.pdf` — the name travels in the object's
+`Content-Disposition`, set when it is stored. A cross-origin download ignores HTML's
+`download` attribute, so the header is the only thing browsers honour. Renaming a
+material therefore needs `pnpm fix:names`, which rewrites the metadata in place
+without moving the file or re-uploading its bytes.
+
 ---
 
 ## 4. Repository layout

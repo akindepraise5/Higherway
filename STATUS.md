@@ -3,7 +3,7 @@
 Living record of where Higherway v2 stands. Update it in the same change as the work.
 
 **Updated:** 2026-09-16
-**Now:** Phase 1 running for real — database live, 651 materials imported, backfill in progress
+**Now:** Phase 2 — the public site is built and serving real data; backfill still running
 **Branch:** work happens on `v2`; `main` keeps serving the current site until v2 matches it
 
 ---
@@ -129,11 +129,33 @@ Phase 3. `audit_log.actor_id` therefore has no foreign key yet; it is added in
 that phase's migration.
 
 ### Phase 2 — Public site on the new data
-- [ ] Home, library, topic pages, about — matching v1 feature for feature
-- [ ] Covers ported to `lib/art/`, server-rendered, unit tested
-- [ ] Material page `/m/[slug]` + reader drawer
-- [ ] Hybrid search (full text + fuzzy titles + meaning)
-- [ ] SEO: sitemap, structured data, social images, redirects from old `#/` links
+- [x] Home, library, topic pages and about — all server-rendered from Neon
+- [x] Covers ported to `lib/art/`, server-rendered SVG, unit tested for
+      determinism: the same material must draw the same cover in a year, or
+      people stop recognising it. Gradient ids are scoped per material, because
+      two covers sharing one on a grid makes the second adopt the first's colours
+- [x] Material page `/m/[slug]` with the in-browser reader — page images from R2,
+      no PDF library shipped to the browser
+- [x] Pagination: numbered pages with gaps, a range line, and a real URL for
+      every state. v1 used infinite scroll with no addressable pages, which
+      search engines could not follow. The window logic is pure and tested
+- [x] Downloads save as the material's title, via `Content-Disposition` on the
+      object — a cross-origin download ignores HTML's `download` attribute
+- [x] Sitemap and robots, built from the database, and guarded so a production
+      build without `NEXT_PUBLIC_SITE_URL` fails loudly rather than publishing
+      localhost URLs for Google to crawl
+- [ ] Social images via `next/og`, reusing the cover artwork
+- [ ] Hybrid search (full text + fuzzy titles + meaning) — needs the OCR text
+- [ ] Redirects from the old `#/` links
+
+Verified against the running site: every route returns 200, both nonsense slugs
+404, and the filters compose — 142 materials, 18 for "faith", 6 under Prayer,
+4 for both together.
+
+**Not yet done, and waiting on the backfill to finish:** a second `pnpm fix:names`
+run. The backfill process was started before `putObject` learned to set the
+download name, so everything it uploads from that point lands without the header.
+The script is idempotent, so re-running it costs nothing.
 
 ### Phase 3 — Auth and admin shell
 - [ ] Better Auth, sign-up disabled, seeded Owner

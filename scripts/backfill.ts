@@ -29,7 +29,7 @@ import {
   renderPages,
   renderThumbnail,
 } from "../src/lib/pdf/render"
-import { pageKey, pdfKey, thumbKey } from "../src/lib/r2/keys"
+import { contentDisposition, pageKey, pdfKey, thumbKey } from "../src/lib/r2/keys"
 import { scoreText } from "../src/lib/text/quality"
 import { objectExists, putObject } from "../src/server/r2/client"
 
@@ -63,7 +63,12 @@ async function processOne(material: { id: string; title: string; driveFileId: st
   const bytes = await download(material.driveFileId)
   const sha256 = createHash("sha256").update(bytes).digest("hex")
 
-  await putObject(pdfKey(material.id), Buffer.from(bytes), "application/pdf")
+  await putObject(
+    pdfKey(material.id),
+    Buffer.from(bytes),
+    "application/pdf",
+    contentDisposition(material.title),
+  )
 
   const pages = await renderPages(bytes)
   for (const page of pages) {

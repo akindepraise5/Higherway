@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
 import {
   assertId,
+  contentDisposition,
+  downloadFilename,
   isStagingKey,
   materialPrefix,
   pageKey,
@@ -77,5 +79,51 @@ describe("publicUrl", () => {
 
   it("refuses to build a URL with no base configured", () => {
     expect(() => publicUrl("a/b.webp", "")).toThrow(/R2_PUBLIC_BASE_URL/)
+  })
+})
+
+describe("downloadFilename", () => {
+  it("names the file after the material, not after the storage key", () => {
+    expect(downloadFilename("The Way of Holiness")).toBe("The Way of Holiness.pdf")
+  })
+
+  it("strips characters that would break the header or the filesystem", () => {
+    expect(downloadFilename('A "quoted" title')).toBe("A quoted title.pdf")
+    expect(downloadFilename("Who am I? Notes: part 1")).toBe("Who am I Notes part 1.pdf")
+    expect(downloadFilename("a/b\\c")).toBe("abc.pdf")
+  })
+
+  it("flattens accents rather than emitting bytes a filesystem may mangle", () => {
+    expect(downloadFilename("Café con Dios")).toBe("Cafe con Dios.pdf")
+  })
+
+  it("never produces an empty or trailing-dot name", () => {
+    expect(downloadFilename("")).toBe("Higherway material.pdf")
+    expect(downloadFilename("???")).toBe("Higherway material.pdf")
+    expect(downloadFilename("Ends with a dot.")).toBe("Ends with a dot.pdf")
+  })
+
+  it("keeps long titles to a sane length", () => {
+    const name = downloadFilename("word ".repeat(80))
+    expect(name.length).toBeLessThanOrEqual(125)
+    expect(name.endsWith(".pdf")).toBe(true)
+  })
+})
+
+describe("contentDisposition", () => {
+  it("asks the browser to save rather than display", () => {
+    expect(contentDisposition("The Way of Holiness")).toContain("attachment;")
+  })
+
+  it("carries the name in both plain and encoded form", () => {
+    const header = contentDisposition("The Way of Holiness")
+    expect(header).toContain('filename="The Way of Holiness.pdf"')
+    expect(header).toContain("filename*=UTF-8''")
+  })
+
+  it("keeps the header valid when the title is not ASCII", () => {
+    const header = contentDisposition("Café con Dios")
+    // The plain form must stay ASCII; the encoded form carries the real name.
+    expect(header.split(";")[1]).toMatch(/^ filename="[\x20-\x7E]+"$/)
   })
 })

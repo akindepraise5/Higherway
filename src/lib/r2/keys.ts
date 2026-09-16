@@ -70,3 +70,38 @@ export function publicUrl(key: string, base: string): string {
   if (!base) throw new Error("R2_PUBLIC_BASE_URL is not set")
   return `${base.replace(/\/+$/, "")}/${key.replace(/^\/+/, "")}`
 }
+
+/**
+ * What a downloaded file should be called.
+ *
+ * The stored key is `materials/<id>/original.pdf`, which is stable and says
+ * nothing to a reader. A browser saving cross-origin ignores the HTML
+ * `download` attribute, so the name has to come from the object's own
+ * Content-Disposition header — set when the file is stored.
+ *
+ * Pure by design (CLAUDE.md).
+ */
+export function downloadFilename(title: string): string {
+  const safe = title
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "") // accents, which some filesystems mangle
+    .replace(/["'\\/\n\r\t]/g, "") // quotes and separators would break the header
+    .replace(/[<>:|?*]/g, "") // characters Windows refuses in a filename
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120)
+    .replace(/[\s.]+$/, "") // a trailing dot or space is invalid on Windows
+
+  return `${safe || "Higherway material"}.pdf`
+}
+
+/**
+ * The Content-Disposition header value. Carries the name twice: a plain ASCII
+ * form every browser understands, and an RFC 5987 form so a title with
+ * non-ASCII characters survives intact.
+ */
+export function contentDisposition(title: string): string {
+  const filename = downloadFilename(title)
+  const ascii = filename.replace(/[^\x20-\x7E]/g, "").trim() || "Higherway material.pdf"
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`
+}

@@ -83,9 +83,21 @@ export async function putObject(
   key: string,
   body: Uint8Array | Buffer,
   contentType: string,
+  /**
+   * What the browser should call the file when it saves it. A cross-origin
+   * download ignores the HTML `download` attribute, so the name has to
+   * travel with the object itself.
+   */
+  contentDisposition?: string,
 ): Promise<void> {
   await r2().send(
-    new PutObjectCommand({ Bucket: bucket(), Key: key, Body: body, ContentType: contentType }),
+    new PutObjectCommand({
+      Bucket: bucket(),
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      ...(contentDisposition ? { ContentDisposition: contentDisposition } : {}),
+    }),
   )
 }
 

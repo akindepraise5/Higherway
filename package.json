@@ -18,7 +18,8 @@
     "db:seed": "tsx --env-file=.env.local src/db/seed.ts",
     "import:sheet": "tsx --env-file=.env.local scripts/import-sheet.ts",
     "backfill": "tsx --env-file=.env.local scripts/backfill.ts",
-    "ocr:local": "tsx --env-file=.env.local scripts/ocr-local.ts"
+    "ocr:local": "tsx --env-file=.env.local scripts/ocr-local.ts",
+    "fix:names": "tsx --env-file=.env.local scripts/fix-download-names.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1132.0",
