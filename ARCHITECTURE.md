@@ -325,9 +325,31 @@ The archive arrives with duplicates: **62 exact-title groups covering 132 rows**
 | Signal | Catches | Method | Verdict |
 |---|---|---|---|
 | Identical bytes | the same file twice | SHA-256, computed in the browser before upload | **Blocks** |
-| Similar title | "A Heart Like His" vs "A heart like His (1)" | normalise (strip `2017-01-FTWord-`, `(1)`, `copy of`, case, punctuation) then `pg_trgm` | Flags at ≥ 0.55 |
-| Same text | a re-scan of the same article | overlap of 5-word shingles (MinHash), tolerant of OCR noise | Flags at ≥ 0.8 |
+| Similar title | "A Heart Like His" vs "A heart like His (1)" | normalise (strip `2017-01-FTWord-`, `(1)`, `copy of`, case, punctuation) then compare significant words | Flags at ≥ 0.55 |
+| Same text | a re-scan of the same article | overlap of 3-word shingles, tolerant of OCR noise | Flags at ≥ 0.7 |
 | Similar meaning | a retyped or re-set copy | cosine distance between document vectors | Flags at ≥ 0.93 |
+| Contained | an article reprinted inside a booklet | how much of the shorter text appears in the longer | Flags at ≥ 0.9, **separately** |
+
+**These numbers were measured, not chosen.** Two OCR reads of one page from this
+archive ("to" read as "lo", "built" as "buiIt"), against an unrelated material as a
+control:
+
+| Shingle size | Same page twice | Unrelated | Article inside a booklet |
+|---|---|---|---|
+| **3** | **0.778** | 0.000 | 0.500 |
+| 4 | 0.722 | 0.000 | 0.477 |
+| 5 | 0.667 | 0.000 | 0.455 |
+
+Three-word shingles score the true pair highest while an unrelated pair stays at
+zero, so nothing is given up for the sensitivity. A threshold of 0.8 was tried first
+and **would have missed the true pair**: each misread word costs a fixed number of
+shingles however short the passage, so short texts are penalised hardest.
+
+Containment is kept as its own signal rather than blended into "same text". A reprint
+contains every shingle of the original by definition, so mixing the two rated that
+pair at 0.79 against a genuine duplicate's 0.78 — no separation at all. Held apart,
+the review page can say *"this appears inside that"* instead of *"these are the
+same"*, which is a different thing for an admin to decide about.
 
 Signals combine into a score with the reasons kept in `signals`, so the review page can
 say *why* rather than showing a number.

@@ -77,12 +77,27 @@ Notes for whoever picks this up:
   the `:root` / `@theme inline` blocks in `globals.css` afterwards.
 
 ### Phase 1 — Data and storage
-- [ ] Drizzle schema (`ARCHITECTURE.md` §5), `pgvector` + `pg_trgm`
+- [x] Drizzle schema (`ARCHITECTURE.md` §5) — 8 tables, migrations generated.
+      `0000_extensions` creates `vector` and `pg_trgm`; `0001` builds the tables
+      against them. Partial unique indexes keep slug and checksum unique among
+      **live** rows only, so archiving a duplicate needs no renaming.
+- [x] Pure primitives in `src/lib`, with tests (landed early — they need no
+      credentials, and the pipeline is built on them):
+      - `dedupe/title` — normalising and comparing titles
+      - `dedupe/score` — combining signals into a verdict that explains itself
+      - `text/similarity` — shingle overlap, survives OCR noise; containment
+        catches an article reprinted inside a booklet
+      - `text/quality` — scores an OCR read, feeding the re-read queue
+      - `text/chunk` — chunking for embeddings, keeping page numbers
 - [ ] R2 client, storage keys, presigned uploads
 - [ ] `scripts/import-sheet.ts` — seed records and the 69 categories
 - [ ] `lib/pdf` — render pages, extract embedded text
 - [ ] `scripts/backfill.ts` — all 651 from Drive into R2, processed
 - [ ] Local embeddings (`bge-small-en-v1.5`, 384 dimensions)
+
+Auth tables are deliberately **not** hand-written: Better Auth generates them in
+Phase 3. `audit_log.actor_id` therefore has no foreign key yet; it is added in
+that phase's migration.
 
 ### Phase 2 — Public site on the new data
 - [ ] Home, library, topic pages, about — matching v1 feature for feature
