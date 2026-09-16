@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main, v2]
+  pull_request:
+
+# See CLAUDE.md, "Definition of done": these four must pass before anything ships.
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+        env:
+          # The build must not need real credentials. Anything that would fail
+          # without a live service belongs in a job, not in a page render.
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
