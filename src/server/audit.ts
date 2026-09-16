@@ -53,6 +53,11 @@ export type AuditAction =
   | "user.role_change"
   | "user.disable"
   | "user.enable"
+  /** Permanently removing an account. Deliberate and Owner-only: suspending
+      (`user.disable`) is the everyday answer and keeps the person's history.
+      The account's email, name and role go in `before`, because once the row
+      is gone that snapshot is the only record the account ever existed. */
+  | "user.delete"
   | "sync.run"
 
 export type AuditEntry = {

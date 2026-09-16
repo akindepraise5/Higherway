@@ -44,6 +44,7 @@ export const ACTION_LABEL: Record<AuditAction, string> = {
   "user.role_change": "Role changed",
   "user.disable": "Account disabled",
   "user.enable": "Account enabled",
+  "user.delete": "Account deleted",
   "sync.run": "Pulled from Drive",
 }
 

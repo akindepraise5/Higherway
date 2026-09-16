@@ -55,6 +55,7 @@ const PHRASING: Record<AuditAction, string> = {
   "user.role_change": "changed someone's role",
   "user.disable": "suspended an account",
   "user.enable": "restored an account",
+  "user.delete": "deleted an account",
   "sync.run": "ran a Drive sync",
 }
 
