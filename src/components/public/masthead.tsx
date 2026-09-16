@@ -1,5 +1,8 @@
+"use client"
+
 import Link from "next/link"
-import { Wordmark } from "./mark"
+import { usePathname } from "next/navigation"
+import { Logo } from "./logo"
 
 /**
  * The masthead. A plain server component: no sticky-scroll JavaScript, no menu
@@ -13,11 +16,14 @@ const LINKS = [
 ]
 
 export function Masthead() {
+  const pathname = usePathname()
+  const active = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
+
   return (
     <header className="sticky top-0 z-50 border-b border-transparent bg-[rgba(245,241,234,.86)] backdrop-blur-[14px] backdrop-saturate-150">
       <div className="mx-auto flex h-(--header-h) max-w-(--measure) items-center gap-7 px-(--gutter)">
         <Link href="/" className="mr-auto" aria-label="Higherway — home">
-          <Wordmark />
+          <Logo className="h-[38px] w-[122px] text-ink" />
         </Link>
 
         <nav aria-label="Primary" className="hidden items-center gap-7 sm:flex">
@@ -25,9 +31,20 @@ export function Masthead() {
             <Link
               key={link.href}
               href={link.href}
-              className="relative py-1.5 text-[14.5px] text-ink-2 transition-colors hover:text-ink"
+              className="group relative py-1.5 text-[14.5px] text-ink-2 transition-colors hover:text-ink aria-[current=page]:text-ink"
+              aria-current={active(link.href) ? "page" : undefined}
             >
               {link.label}
+              {/* v1 drew a gold rule under the section you were in, and a
+                  hairline that grew in on hover. Both are worth keeping. */}
+              <span
+                aria-hidden="true"
+                className={`absolute inset-x-0 bottom-0 h-px origin-left transition-transform duration-500 ${
+                  active(link.href)
+                    ? "scale-x-100 bg-gold"
+                    : "scale-x-0 bg-ink group-hover:scale-x-100"
+                }`}
+              />
             </Link>
           ))}
         </nav>

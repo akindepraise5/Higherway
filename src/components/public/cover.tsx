@@ -1,6 +1,6 @@
 import { coverArt } from "../../lib/art/cover"
 import type { Motif, Palette } from "../../lib/art/palette"
-import { Arc } from "./mark"
+import { Arc } from "./logo"
 
 /**
  * A material's cover. The artwork is generated from the material's own identity

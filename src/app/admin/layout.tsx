@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { SignOutButton } from "../../components/admin/sign-out-button"
-import { Arc } from "../../components/public/mark"
+import { Logo } from "../../components/public/logo"
 import { requireSession } from "../../lib/session"
 
 /**
@@ -32,8 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="sticky top-0 z-50 border-b border-line-soft bg-paper/85 backdrop-blur-[14px]">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
           <Link href="/admin" className="flex items-center gap-2.5">
-            <Arc className="h-2.5 w-8 text-gold" />
-            <span className="font-serif text-lg tracking-[-0.018em]">Higherway</span>
+            <Logo className="h-[30px] w-[96px] text-ink" />
             <span className="rounded-full bg-paper-3 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[.16em] text-taupe">
               {role}
             </span>

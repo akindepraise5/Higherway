@@ -36,7 +36,34 @@ export const metadata: Metadata = {
   },
   description:
     "A free archive of inspired teachings, practical insights and biblical perspectives. Read every material in full, or download it.",
-  openGraph: { type: "website", siteName: "Higherway", locale: "en" },
+  openGraph: {
+    type: "website",
+    siteName: "Higherway",
+    locale: "en",
+    title: "Higherway — Wisdom for a more faithful life",
+    description:
+      "A free archive of inspired teachings, practical insights and biblical perspectives.",
+  },
+  /**
+   * Without this, a link shared on X previews as a small square thumbnail
+   * rather than the wide card the OG image is drawn for.
+   */
+  twitter: {
+    card: "summary_large_image",
+    title: "Higherway — Wisdom for a more faithful life",
+    description:
+      "A free archive of inspired teachings, practical insights and biblical perspectives.",
+  },
+  /**
+   * Search Console and Bing ownership tags. Set the env vars to the content
+   * values each console gives you, deploy, then verify there.
+   */
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION }
+      : undefined,
+  },
   robots: { index: true, follow: true },
 }
 
@@ -46,11 +73,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         {/*
-          The only client JavaScript on the public site, and it earns its place:
-          v1 addressed everything with hash routes (#/library?cat=faith), and a
-          hash is never sent to the server — so no redirect rule, middleware or
-          rewrite can see it. Old links people saved or shared would land on the
-          home page with their destination silently dropped.
+          One of only two pieces of client JavaScript on the public site — the
+          other is the masthead, which reads the current path to underline the
+          section you are in. This one earns its place: v1 addressed everything
+          with hash routes (#/library?cat=faith), and a hash is never sent to
+          the server, so no redirect rule, middleware or rewrite can see it.
+          Old links people saved or shared would land on the home page with
+          their destination silently dropped.
 
           It runs before paint, so a visitor following an old link sees the page
           they asked for rather than the home page first.

@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { topicList } from "../../server/materials/queries"
-import { Wordmark } from "./mark"
+import { Logo } from "./logo"
 
 /**
  * The footer, built from the same data as the rest of the site — the topics
@@ -14,9 +14,7 @@ export async function Footer() {
       <div className="mx-auto max-w-(--measure) px-(--gutter)">
         <div className="grid gap-[clamp(24px,3vw,48px)] sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr]">
           <div>
-            <div className="text-paper-2">
-              <Wordmark />
-            </div>
+            <Logo className="h-[40px] w-[130px] text-paper-2" />
             <p className="mt-4 max-w-[34ch] text-sm leading-relaxed">
               A free archive of the Higherway publication. Read any material in full, or take the
               file with you.
