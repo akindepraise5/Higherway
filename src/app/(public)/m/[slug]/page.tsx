@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Cover } from "../../../../components/public/cover"
+import { Share } from "../../../../components/public/share"
 import { materialBySlug } from "../../../../server/materials/queries"
 
 /**
@@ -80,6 +81,13 @@ export default async function MaterialPage({ params }: { params: Promise<{ slug:
               Download the PDF
             </a>
           ) : null}
+
+          <Share
+            title={material.title}
+            author={material.author ?? undefined}
+            topic={topic?.name}
+            pageCount={material.pageCount}
+          />
         </div>
 
         <div>

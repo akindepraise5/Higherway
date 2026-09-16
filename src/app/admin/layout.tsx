@@ -51,7 +51,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </nav>
 
           <div className="ml-auto flex items-center gap-4 md:ml-0">
-            <span className="hidden text-[13px] text-taupe sm:inline">{session.user.email}</span>
+            {/* The email is the way to your own account — the conventional place
+                to look, and it keeps a seventh item out of the section nav. */}
+            <Link
+              href="/admin/profile"
+              className="hidden text-[13px] text-taupe transition-colors hover:text-ink sm:inline"
+            >
+              {session.user.email}
+            </Link>
             <SignOutButton />
           </div>
         </div>
@@ -69,6 +76,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               {item.label}
             </Link>
           ))}
+          {/* On a phone the email is hidden, so this is the only way through. */}
+          <Link href="/admin/profile" className="whitespace-nowrap text-[13.5px] text-ink-2">
+            Profile
+          </Link>
         </nav>
       </header>
 
