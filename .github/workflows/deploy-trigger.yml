@@ -51,3 +51,13 @@ jobs:
           # repository secret. Not TRIGGER_SECRET_KEY — that one is for the app
           # triggering runs, and it cannot deploy.
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
+
+          # Which project to deploy to. trigger.config.ts reads it from the
+          # environment, and without it falls back to a placeholder — so the
+          # first run asked for a project literally called
+          # "proj_set_TRIGGER_PROJECT_REF" and failed with "Project not found".
+          #
+          # Not a secret: it appears in every dashboard and deployment URL. A
+          # repository *variable* overrides it if the project ever moves; the
+          # literal means the workflow works with no extra setup today.
+          TRIGGER_PROJECT_REF: ${{ vars.TRIGGER_PROJECT_REF || 'proj_pegxizetjeagfcoeijrb' }}
