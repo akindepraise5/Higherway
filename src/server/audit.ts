@@ -36,6 +36,11 @@ export type AuditAction =
   | "material.restore"
   | "material.update"
   | "material.categorise"
+  /** Taking a material off a topic. Deliberately not the same action as putting
+      it on one: they are opposite events, and a trail that gives them one name
+      cannot answer "who removed this from Faith?". Same reasoning as
+      `category.unmerge`. */
+  | "material.uncategorise"
   | "material.text_visibility"
   | "duplicate.dismiss"
   | "duplicate.merge"

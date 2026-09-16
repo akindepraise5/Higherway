@@ -44,6 +44,7 @@ const PHRASING: Record<AuditAction, string> = {
   "material.restore": "restored",
   "material.update": "edited",
   "material.categorise": "filed",
+  "material.uncategorise": "unfiled",
   "material.text_visibility": "changed text visibility for",
   "duplicate.dismiss": "marked a pair as not duplicates",
   "duplicate.merge": "resolved a duplicate pair",
@@ -58,6 +59,74 @@ const PHRASING: Record<AuditAction, string> = {
 
 export const describe = (action: string): string =>
   PHRASING[action as AuditAction] ?? action.replace(/[._]/g, " ")
+
+/**
+ * What a change acted on — the topic filed under, the account renamed, the
+ * topic merged into — read out of the entry's own payload.
+ *
+ * The payload is already the record of what happened, so this needs no extra
+ * column. `before` is checked after `after` because a removal records what was
+ * there rather than what now is.
+ */
+export function changedName(before: unknown, after: unknown): string | null {
+  const pick = (value: unknown, keys: string[]) => {
+    const o = value as Record<string, unknown> | null
+    for (const key of keys) {
+      const found = o?.[key]
+      if (typeof found === "string" && found.length > 0) return found
+    }
+    return null
+  }
+
+  return (
+    pick(after, ["topic", "added", "removed", "mergedInto", "name", "email"]) ??
+    pick(before, ["topic", "had", "name", "email"])
+  )
+}
+
+/**
+ * Whether an entry describes a removal.
+ *
+ * Before filing and unfiling had separate actions, a removal was written as
+ * `material.categorise` with `after.removed`. Reading those as "Added to Faith"
+ * would make the trail describe itself backwards, so where the action name
+ * cannot settle the direction, the payload does. The entries themselves are
+ * left alone — amending the trail is not a feature.
+ */
+function isRemoval(before: unknown, after: unknown): boolean {
+  const a = after as Record<string, unknown> | null
+  const b = before as Record<string, unknown> | null
+  return typeof a?.removed === "string" || typeof b?.had === "string"
+}
+
+/**
+ * One entry as a complete phrase: "Added to Faith", "Removed from Faith".
+ *
+ * A material's own history is read down a single column, where "Topics changed"
+ * answers nothing — the useful question is *which* topic, and in which
+ * direction. Falls back to the verb when the payload names nothing.
+ */
+export function describeChange(action: string, before: unknown, after: unknown): string {
+  const name = changedName(before, after)
+  const sentence = describe(action)
+  const fallback = sentence.charAt(0).toUpperCase() + sentence.slice(1)
+  if (!name) return fallback
+
+  switch (action) {
+    case "material.categorise":
+      return isRemoval(before, after) ? `Removed from ${name}` : `Added to ${name}`
+    case "material.uncategorise":
+      return `Removed from ${name}`
+    case "category.create":
+      return `Created the topic ${name}`
+    case "category.merge":
+      return `Merged into ${name}`
+    case "category.unmerge":
+      return `Reversed the merge into ${name}`
+    default:
+      return `${fallback} ${name}`
+  }
+}
 
 /** The distinct actions present, so the filter only offers what exists. */
 export async function activityActions() {

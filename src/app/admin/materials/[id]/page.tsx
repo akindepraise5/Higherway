@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { CategoryPicker } from "../../../../components/admin/category-picker"
+import { PageReader } from "../../../../components/admin/page-reader"
 import { Cover } from "../../../../components/public/cover"
 import { db } from "../../../../db"
 import {
@@ -16,7 +17,8 @@ import { lookFor } from "../../../../lib/art/palette"
 import { pageKey, publicUrl } from "../../../../lib/r2/keys"
 import { requireSession } from "../../../../lib/session"
 import { exact, timeAgo, who } from "../../../../lib/when"
-import { actionLabel, contributors, materialHistory } from "../../../../server/materials/history"
+import { describeChange } from "../../../../server/activity"
+import { contributors, materialHistory } from "../../../../server/materials/history"
 
 /**
  * One material, as an admin sees it.
@@ -190,32 +192,16 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
           <h2 className="mt-10 text-[11px] font-medium uppercase tracking-[.2em] text-taupe">
             Pages
           </h2>
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {pages.map((p) => (
-              <figure
-                key={p.pageNumber}
-                className="overflow-hidden rounded-[3px] border border-line-soft"
-              >
-                {/* biome-ignore lint/performance/noImgElement: already sized by our pipeline, served free from R2 */}
-                <img
-                  src={publicUrl(pageKey(id, p.pageNumber), base)}
-                  alt={`Page ${p.pageNumber}`}
-                  width={p.width ?? 1400}
-                  height={p.height ?? 1980}
-                  loading="lazy"
-                  className="h-auto w-full bg-paper-3"
-                />
-                <figcaption className="flex items-center justify-between px-2.5 py-2 text-[11px] text-taupe">
-                  <span>p{p.pageNumber}</span>
-                  <span
-                    className={p.ocrQuality !== null && p.ocrQuality < 0.55 ? "text-[#8c2f22]" : ""}
-                  >
-                    {p.ocrQuality !== null ? `${Math.round(p.ocrQuality * 100)}%` : "—"}
-                  </span>
-                </figcaption>
-              </figure>
-            ))}
-          </div>
+          <PageReader
+            title={material.title}
+            pages={pages.map((p) => ({
+              pageNumber: p.pageNumber,
+              url: publicUrl(pageKey(id, p.pageNumber), base),
+              width: p.width,
+              height: p.height,
+              ocrQuality: p.ocrQuality,
+            }))}
+          />
 
           {pages.length === 0 ? (
             <p className="mt-4 text-[13.5px] text-ink-3">
@@ -249,7 +235,7 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
               {history.map((h) => (
                 <li key={h.id} className="relative py-2.5 pl-5 text-[13.5px]">
                   <span className="absolute left-0 top-[18px] h-px w-3 bg-line-soft" />
-                  <span className="text-ink-2">{actionLabel(h.action)}</span>
+                  <span className="text-ink-2">{describeChange(h.action, h.before, h.after)}</span>
                   <span className="text-taupe"> — {who(h.byName, null)}</span>
                   <time
                     dateTime={h.at.toISOString()}

@@ -237,8 +237,21 @@ the dialog is what stops it being needed again.
       services, but nothing on the page calls them yet
 - [ ] Bulk actions on the materials table (filter and sort are done)
 - [ ] Upload (presigned) and import by URL, with the safety checks in §6
-- [ ] Reading a material properly while filing it. Pages are 4-up thumbnails;
-      once OCR has run the text itself becomes the faster way to judge a topic
+- [x] Reading a material while filing it: any page opens full size in a native
+      `<dialog>`, with arrow keys and on-screen controls through the rest. The
+      OCR text is deliberately not shipped to it — at ~3 KB a page a 48-page
+      booklet would put 150 KB into the payload for a panel most visits never
+      open
+- [x] The trail says *which* topic and in which direction. Filing and unfiling
+      were writing the same `material.categorise` action, so nothing could tell
+      them apart and both read as "Topics changed"; unfiling is now
+      `material.uncategorise` and entries read "Added to Faith" / "Removed from
+      Faith", drawn from the payload rather than a new column. Filing no longer
+      records the title, which made every entry look like a title edit
+- [ ] **Adding materials from the dashboard** — not built at all yet. Needs
+      presigned upload and import-by-URL (§6), an edit form on top of the
+      existing `updateMaterial`, and archive/restore. Until then the archive can
+      only grow through `scripts/backfill.ts`
 
 ### Phase 5 — Reading and duplicates
 - [ ] OCR interface; tesseract.js on the worker

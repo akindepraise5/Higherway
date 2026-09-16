@@ -7,6 +7,7 @@ import {
   activity,
   activityActions,
   actors,
+  changedName,
   describe,
 } from "../../../server/activity"
 
@@ -37,21 +38,6 @@ const href = (params: Search) => {
   if (params.page && params.page !== "1") qs.set("page", params.page)
   const s = qs.toString()
   return s ? `/admin/activity?${s}` : "/admin/activity"
-}
-
-/** A short, readable summary of what changed, drawn from before/after. */
-function detail(row: { before: unknown; after: unknown }) {
-  const before = row.before as Record<string, unknown> | null
-  const after = row.after as Record<string, unknown> | null
-
-  const name = (o: Record<string, unknown> | null) =>
-    typeof o?.name === "string" ? o.name : typeof o?.email === "string" ? o.email : null
-
-  const from = name(before)
-  const to = name(after) ?? (typeof after?.mergedInto === "string" ? after.mergedInto : null)
-
-  if (from && to && from !== to) return `${from} → ${to}`
-  return to ?? from ?? null
 }
 
 export default async function ActivityPage({ searchParams }: { searchParams: Promise<Search> }) {
@@ -137,7 +123,7 @@ export default async function ActivityPage({ searchParams }: { searchParams: Pro
       ) : (
         <ol className="mt-8 overflow-hidden rounded-[3px] border border-line-soft">
           {result.items.map((row) => {
-            const summary = detail(row)
+            const summary = changedName(row.before, row.after)
             return (
               <li
                 key={row.id}

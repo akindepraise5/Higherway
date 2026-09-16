@@ -112,8 +112,9 @@ export async function assignCategory(
       action: "material.categorise",
       entityType: "material",
       entityId: materialId,
-      before: { title: material.title },
-      after: { added: category?.name, created: createdName ?? undefined },
+      // The title is not what changed. Recording it here made every filing read
+      // as though someone had edited the title.
+      after: { topic: category?.name, created: createdName ?? undefined },
       actorId: session.user.id,
     })
 
@@ -155,11 +156,10 @@ export async function unassignCategory(
       )
 
     await audit(tx, {
-      action: "material.categorise",
+      action: "material.uncategorise",
       entityType: "material",
       entityId: materialId,
-      before: { had: category?.name },
-      after: { removed: category?.name },
+      before: { topic: category?.name },
       actorId: session.user.id,
     })
 
