@@ -544,6 +544,7 @@ GOOGLE_CLOUD_VISION_KEY           optional — server-side OCR, 1,000 pages/mont
 | 2026-09-16 | Measured, not assumed: 2.04 GB, ~1,100 pages, 1.68 pages/document | The archive is a seventh of the assumed workload; everything fits free |
 | 2026-09-16 | The OCR text is public by default, collapsed, with a per-material switch | It is the only thing that makes the archive findable |
 | 2026-09-16 | Public submissions designed into the schema now, built after launch | Keeps the first release focused |
+| 2026-09-16 | The backfill publishes directly; no review queue for the v1 archive | These 651 were already published for years in print and on the v1 site. Holding them for approval would be re-deciding something the church already decided. New uploads still go through review |
 | 2026-09-16 | Roles are strictly nested: Owner ⊃ Admin ⊃ Editor | Simple to explain, simple to check |
 | 2026-09-16 | shadcn's semantic tokens are mapped onto the Higherway palette in `globals.css` | A generated component is on-brand immediately, with no per-component overrides. `--background` is paper, `--primary` is ink, `--ring` is gold, the sidebar is forest |
 | 2026-09-16 | Geist removed from `layout.tsx`; the faces stay Newsreader + Instrument Sans | `shadcn init` adds Geist bound to `--font-sans`, which silently replaces the v1 typography. **Re-running init reintroduces this — check `layout.tsx` and the `@theme inline` block afterwards** |

@@ -144,9 +144,18 @@ that phase's migration.
 - [x] Sitemap and robots, built from the database, and guarded so a production
       build without `NEXT_PUBLIC_SITE_URL` fails loudly rather than publishing
       localhost URLs for Google to crawl
-- [ ] Social images via `next/og`, reusing the cover artwork
+- [x] Social images via `next/og`, reusing the cover artwork so a shared link
+      looks like the material rather than a generic banner
+- [x] Redirects from the old `#/` links. This has to be a small inline script:
+      a hash fragment is never sent to the server, so no redirect rule,
+      middleware or rewrite can see it. It is the only client JavaScript on the
+      public site, and it maps v1's `?cat=` to v2's `?topic=`
 - [ ] Hybrid search (full text + fuzzy titles + meaning) — needs the OCR text
-- [ ] Redirects from the old `#/` links
+
+**Decided 2026-09-16:** the v1 archive publishes straight from the backfill, with
+no review queue. These materials were already published in print and on the v1
+site for years; holding them for approval would re-decide something the church
+already decided. New uploads through the admin panel still go through review.
 
 Verified against the running site: every route returns 200, both nonsense slugs
 404, and the filters compose — 142 materials, 18 for "faith", 6 under Prayer,

@@ -43,7 +43,40 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${newsreader.variable} ${instrument.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/*
+          The only client JavaScript on the public site, and it earns its place:
+          v1 addressed everything with hash routes (#/library?cat=faith), and a
+          hash is never sent to the server — so no redirect rule, middleware or
+          rewrite can see it. Old links people saved or shared would land on the
+          home page with their destination silently dropped.
+
+          It runs before paint, so a visitor following an old link sees the page
+          they asked for rather than the home page first.
+        */}
+        <script
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed string, no interpolation
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{
+var h=location.hash;if(!h||h.charAt(1)!=="/")return;
+var raw=h.slice(2),cut=raw.indexOf("?");
+var path=cut<0?raw:raw.slice(0,cut);
+var q=new URLSearchParams(cut<0?"":raw.slice(cut+1));
+var to="/";
+if(path===""){to="/";}
+else if(path==="about"){to="/about";}
+else if(path.indexOf("library")===0){
+var p=new URLSearchParams();
+var cat=q.get("cat");if(cat&&cat!=="all")p.set("topic",cat);
+var term=q.get("q");if(term)p.set("q",term);
+var sort=q.get("sort");if(sort&&sort!=="recent")p.set("sort",sort);
+var s=p.toString();to="/library"+(s?"?"+s:"");}
+else{to="/library";}
+location.replace(to);}catch(e){}})();`,
+          }}
+        />
+      </body>
     </html>
   )
 }
