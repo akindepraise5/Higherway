@@ -146,6 +146,27 @@ export function titleSimilarity(a: string, b: string): number {
   const sb = splitSeries(nb)
   if (sa.stem === sb.stem && sa.number !== sb.number) return 0
 
+  return titleOverlap(a, b)
+}
+
+/**
+ * Word overlap alone, with the series rule not applied.
+ *
+ * "Are these worth comparing?" is a different question from "are these titles
+ * evidence of duplication?", and conflating them costs real findings. The scan
+ * only reads two materials' text when their titles already look related, so if
+ * the series rule reached that gate as well, "Our Conscience is a Witness"
+ * against "…Witness1" would score 0, never be compared, and lose the very
+ * containment finding that makes it worth raising — five pages appearing inside
+ * forty-eight. The title says nothing; the text says everything.
+ */
+export function titleOverlap(a: string, b: string): number {
+  const na = normaliseTitle(a)
+  const nb = normaliseTitle(b)
+  if (!na && !nb) return 1
+  if (!na || !nb) return 0
+  if (na === nb) return 1
+
   const ta = titleTokens(a)
   const tb = titleTokens(b)
   if (ta.size === 0 || tb.size === 0) return 0

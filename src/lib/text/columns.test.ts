@@ -134,6 +134,46 @@ describe("readingOrder", () => {
     expect(out.indexOf("left three")).toBeLessThan(out.indexOf("right one"))
   })
 
+  it("puts back together words the printer broke across a line", () => {
+    // All four are real breaks from one page of this archive. Left split, none
+    // of these words can be searched for.
+    const boxes = [
+      line("I was still able to pass all the exams and was granted admis-", LEFT, COL, 1),
+      line("sion to a university. Once there, however, I did not do well", LEFT, COL, 2),
+      line("and it was God Him-", LEFT, COL, 3),
+      line("self who gave me the words to say", LEFT, COL, 4),
+    ]
+
+    const out = readingOrder(boxes)
+    expect(out).toContain("granted admission to a university")
+    expect(out).toContain("it was God Himself who gave me")
+    expect(out).not.toContain("admis-")
+  })
+
+  it("keeps the hyphen where the word really has one", () => {
+    // "Self denial" is a material in this archive, so this is not hypothetical.
+    const boxes = [
+      line("a study of self-", LEFT, COL, 1),
+      line("denial and what it costs", LEFT, COL, 2),
+    ]
+    expect(readingOrder(boxes)).toContain("self-denial and what it costs")
+  })
+
+  it("does not join a hyphen to a line that starts a new sentence", () => {
+    // The guard is the lower-case check. A hyphen before a capital is a dash
+    // doing its own work, not half of a broken word. Written with a hyphen on
+    // purpose: an em-dash would pass this whatever the guard did, because it is
+    // not in the character class at all.
+    const boxes = [
+      line("he spoke to the congregation -", LEFT, COL, 1),
+      line("And then he left", LEFT, COL, 2),
+    ]
+    expect(readingOrder(boxes).split("\n")).toEqual([
+      "he spoke to the congregation -",
+      "And then he left",
+    ])
+  })
+
   it("ignores empty lines and survives an empty page", () => {
     expect(readingOrder([])).toBe("")
     expect(readingOrder([line("   ", LEFT, COL, 1)])).toBe("")

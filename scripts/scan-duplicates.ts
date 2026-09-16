@@ -20,7 +20,7 @@ import { eq, sql } from "drizzle-orm"
 import { duplicatePairs, materials } from "../src/db/schema"
 import { txdb } from "../src/db/tx"
 import { scoreDuplicate } from "../src/lib/dedupe/score"
-import { titleSimilarity } from "../src/lib/dedupe/title"
+import { titleOverlap, titleSimilarity } from "../src/lib/dedupe/title"
 import { containment, textSimilarity } from "../src/lib/text/similarity"
 
 const args = process.argv.slice(2)
@@ -102,8 +102,13 @@ async function main() {
 
       // Comparing text is the expensive part, so only do it for pairs that
       // already look related by title or are byte-identical.
+      //
+      // Gated on raw word overlap, not on `title`: the series rule sets `title`
+      // to 0 for "…Witness" against "…Witness1", and gating on that would stop
+      // the text ever being read — losing the containment finding that is the
+      // whole reason the pair deserves a look.
       const bothHaveText = !titlesOnly && x.text.length > 200 && y.text.length > 200
-      const worthReading = bothHaveText && (title >= 0.35 || sha256Equal)
+      const worthReading = bothHaveText && (titleOverlap(x.title, y.title) >= 0.35 || sha256Equal)
 
       const shingles = worthReading ? textSimilarity(x.text, y.text) : 0
       const contained = worthReading ? containment(x.text, y.text) : 0

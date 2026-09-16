@@ -366,7 +366,7 @@ The archive arrives with duplicates: **62 exact-title groups covering 132 rows**
 | Signal | Catches | Method | Verdict |
 |---|---|---|---|
 | Identical bytes | the same file twice | SHA-256, computed in the browser before upload | **Blocks** |
-| Similar title | "A Heart Like His" vs "A heart like His (1)" | normalise (strip `2017-01-FTWord-`, `(1)`, `copy of`, case, punctuation) then compare significant words | Flags at ≥ 0.55 |
+| Similar title | "A Heart Like His" vs "A heart like His (1)" | normalise (strip `2017-01-FTWord-`, `(1)`, `copy of`, case, punctuation) then compare significant words. A differing trailing series number scores 0 | Flags at ≥ 0.55 |
 | Same text | a re-scan of the same article | overlap of 3-word shingles, tolerant of OCR noise | Flags at ≥ 0.7 |
 | Similar meaning | a retyped or re-set copy | cosine distance between document vectors | Flags at ≥ 0.93 |
 | Contained | an article reprinted inside a booklet | how much of the shorter text appears in the longer | Flags at ≥ 0.9, **separately** |
@@ -391,6 +391,24 @@ contains every shingle of the original by definition, so mixing the two rated th
 pair at 0.79 against a genuine duplicate's 0.78 — no separation at all. Held apart,
 the review page can say *"this appears inside that"* instead of *"these are the
 same"*, which is a different thing for an admin to decide about.
+
+**A series is not a duplicate of itself.** The first scan of the real archive raised
+"Questions and answers Vol 1" against "Vol 2" at 0.510 — three shared words out of
+four, clearing the title threshold with no content evidence behind it at all. That
+trailing number is the entire difference between the two materials, not incidental
+noise, so two titles alike in everything but a trailing number now score 0 on the
+title signal.
+
+The rule is narrow, and deliberately so. It fires only when the rest of the title
+matches exactly, leaving "The Place of Full Surrender" against "A Place of Surrender"
+untouched, and it suppresses the title alone: "Our Conscience is a Witness" against
+"…Witness1" keeps its containment finding — five pages inside forty-eight — and is
+still raised. Re-scored against the live pairs rather than argued in the abstract:
+82 of 87 unchanged, 4 dropped, every one a series.
+
+A shared series *prefix* is left alone — "Exploring the word Holiness" against
+"Exploring the word". Telling a series from a retitled reprint there is a judgement
+for a person, not a rule worth inventing.
 
 Signals combine into a score with the reasons kept in `signals`, so the review page can
 say *why* rather than showing a number.
@@ -578,3 +596,5 @@ GOOGLE_CLOUD_VISION_KEY           optional — server-side OCR, 1,000 pages/mont
 | 2026-09-16 | `mupdf` and `sharp` are in `build.external` for Trigger.dev | A WASM module and a native binary cannot be bundled. Left out, the task builds and then fails at runtime, which is the worst order to discover it |
 | 2026-09-16 | Filing and unfiling are separate audit actions (`material.categorise` / `material.uncategorise`) | One action for two opposite events meant no reader could tell "added to Faith" from "removed from Faith", and the trail could not answer who removed something. An undo must never wear the name of the thing it undid — the same reason `category.unmerge` exists |
 | 2026-09-16 | The 27 materials the backfill left stuck are archived as duplicates, not retried | Hashing the bytes proved 24 of them byte-identical to a material already live: the v1 sheet lists the same Drive file twice, and `materials_sha256_live_idx` refused the copy. The index was working; only its failure was being treated as a crash. Byte-identical matches under a *different* title are held back for a person, because naming them is a judgement |
+| 2026-09-16 | A differing trailing series number sets the title signal to 0 | "Questions and answers Vol 1" against "Vol 2" scored 0.510 on three shared words of four, with no content evidence. The number is the difference between the materials, not noise. Narrow by design: only when the rest of the title matches exactly, and content signals are untouched, so a contained reprint is still raised |
+| 2026-09-16 | OCR line geometry is emitted by Swift; reading order is rebuilt in TypeScript | Ordering inside `vision-ocr.swift` could not be tested without a Mac and an image. As a pure module the awkward layouts — two columns, three, a byline in the gutter, a line Vision ran across it — are testable, which mattered: the fix took six attempts and every wrong turn came from reasoning about the geometry instead of measuring it |

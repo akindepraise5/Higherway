@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { cleanTitle, normaliseTitle, titleSimilarity } from "./title"
+import { cleanTitle, normaliseTitle, titleOverlap, titleSimilarity } from "./title"
 
 /**
  * Every pair below is real, taken from the v1 spreadsheet. If a change makes
@@ -108,6 +108,16 @@ describe("titleSimilarity", () => {
     )
     expect(titleSimilarity("Psalm 23", "Psalm 23")).toBe(1)
     expect(titleSimilarity("Lessons From Jericho", "Lessons from Jericho")).toBe(1)
+  })
+
+  it("still reports word overlap for gating, even where the title signal is 0", () => {
+    // The scan reads two materials' text only when their titles already look
+    // related. If the series rule reached that gate too, this pair would never
+    // be compared and its containment finding would vanish — which is exactly
+    // the bug the separate function exists to prevent.
+    const pair: [string, string] = ["Our Conscience is a Witness", "Our Conscience is a Witness1"]
+    expect(titleSimilarity(...pair)).toBe(0)
+    expect(titleOverlap(...pair)).toBeGreaterThanOrEqual(0.35)
   })
 
   it("leaves the content signals to speak for themselves", () => {
