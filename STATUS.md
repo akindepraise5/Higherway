@@ -167,11 +167,33 @@ download name, so everything it uploads from that point lands without the header
 The script is idempotent, so re-running it costs nothing.
 
 ### Phase 3 — Auth and admin shell
-- [ ] Better Auth, sign-up disabled, seeded Owner
-- [ ] Invites: token, email, Copy invite link, accept page
-- [ ] Roles: Owner ⊃ Admin ⊃ Editor
-- [ ] Audit log written inside every mutation
-- [ ] Admin layout, dashboard, Activity page
+- [x] Better Auth, sign-up disabled, seeded Owner. Confirmed working from a real
+      browser, not just by script
+- [x] Invites: single-use hashed token, accept page, Copy-invite-link panel
+      shown once. Email delivery is configured but the link is shown regardless,
+      so the flow never depends on Resend
+- [x] Roles: Owner ⊃ Admin ⊃ Editor. Only an Owner invites an Owner or Admin;
+      the last Owner cannot be demoted or suspended
+- [x] Audit log written inside every mutation — **this forced a second database
+      handle**. Neon's HTTP driver has no transaction support at all, so
+      mutations use a pooled WebSocket connection (`src/db/tx.ts`) where a real
+      transaction works. Proved by probe: rollback leaves neither the change nor
+      its audit entry
+- [x] Admin layout, overview, materials list and detail, categories, People,
+      Activity
+- [x] Route guards in `src/proxy.ts` — verified both directions. No admin or
+      sign-in link appears anywhere on the public site
+- [x] Confirmation dialog for destructive actions, requiring the category's name
+      to be typed where materials would move or be unfiled
+
+**Learned the hard way.** Category merge shipped behind a `<select>` that fired
+on change, with no confirmation. A stray click moved 42 materials out of Faith.
+It was reversible only because the v1 spreadsheet still records the original
+filing — `mergeCategory` moves rows with an UPDATE, so afterwards a moved row is
+indistinguishable from one that was always on the target, and the audit entry
+records how many moved but not which. A category created after the import would
+have been unrecoverable. `scripts/undo-merge.ts` performs the reconstruction;
+the dialog is what stops it being needed again.
 
 ### Phase 4 — Managing materials
 - [ ] Materials table: filter, sort, bulk actions
