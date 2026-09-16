@@ -52,9 +52,28 @@ export function Masthead() {
           ))}
         </nav>
 
+        {/* Search on every page, not only once you have reached the library.
+            A plain GET form to /library, the same contract the library's own
+            box uses — so it needs no JavaScript, no new route, and the result
+            has a shareable URL. It searches titles, summaries, authors, topic
+            names and the read text of every page. */}
+        <form action="/library" method="get" className="relative hidden sm:block">
+          <label htmlFor="site-search" className="sr-only">
+            Search materials, topics and authors
+          </label>
+          <input
+            id="site-search"
+            name="q"
+            type="search"
+            placeholder="Search"
+            className="w-36 rounded-full border border-line-soft bg-paper-2 py-2.5 pl-10 pr-4 text-[14px] transition-[width,border-color] duration-300 focus:w-56 focus:border-ink focus:bg-white focus:outline-none"
+          />
+          <SearchIcon />
+        </form>
+
         <Link
           href="/library"
-          className="hidden items-center gap-2.5 rounded-full border border-ink bg-ink px-5 py-3 text-sm font-medium text-paper-2 transition-colors hover:bg-forest-2 sm:inline-flex"
+          className="hidden items-center gap-2.5 rounded-full border border-ink bg-ink px-5 py-3 text-sm font-medium text-paper-2 transition-colors hover:bg-forest-2 lg:inline-flex"
         >
           Explore Library
           <Arrow />
@@ -70,7 +89,23 @@ export function Masthead() {
               <span className="block h-[1.5px] w-[18px] rounded bg-ink" />
             </span>
           </summary>
-          <div className="absolute right-0 top-full mt-2 w-48 rounded-md border border-line-soft bg-paper-2 p-2 shadow-lg">
+          <div className="absolute right-0 top-full mt-2 w-60 rounded-md border border-line-soft bg-paper-2 p-2 shadow-lg">
+            {/* The phone has no room for a permanent search box, so it lives in
+                the menu rather than being dropped on small screens. */}
+            <form action="/library" method="get" className="relative p-1">
+              <label htmlFor="menu-search" className="sr-only">
+                Search materials, topics and authors
+              </label>
+              <input
+                id="menu-search"
+                name="q"
+                type="search"
+                placeholder="Search"
+                className="w-full rounded-full border border-line-soft bg-paper py-2.5 pl-9 pr-3 text-[14px] focus:border-ink focus:outline-none"
+              />
+              <SearchIcon className="left-3.5" />
+            </form>
+
             {LINKS.map((link) => (
               <Link
                 key={link.href}
@@ -84,6 +119,24 @@ export function Masthead() {
         </details>
       </div>
     </header>
+  )
+}
+
+/** Sits inside the search field, so it is decoration — the label does the work. */
+function SearchIcon({ className = "left-4" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={`pointer-events-none absolute ${className} top-1/2 h-4 w-4 -translate-y-1/2 text-taupe`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
   )
 }
 

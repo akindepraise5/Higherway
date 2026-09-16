@@ -128,6 +128,27 @@ export async function topicList(limit?: number) {
   return rows
 }
 
+/**
+ * Authors with something published, busiest first.
+ *
+ * Most of the archive is unattributed, so this is deliberately a list of the
+ * few who *are* credited rather than a directory of everyone. `author` is
+ * stored null when unknown — never "" — so a simple NOT NULL is enough here;
+ * see `ingestPdf`.
+ */
+export async function authorList(limit?: number) {
+  const rows = await db
+    .select({ name: materials.author, count: count(materials.id) })
+    .from(materials)
+    .where(and(published(), sql`${materials.author} is not null`))
+    .groupBy(materials.author)
+    .orderBy(desc(count(materials.id)), materials.author)
+    .limit(limit ?? 100)
+
+  // The column is nullable in the type even though the filter excludes nulls.
+  return rows.map((row) => ({ name: row.name ?? "", count: row.count }))
+}
+
 /** One material, by its public slug. Returns null rather than throwing. */
 export async function materialBySlug(slug: string) {
   const [row] = await db

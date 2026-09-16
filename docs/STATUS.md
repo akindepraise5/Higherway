@@ -575,15 +575,44 @@ Asked for directly, in the owner's words, and not yet built:
       picker hides the create option to match, and its empty state now
       distinguishes "already filed there" from "no such topic, and only an
       Owner can add one" — it previously claimed the former for both.
-- [ ] **Author, treated as a first-class field.** Optional, but present on the
-      add *and* edit forms, searchable and filterable on the public site as well
-      as in admin, so a reader can follow an author they like. `materials.author`
-      already exists and library search already matches it; what is missing is
-      the input on the forms, a filter, and somewhere to browse by author.
-- [ ] **Search in the navbar, on every page.** Today search only exists once you
-      have reached the library. It should be reachable anywhere, cover
-      materials, topics *and* authors, and land on a search page rather than
-      making someone navigate to the library first.
+- [x] **Author, treated as a first-class field** — done. The edit screen always
+      had the input; the real gap was underneath it. **`ingestPdf` had no
+      `author` parameter at all**, so nothing between a form and the materials
+      row could carry one — an author added at upload time was not merely
+      unasked, it was unstorable. It now threads the add form → both upload
+      services → the task payload → ingest.
+
+      Empty is stored as `null`, never `""`. An empty string passes every "is
+      it set?" check, renders as a blank byline, and would split the author
+      list into "unattributed" and "attributed to nothing".
+
+      Browsing is a row of author chips on the library, built from
+      `authorList()` — deliberately only the credited few, since most of the
+      archive is unattributed and a directory of mostly-nothing is noise.
+      Clicking the active author clears it, so the row is its own escape. The
+      filter is an **exact** match, unlike `q`: it comes from a chip, so
+      "Rev. Darrel Lee" must not also collect "Darrel Lee Jr". `author` is
+      preserved across every topic, sort and pagination link — dropping it on a
+      topic click is the obvious bug here and it is tested by hand.
+
+      The author on a card is deliberately **not** a link: the whole card is
+      already an anchor, and an anchor inside an anchor is invalid HTML.
+- [x] **Search in the navbar, on every page** — done. A plain GET form to
+      `/library`, the same contract the library's own box already uses, so it
+      needs no JavaScript, no new route, and every result has a shareable URL.
+      On a phone it sits inside the menu rather than being dropped, and the
+      Explore Library button moves to `lg:` so the two do not collide.
+
+      Search now also matches **topic names**, which the box has claimed since
+      it was written ("Search materials or topics") without it being true.
+
+      **Measured, and honest about it: that clause currently changes nothing.**
+      Across six topic words it matched 15, 13, 10, 10, 5 and 10 materials —
+      and in every case *every one of them was already matched* by the page
+      text. Materials found by topic name alone: **0, for all six.** It is kept
+      because a newly published upload has no OCR text until someone runs
+      `ocr:local`, and for that material the topic name is the only thing to
+      match on — but it earns its place on that argument, not on a measurement.
 
 ### Phase 7 — Launch
 
@@ -672,6 +701,19 @@ building.
 
 ## Open questions
 
+- **Search matches far too much, and ranks none of it.** Measured against the
+  live archive: "prayer" returns **371 of 624 materials**, "heaven" 352,
+  "salvation" 287. Any occurrence anywhere in a document's full text counts, and
+  every hit is weighted the same, so a material *about* prayer sorts no higher
+  than one that mentions it once on page 3. Sorting is by date or title only —
+  there is no relevance order at all.
+
+  This is not new and nothing above caused it; it simply was not measured until
+  now. It is the strongest practical argument for the hybrid search in Phase 5:
+  Postgres full-text gives `ts_rank` almost for free, and the embeddings would
+  put "trusting God through illness" above a passing mention. Worth deciding
+  before launch whether a 59%-of-the-archive result set is acceptable in the
+  meantime.
 - Domain name and timing — decides when invite emails and R2's public domain go live.
 - Whether paid work is involved in building this, which decides Vercel Hobby vs Pro
   (`ARCHITECTURE.md` §3).

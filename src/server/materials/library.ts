@@ -20,6 +20,8 @@ export const PAGE_SIZE = 48
 export type LibraryQuery = {
   q?: string
   topic?: string
+  /** An exact author name, from the chips — not a search term. */
+  author?: string
   sort?: Sort
   page?: number
 }
@@ -44,8 +46,12 @@ function orderFor(sort: Sort) {
   }
 }
 
-function filters({ q, topic }: LibraryQuery) {
+function filters({ q, topic, author }: LibraryQuery) {
   const clauses: (SQL | undefined)[] = [published()]
+
+  // An exact match, unlike `q`: this comes from a chip the reader clicked, so
+  // "Rev. Darrel Lee" must not also collect "Darrel Lee Jr".
+  if (author) clauses.push(eq(materials.author, author))
 
   if (topic && topic !== "all") {
     clauses.push(
@@ -70,6 +76,21 @@ function filters({ q, topic }: LibraryQuery) {
         ilike(materials.title, like),
         ilike(materials.summary, like),
         ilike(materials.author, like),
+        /**
+         * The name of a topic it is filed under. Searching "prayer" should find
+         * what is shelved under Prayer even when the word appears nowhere in
+         * the title — the search box says "materials or topics", and until now
+         * only the first half was true.
+         */
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(materialCategories)
+            .innerJoin(categories, eq(categories.id, materialCategories.categoryId))
+            .where(
+              and(eq(materialCategories.materialId, materials.id), ilike(categories.name, like)),
+            ),
+        ),
         /**
          * The OCR text is what makes a photographed page findable at all, and
          * it is stored one line per line of the page — `readingOrder` ends with
