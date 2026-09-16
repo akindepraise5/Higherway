@@ -23,7 +23,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { GetObjectCommand } from "@aws-sdk/client-s3"
-import { and, eq, isNull, or, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { db } from "../src/db"
 import { materialPages } from "../src/db/schema"
 import { readingOrder, type TextBox } from "../src/lib/text/columns"
@@ -85,7 +85,11 @@ async function main() {
         : redo
           ? sql`${materialPages.ocrEngine} <> 'vision' and ${materialPages.r2KeyWebp} is not null`
           : and(
-              or(isNull(materialPages.text), eq(materialPages.ocrEngine, "none")),
+              // "Never been read", not "has no text". A blank verso is read
+              // correctly, yields nothing, and is finished — but while the
+              // queue asked for empty text it came back every single run:
+              // "read 5 … still waiting 5", for ever.
+              eq(materialPages.ocrEngine, "none"),
               sql`${materialPages.r2KeyWebp} is not null`,
             ),
     )
@@ -203,7 +207,7 @@ Done in ${Math.round(elapsed)}s (${(elapsed / Math.max(read, 1)).toFixed(2)}s a 
   const remaining = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(materialPages)
-    .where(or(isNull(materialPages.text), eq(materialPages.ocrEngine, "none")))
+    .where(eq(materialPages.ocrEngine, "none"))
 
   console.log(`  still waiting ${remaining[0]?.n ?? 0}`)
 }

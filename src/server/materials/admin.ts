@@ -80,7 +80,15 @@ function whereFor(filter: AdminFilter, q?: string): SQL | undefined {
           db
             .select({ one: sql`1` })
             .from(materialPages)
-            .where(and(eq(materialPages.materialId, materials.id), isNull(materialPages.text))),
+            .where(
+              and(
+                eq(materialPages.materialId, materials.id),
+                // Never read, rather than holding no text: a blank page has
+                // been read and is finished, and listing it here sent an admin
+                // to run OCR that could never clear it.
+                eq(materialPages.ocrEngine, "none"),
+              ),
+            ),
         ),
       )
       break

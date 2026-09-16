@@ -1,4 +1,4 @@
-import { count, eq, isNull, sql } from "drizzle-orm"
+import { count, eq, sql } from "drizzle-orm"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { db } from "../../db"
@@ -37,7 +37,10 @@ export default async function AdminHome({
         )`,
       ),
     db.select({ n: count() }).from(duplicatePairs).where(eq(duplicatePairs.status, "pending")),
-    db.select({ n: count() }).from(materialPages).where(isNull(materialPages.text)),
+    // Pages nothing has read yet. Counting "no text" instead would include
+    // blank versos, which are read correctly, hold nothing, and are done —
+    // leaving a tile that never reaches zero however often OCR is run.
+    db.select({ n: count() }).from(materialPages).where(eq(materialPages.ocrEngine, "none")),
   ])
 
   const queues = [
