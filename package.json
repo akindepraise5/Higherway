@@ -19,7 +19,8 @@
     "import:sheet": "tsx --env-file=.env.local scripts/import-sheet.ts",
     "backfill": "tsx --env-file=.env.local scripts/backfill.ts",
     "ocr:local": "tsx --env-file=.env.local scripts/ocr-local.ts",
-    "fix:names": "tsx --env-file=.env.local scripts/fix-download-names.ts"
+    "fix:names": "tsx --env-file=.env.local scripts/fix-download-names.ts",
+    "reinvite": "tsx --env-file=.env.local scripts/reinvite-owner.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1132.0",
@@ -27,6 +28,7 @@
     "@base-ui/react": "^1.8.0",
     "@huggingface/transformers": "^4.2.0",
     "@neondatabase/serverless": "^1.1.0",
+    "better-auth": "^1.7.5",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.0",
     "drizzle-orm": "^0.45.2",

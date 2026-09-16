@@ -15,6 +15,13 @@
       "when": 1789519401398,
       "tag": "0001_lonely_scrambler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789524670071,
+      "tag": "0002_tiresome_viper",
+      "breakpoints": true
     }
   ]
 }

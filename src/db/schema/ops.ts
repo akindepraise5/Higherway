@@ -1,4 +1,5 @@
 import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core"
+import { user } from "./auth"
 
 /**
  * Operational tables: what staff did, and what each sync run found.
@@ -10,16 +11,16 @@ import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-o
  * row here in the same transaction as the change — a change that cannot be
  * audited must not happen. See CLAUDE.md.
  *
- * actorId has no foreign key yet: Better Auth generates the users table in
- * Phase 3, and hand-writing it now risks a mismatch. The constraint is added
- * in that phase's migration.
+ * actorId now carries its foreign key — the debt Phase 1 deliberately deferred
+ * until the `user` table existed. `set null` rather than `cascade`: deleting a
+ * person must never erase the record of what they did.
  */
 export const auditLog = pgTable(
   "audit_log",
   {
     id: uuid().primaryKey().defaultRandom(),
 
-    actorId: text(),
+    actorId: text().references(() => user.id, { onDelete: "set null" }),
     /** e.g. "material.publish", "category.merge", "duplicate.dismiss" */
     action: text().notNull(),
     entityType: text().notNull(),
