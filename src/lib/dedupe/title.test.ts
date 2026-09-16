@@ -22,6 +22,13 @@ const DISTINCT_PAIRS: [string, string][] = [
   ["The value of affliction", "The value of choosing self denial"],
   ["Exploring the word", "Exploring the word - Self denial"],
   ["Take a step of Faith", "The Trial of our Faith"],
+  /**
+   * Series, raised as duplicates by the first real scan of the archive. They
+   * share every word but the last, and that last word is the whole point.
+   */
+  ["Questions and answers Vol 1", "Questions and answers Vol 2"],
+  ["A Total Commitment", "A Total Commitment 2"],
+  ["Dare To Be Different!", "Dare To Be Different 2"],
 ]
 
 describe("normaliseTitle", () => {
@@ -84,5 +91,30 @@ describe("titleSimilarity", () => {
   it("handles empty input without throwing", () => {
     expect(titleSimilarity("", "")).toBe(1)
     expect(titleSimilarity("", "Faith")).toBe(0)
+  })
+
+  it("reads a trailing series number as evidence against, not as noise", () => {
+    expect(titleSimilarity("Questions and answers Vol 1", "Questions and answers Vol 2")).toBe(0)
+    expect(titleSimilarity("A Total Commitment", "A Total Commitment 2")).toBe(0)
+    // Run onto the word, as the archive has it.
+    expect(titleSimilarity("Our Conscience is a Witness", "Our Conscience is a Witness1")).toBe(0)
+  })
+
+  it("only does that when the rest of the title is identical", () => {
+    // Different stems: the rule must not reach these, or it would silence a
+    // signal on pairs that have nothing to do with a series.
+    expect(titleSimilarity("The Place of Full Surrender", "A Place of Surrender")).toBeGreaterThan(
+      0,
+    )
+    expect(titleSimilarity("Psalm 23", "Psalm 23")).toBe(1)
+    expect(titleSimilarity("Lessons From Jericho", "Lessons from Jericho")).toBe(1)
+  })
+
+  it("leaves the content signals to speak for themselves", () => {
+    // Suppressing the title is safe precisely because it is not the only
+    // evidence: "…Witness" against "…Witness1" is 5 pages inside 48, and the
+    // containment signal still raises it. Verified against the live pairs —
+    // of 87, four were dropped and every one was a series.
+    expect(titleSimilarity("Our Conscience is a Witness", "Our Conscience is a Witness1")).toBe(0)
   })
 })

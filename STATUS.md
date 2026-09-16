@@ -234,6 +234,19 @@ Still to do, now unblocked:
   Anchor that holds", "The cord of Salvation" against "The Cord Of Salvation",
   "Who's Right for Me" against "Who is right for me?". Waiting for a person at
   `/admin/duplicates`.
+
+  Reading the weakest pairs found a systematic false positive worth fixing:
+  **series**. "Questions and answers Vol 1" against "Vol 2" scored 0.510 purely
+  on sharing three words of four, with no content evidence at all — and the
+  trailing number is exactly what makes them different materials. Two titles
+  alike in everything but a trailing number now score 0 on the title signal.
+  Re-scored against the live pairs rather than argued in the abstract: 82 of 87
+  unchanged, 4 dropped, every one a series. "Our Conscience is a Witness"
+  against "…Witness1" survived, because 5 pages inside 48 is a containment
+  finding and does not depend on the title.
+
+  **Not** fixed, because it is a judgement rather than a rule: a shared series
+  *prefix*, such as "Exploring the word Holiness" against "Exploring the word".
 - **`TRIGGER_PROJECT_REF` is still missing** — only `TRIGGER_SECRET_KEY` is set,
   so `hasJobs` is false and adding a material is switched off. Deliberately: the
   file would upload and then sit in staging with nothing to process it.

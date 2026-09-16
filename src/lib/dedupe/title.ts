@@ -96,6 +96,31 @@ export function titleTokens(raw: string): Set<string> {
 }
 
 /**
+ * A trailing series number: "Vol 2", "Part 3", "Q&A 1", or one run straight
+ * onto the word as "Witness1".
+ */
+const SERIES_TAIL = /(?:\b(?:vol(?:ume)?|part|no)\.?\s*)?(\d{1,3})\s*$/i
+
+/**
+ * A title split from the series number at its end.
+ *
+ * That number is the one part of a title which argues *against* two materials
+ * being the same, and treating it as just another word gets it backwards: the
+ * first duplicate scan raised "Questions and answers Vol 1" against "Vol 2"
+ * because they share three words of four. They are different volumes, and the
+ * digit is the whole point.
+ */
+function splitSeries(normalised: string): { stem: string; number: string | null } {
+  const match = normalised.match(SERIES_TAIL)
+  if (!match || match.index === undefined) return { stem: normalised, number: null }
+
+  return {
+    stem: normalised.slice(0, match.index).trim(),
+    number: match[1] ?? null,
+  }
+}
+
+/**
  * Similarity between two titles, 0 to 1.
  *
  * Identical once normalised scores 1. Otherwise it is the overlap of the
@@ -103,6 +128,12 @@ export function titleTokens(raw: string): Set<string> {
  * without the false matches that character-level comparison produces on short
  * titles — "God cares" and "God calls" share most of their characters but
  * none of their meaning.
+ *
+ * Two titles alike in everything *but* a trailing number score 0: they are a
+ * series, and the title is evidence against rather than for. Content signals
+ * are untouched by this, which is what keeps it safe — "Our Conscience is a
+ * Witness" against "…Witness1" loses its title signal and is still raised,
+ * because 5 pages appearing inside 48 is a finding of its own.
  */
 export function titleSimilarity(a: string, b: string): number {
   const na = normaliseTitle(a)
@@ -110,6 +141,10 @@ export function titleSimilarity(a: string, b: string): number {
   if (!na && !nb) return 1
   if (!na || !nb) return 0
   if (na === nb) return 1
+
+  const sa = splitSeries(na)
+  const sb = splitSeries(nb)
+  if (sa.stem === sb.stem && sa.number !== sb.number) return 0
 
   const ta = titleTokens(a)
   const tb = titleTokens(b)
