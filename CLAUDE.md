@@ -14,7 +14,7 @@ lives in `docs/`.
 |---|---|
 | **`docs/ONBOARDING.md`** | First time in this repo. What it is, how a material comes to exist, how the code is shaped. |
 | **`docs/ARCHITECTURE.md`** | Before any change to structure, storage, or a pipeline. The source of truth for decisions and *why* they were taken. |
-| **`docs/STATUS.md`** | Before starting work. What is done, what is in flight, what is deliberately not built. |
+| **`docs/STATUS.md`** | Before starting work. **Start at its *Resume here* section** — where work stopped, what needs checking, and what comes next. |
 | **`docs/RUNBOOK.md`** | **Before running any script against real data.** Every one of them touches the live archive. |
 
 Comments in the code cite sections by document name — "ARCHITECTURE.md §7" means
@@ -43,7 +43,8 @@ pnpm db:studio           # browse the database
 
 Data and maintenance scripts — **read `docs/RUNBOOK.md` first**, they act on the real
 archive: `import:sheet`, `backfill`, `ocr:local`, `fix:names`, `fix:hyphens`,
-`scan:duplicates`, `resolve:stuck`, `reinvite`.
+`scan:duplicates`, `resolve:stuck`, `reinvite`. `ocr:status` is read-only and safe to
+run any time.
 
 ---
 

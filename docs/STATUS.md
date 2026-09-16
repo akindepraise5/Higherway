@@ -2,23 +2,78 @@
 
 Living record of where Higherway v2 stands. Update it in the same change as the work.
 
-**Updated:** 2026-09-16
-**Now:** Phase 2 — the public site is built and serving real data; backfill still running
-**Branch:** work happens on `v2`; `main` keeps serving the current site until v2 matches it
+**Updated:** 2026-09-16, late
+**Now:** v2 is live in production. Launch work is done — start at **Resume here**.
+**Branch:** work on `v2` and open a PR into `main`. Vercel builds `main`.
+
+---
+
+## Resume here
+
+Read this first when coming back. Everything below it is history and reasoning.
+
+### Where it stopped
+
+- **Production runs `main`**, built by Vercel. v2 was merged in PR #5 (`f5624b2`).
+- **One commit is on `v2` but not yet on `main`:** `8b7b55c`, which adds an "Account
+  deleted" label to the activity log. Harmless — merge it with the next PR.
+- The working tree is clean.
+
+### Check these first — only the owner can
+
+1. **Did the Trigger.dev deploy succeed?** The last fix (the project ref, `1c2e7b7`)
+   merged in PR #5, but nobody has confirmed a green run — `gh` was not authenticated
+   where the fix was made. Look at GitHub → Actions → *Deploy Trigger.dev tasks*. It
+   needs the repository secret `TRIGGER_ACCESS_TOKEN`, **and the Trigger.dev dashboard
+   needs its own `DATABASE_URL` and `R2_*`**. Vercel's variables never reach it: without
+   them the deploy succeeds and every run then fails at its first query.
+2. **Is CI green?** The build prerenders from the database, so it needs the repository
+   secret `DATABASE_URL`.
+3. **Add a material in production, end to end** — upload it, watch it process, see it
+   appear. This has never been verified live.
+4. **There are three Owners.** `n***@gmail.com` (the original), `d***@gmail.com` and
+   `a***@gmail.com`. Owner can change anyone's role and restructure every topic; if the
+   last two should be Admin or Editor, change it in People.
+
+### Next, in the order worth taking them
+
+1. **Invitation email.** Nothing is sent — admins copy the link by hand. `resend` is not
+   a dependency, and `RESEND_API_KEY` is read into `hasEmail` and never used.
+2. **OCR for new uploads.** A photographed PDF added from the dashboard has no
+   searchable text until someone runs `pnpm ocr:local` on a Mac. `pnpm ocr:status`
+   reports what is waiting.
+3. **Embeddings — pipeline stage 5.** Built and tested, never connected: 0 chunks are
+   stored. It unlocks auto-filing for the 340 unfiled materials, meaning-based search,
+   and the duplicate scan's meaning signal. The four steps are written up under Phase 5.
+4. **Search relevance.** "prayer" matches 59% of the archive, and nothing is ranked.
+5. **Audit the invitation flow.** Creating an account and accepting an invitation write
+   no audit entry, which CLAUDE.md requires of every mutation.
+6. **Show why a material was archived, and what it duplicates.** Both are stored;
+   neither is displayed anywhere in admin.
+7. **Public submissions** — a short form and batch upload. The constraints are under
+   *After launch*.
+8. **Drive sync, Phase 6** — blocked on a Google service account with read access.
 
 ---
 
 ## Where things stand
 
+Measured against the live database on 2026-09-16, late — not remembered. Several of
+these moved during that same evening: 17 duplicate pairs were merged between 20:11 and
+20:39, which is what took published from 624 to 607.
+
 | | |
 |---|---|
+| Production | v2 on `main`, built by Vercel. Trigger.dev deploys on every push to `main` |
 | Docs | All in `docs/`, entered through `CLAUDE.md` at the repo root: `ONBOARDING`, `ARCHITECTURE`, `STATUS`, `RUNBOOK`, plus a `README` |
-| Code | Phases 0 and 1 on the `v2` branch. `main` still serves v1 |
-| Database | Live on Neon. 8 tables, `pg_trgm` 1.6 and `vector` 0.8.6, 651 materials, 69 categories |
-| Files | Moving into R2 bucket `higherway`, served from `cdn-higherway.mavilletech.com` |
-| Materials | 651 in the spreadsheet, all with a valid Drive link, ~3.5 GB |
-| Categories | 69 real topics found; 367 materials (56%) have none |
-| Duplicates | 62 exact-title groups covering 132 rows; 69 groups ignoring case and punctuation |
+| Materials | 651 rows · 611 live · **607 published** · 4 staged · 40 archived |
+| Filing | **340** published materials have no topic |
+| Authors | 2 published materials are credited |
+| Text | 2,228 of 2,228 pages read (100%) |
+| Duplicates | **64 pending** · 17 merged · 2 dismissed |
+| Topics | 69, of which only 12 have sub-text |
+| Accounts | 3, all Owner · none suspended · no open invitations |
+| Embeddings | 0 chunks — stage 5 is not connected |
 | Decided | R2 is the truth, sync is manual and one-way, OCR is free (see `ARCHITECTURE.md` §13) |
 
 ---

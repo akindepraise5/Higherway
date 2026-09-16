@@ -116,6 +116,37 @@ Re-issues the first owner invitation. For when the seeded account's link has exp
 
 ---
 
+## Deploying
+
+Production is `main`, built by Vercel. Background jobs run on Trigger.dev, which is
+deployed separately. **The two do not share environment variables.**
+
+| Where | Needs |
+|---|---|
+| **Vercel** | What the app reads: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_SITE_URL`, `R2_*`, `TRIGGER_PROJECT_REF`, and `TRIGGER_SECRET_KEY` as a **`tr_prod_…`** key |
+| **Trigger.dev dashboard** | Its **own** `DATABASE_URL` and `R2_*`. Vercel's never reach it. Without them a deploy succeeds and every run fails at its first query |
+| **GitHub → Actions secrets** | `DATABASE_URL`, because the CI build prerenders from the database · `TRIGGER_ACCESS_TOKEN`, a `tr_pat_…` personal token, which deploys the tasks |
+
+The CI build's other values (`BETTER_AUTH_*`, `NEXT_PUBLIC_SITE_URL`,
+`R2_PUBLIC_BASE_URL`) are literals in `ci.yml`. They are placeholders or public
+hostnames, not secrets — do not replace them with real ones.
+
+### Trigger.dev
+
+Deploys automatically on every push to `main` via `.github/workflows/deploy-trigger.yml`.
+To deploy by hand:
+
+    pnpm exec trigger deploy
+
+- **The binary is `trigger`, not `trigger.dev`.** `pnpm exec trigger.dev` finds nothing.
+- **Never `npx trigger.dev@latest`.** It fetches whatever CLI is newest, and the CLI
+  refuses to deploy against packages newer than itself. The CLI is a locked devDependency
+  precisely so it always matches `@trigger.dev/sdk`.
+- **`TRIGGER_SECRET_KEY` on Vercel must be `tr_prod_…`.** A `tr_dev_…` key sends runs to
+  a developer's laptop, and they only process while that machine is on.
+
+---
+
 ## Traps that have actually bitten
 
 Each of these cost real time. They are here so they cost it only once.
@@ -148,6 +179,33 @@ Use separate queries and join in JavaScript.
 documents as *disabled*. An unguarded `getObject` can wait for ever: one re-read sat at 0%
 CPU for 53 minutes with no sockets and no error. `src/server/r2/client.ts` now sets them,
 and `throwOnRequestTimeout` matters as much as the numbers.
+
+**`pnpm build` leaves a running dev server serving stale code.** `next build` and
+`next dev` share `.next/`. After any build — including the one the pre-push hook runs on
+every `git push` — restart `pnpm dev`, or the browser shows code from before the change.
+This cost an hour chasing a form field that was in the source the entire time.
+
+**Finding a string in `.next/` says nothing about what the dev server serves.** Build
+output lands in `.next/server/`; the dev server compiles to `.next/dev/`. That grep
+"proved" the server was current when it was not.
+
+**`env -i` does not hide `.env.local`.** Next reads it off disk. A "stripped" build run
+that way quietly used every real value and certified the wrong variable list for CI. To
+simulate CI, move the file aside — back it up first — and restore it unconditionally.
+
+**Run `pnpm dev` in your own terminal.** A dev server started as an agent's background
+task was reaped for low memory twice in a row while the machine had half its memory
+free.
+
+**A module-scope `process.env` throw breaks deploys that never query.** The Trigger.dev
+indexer imports every task file with no environment, so a throw at import failed the
+whole deploy with "There was an error importing task files" — naming neither the
+variable nor the file. The database handles connect lazily for exactly this reason;
+keep them that way.
+
+**Only the newest invitation link works.** Sending a fresh link requires revoking the
+old one, so every earlier link is withdrawn. The invite page used to say "expired" for
+all four ways a link can fail; it now says which.
 
 **Check one concrete row before trusting any aggregate.** Nearly every wrong turn above
 shares this cause.
