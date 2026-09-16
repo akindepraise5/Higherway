@@ -222,8 +222,18 @@ Still to do, now unblocked:
 - `pnpm fix:names` — running. The backfill was started before `putObject`
   learned to set the download name, so everything from that point landed
   without the header. Idempotent, so re-running costs nothing.
-- `pnpm scan:duplicates` — running, now that the text has settled. It only
-  raises *pending* pairs; nothing is ever merged without a person deciding.
+- [x] `pnpm scan:duplicates` — **done**, now that the text had settled. 628
+  materials compared, 625 with usable text, **87 pairs raised: 49 likely, 38
+  possible, every one `pending`**. Nothing was decided automatically, which is
+  the point of it.
+
+  These are a different class from the 23 the backfill left stuck. Those were
+  byte-identical files — the same Drive file listed twice in the v1 sheet, caught
+  by a checksum. These are the same teaching scanned or photographed on separate
+  occasions, so no checksum could see them: "The anchor that holds" against "The
+  Anchor that holds", "The cord of Salvation" against "The Cord Of Salvation",
+  "Who's Right for Me" against "Who is right for me?". Waiting for a person at
+  `/admin/duplicates`.
 - **`TRIGGER_PROJECT_REF` is still missing** — only `TRIGGER_SECRET_KEY` is set,
   so `hasJobs` is false and adding a material is switched off. Deliberately: the
   file would upload and then sit in staging with nothing to process it.
