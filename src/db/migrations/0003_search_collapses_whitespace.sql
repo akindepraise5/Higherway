@@ -1,0 +1,1 @@
+CREATE INDEX "material_pages_text_trgm_idx" ON "material_pages" USING gin (regexp_replace("text", '[[:space:]]+', ' ', 'g') gin_trgm_ops);

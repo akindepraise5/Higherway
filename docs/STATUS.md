@@ -161,6 +161,26 @@ that phase's migration.
       a hash fragment is never sent to the server, so no redirect rule,
       middleware or rewrite can see it. It is the only client JavaScript on the
       public site, and it maps v1's `?cat=` to v2's `?topic=`
+- [x] **Search no longer breaks on a line ending.** A reader searching
+      "I had been brought up in a good home" got **nothing**, while "I had been
+      brought up in a good" found it — which reads like a length limit and is
+      not one. The page is stored one line per printed line (`readingOrder`
+      ends with `.join("\n")`), so what is actually in the column is
+      `"brought up in a good\nhome where "`. The search was
+      `ilike '%…%'`, a literal substring match, and that substring genuinely
+      does not exist: a newline sits where the reader typed a space.
+
+      It hit every phrase long enough to wrap — which is every phrase anyone
+      copies out of an article. Both sides now collapse whitespace, so a phrase
+      is findable across whatever line break it happens to fall on, and
+      `material_pages_text_trgm_idx` (migration `0003`) indexes the identical
+      expression so it stays an index lookup rather than a scan of all 2,228
+      pages. Verified against the running site: the full phrase returns the
+      same 2 materials as the short one, where it returned 0.
+
+      Worth noting for whoever adds hybrid search: this is the class of bug
+      full-text search removes by construction, because a tsvector holds tokens
+      and never sees the whitespace between them.
 - [ ] Hybrid search (full text + fuzzy titles + meaning) — needs the OCR text
 
 **Decided 2026-09-16:** the v1 archive publishes straight from the backfill, with

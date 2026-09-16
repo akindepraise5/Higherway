@@ -6,7 +6,14 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/.next", "!**/node_modules", "!**/docs/legacy", "!**/.trigger"]
+    "includes": [
+      "**",
+      "!**/.next",
+      "!**/node_modules",
+      "!**/docs/legacy",
+      "!**/.trigger",
+      "!**/src/db/migrations/meta"
+    ]
   },
   "formatter": {
     "enabled": true,

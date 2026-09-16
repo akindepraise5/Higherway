@@ -139,5 +139,18 @@ export const materialPages = pgTable(
   (t) => [
     uniqueIndex("material_pages_unique_idx").on(t.materialId, t.pageNumber),
     index("material_pages_material_idx").on(t.materialId),
+    /**
+     * Searching the OCR text collapses whitespace first, because a page is
+     * stored one line per printed line — so a phrase typed in full crosses the
+     * line breaks and never matches as a literal substring.
+     *
+     * The index must be built on the *identical* expression or the planner
+     * cannot use it, and an `ilike '%…%'` without a trigram index is a
+     * sequential scan of every page in the archive.
+     */
+    index("material_pages_text_trgm_idx").using(
+      "gin",
+      sql`regexp_replace(${t.text}, '[[:space:]]+', ' ', 'g') gin_trgm_ops`,
+    ),
   ],
 )

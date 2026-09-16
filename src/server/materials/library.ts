@@ -59,7 +59,10 @@ function filters({ q, topic }: LibraryQuery) {
     )
   }
 
-  const term = q?.trim()
+  // Collapsed here as well as in the column: a reader who types two spaces, or
+  // pastes a phrase that wrapped in whatever they copied it from, means the
+  // same search as one who does not.
+  const term = q?.trim().replace(/\s+/g, " ")
   if (term) {
     const like = `%${term}%`
     clauses.push(
@@ -67,13 +70,28 @@ function filters({ q, topic }: LibraryQuery) {
         ilike(materials.title, like),
         ilike(materials.summary, like),
         ilike(materials.author, like),
-        // The OCR text is what makes a photographed page findable at all.
+        /**
+         * The OCR text is what makes a photographed page findable at all, and
+         * it is stored one line per line of the page — `readingOrder` ends with
+         * `.join("\n")`. So a page holds "in a good\nhome", and searching
+         * "brought up in a good home" found nothing while "brought up in a
+         * good" found it: the literal substring genuinely is not there, because
+         * a newline sits where the space would be.
+         *
+         * Collapsing whitespace on both sides makes a phrase findable across
+         * whatever line break it happens to fall on. `material_pages_text_trgm_idx`
+         * indexes this exact expression, so it stays an index lookup — the
+         * expression must match the index character for character.
+         */
         exists(
           db
             .select({ one: sql`1` })
             .from(materialPages)
             .where(
-              and(eq(materialPages.materialId, materials.id), ilike(materialPages.text, like)),
+              and(
+                eq(materialPages.materialId, materials.id),
+                sql`regexp_replace(${materialPages.text}, '[[:space:]]+', ' ', 'g') ilike ${like}`,
+              ),
             ),
         ),
       ),
