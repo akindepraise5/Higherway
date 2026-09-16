@@ -267,10 +267,21 @@ the dialog is what stops it being needed again.
       its title. Each filed topic names who filed it and when, straight from
       `assignedBy` and `createdAt` on the join row, no new column. A **Next
       unfiled** link goes to the next one without a detour through the list
-- [ ] Material editor UI. `updateMaterial` and `setTextPublic` exist as audited
-      services, but nothing on the page calls them yet
+- [x] Material editor UI — title, author and summary, the public-text switch,
+      and publish / take-out-of-the-library / restore. The services existed and
+      audited every change; nothing called them, so a title imported from a
+      filename could not be fixed without a database client. Correcting details
+      is Editor work, moderating is Admin, and archiving asks for its reason in
+      the dialog itself — a reason collected afterwards is one nobody writes
 - [ ] Bulk actions on the materials table (filter and sort are done)
-- [ ] Upload (presigned) and import by URL, with the safety checks in §6
+- [x] Upload (presigned) and import by URL, with the safety checks in §6. The
+      file goes browser → R2 directly and never through the app, because Vercel
+      refuses bodies over 4.5 MB and 8.6% of this archive is over 10 MB. A
+      pasted link is checked as typed *and* after DNS resolves it, since a
+      public-looking hostname can still point at a private address; redirects
+      are refused outright, because a redirect lands somewhere the checks never
+      saw. `lib/import/url-guard` is pure and tested — including the IPv4
+      written as decimal, hex and octal that a dotted-quad check waves through
 - [x] Reading a material while filing it: any page opens full size in a native
       `<dialog>`, with arrow keys and on-screen controls through the rest. The
       OCR text is deliberately not shipped to it — at ~3 KB a page a 48-page
@@ -282,10 +293,11 @@ the dialog is what stops it being needed again.
       `material.uncategorise` and entries read "Added to Faith" / "Removed from
       Faith", drawn from the payload rather than a new column. Filing no longer
       records the title, which made every entry look like a title edit
-- [ ] **Adding materials from the dashboard** — not built at all yet. Needs
-      presigned upload and import-by-URL (§6), an edit form on top of the
-      existing `updateMaterial`, and archive/restore. Until then the archive can
-      only grow through `scripts/backfill.ts`
+- [x] **Adding materials from the dashboard** — `/admin/materials/new`, by file
+      or by link. Both doors lead to the same pipeline, so an uploaded material
+      is indistinguishable from a backfilled one. **Runtime-gated**: without
+      `TRIGGER_SECRET_KEY` the form says so rather than accepting a file it
+      would leave sitting unprocessed in staging
 
 ### Phase 5 — Reading and duplicates
 - [ ] OCR interface; tesseract.js on the worker

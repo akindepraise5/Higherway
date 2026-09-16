@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { CategoryPicker } from "../../../../components/admin/category-picker"
+import { MaterialEditor } from "../../../../components/admin/material-editor"
 import { PageReader } from "../../../../components/admin/page-reader"
 import { Cover } from "../../../../components/public/cover"
 import { db } from "../../../../db"
@@ -43,7 +44,12 @@ const fmtBytes = (n: number | null) =>
       : `${Math.round(n / 1024)} KB`
 
 export default async function AdminMaterialPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireSession()
+  const session = await requireSession()
+  // Correcting details is everyone's work; publishing and archiving are not.
+  // The services enforce this too — this only decides what is worth showing.
+  const role = (session.user as { role?: string }).role ?? "editor"
+  const canModerate = role === "admin" || role === "owner"
+
   const { id } = await params
 
   const [material] = await db.select().from(materials).where(eq(materials.id, id)).limit(1)
@@ -208,6 +214,18 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
               This material has not been processed yet.
             </p>
           ) : null}
+
+          <MaterialEditor
+            materialId={id}
+            title={material.title}
+            author={material.author}
+            summary={material.summary}
+            status={material.status}
+            archived={material.archivedAt !== null}
+            hasFile={material.r2KeyPdf !== null}
+            textPublic={material.textPublic}
+            canModerate={canModerate}
+          />
 
           <h2 className="mt-12 text-[11px] font-medium uppercase tracking-[.2em] text-taupe">
             History

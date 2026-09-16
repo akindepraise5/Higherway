@@ -100,11 +100,18 @@ export default async function AdminMaterialsPage({
           />
           <button
             type="submit"
-            className="rounded-full bg-ink px-4 py-2.5 text-[13.5px] font-medium text-paper-2 transition-colors hover:bg-forest-2"
+            className="rounded-full border border-line px-4 py-2.5 text-[13.5px] transition-colors hover:border-ink"
           >
             Search
           </button>
         </form>
+
+        <Link
+          href="/admin/materials/new"
+          className="rounded-full bg-ink px-4 py-2.5 text-[13.5px] font-medium text-paper-2 transition-colors hover:bg-forest-2"
+        >
+          Add a material
+        </Link>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
