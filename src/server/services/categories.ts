@@ -5,7 +5,7 @@ import { and, eq, ne, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { categories, materialCategories } from "../../db/schema"
 import { txdb } from "../../db/tx"
-import { requireRole, requireSession } from "../../lib/session"
+import { requireRole } from "../../lib/session"
 import { slugify } from "../../lib/slug"
 import { audit } from "../audit"
 
@@ -22,9 +22,16 @@ import { audit } from "../audit"
 
 export type ServiceResult = { ok: true; message?: string } | { ok: false; error: string }
 
-/** Create a category. Editors may, because filing is their daily work. */
+/**
+ * Create a category. **Owner only.**
+ *
+ * A topic is a public URL and a shelf in the library, so adding one is a
+ * structural decision about how the archive is organised rather than part of
+ * filing. 69 topics arrived from v1 with 19 used exactly once — "Pain" beside
+ * "Suffering" — which is what an open create door produces over time.
+ */
 export async function createCategory(name: string, blurb?: string): Promise<ServiceResult> {
-  const session = await requireSession()
+  const { session } = await requireRole("owner")
 
   const trimmed = name.trim()
   if (trimmed.length < 2) return { ok: false, error: "A name needs at least two characters." }
@@ -60,13 +67,16 @@ export async function createCategory(name: string, blurb?: string): Promise<Serv
   return result
 }
 
-/** Rename a category. The slug follows, so its public URL changes with it. */
+/**
+ * Rename a category. **Owner only** — the slug follows the name, so this
+ * changes a public URL and breaks every link anyone has already shared to it.
+ */
 export async function renameCategory(
   id: string,
   name: string,
   blurb?: string,
 ): Promise<ServiceResult> {
-  const session = await requireSession()
+  const { session } = await requireRole("owner")
 
   const trimmed = name.trim()
   if (trimmed.length < 2) return { ok: false, error: "A name needs at least two characters." }
@@ -116,7 +126,7 @@ export async function renameCategory(
  * new home so old links keep working rather than dead-ending.
  */
 export async function mergeCategory(fromId: string, intoId: string): Promise<ServiceResult> {
-  const { session } = await requireRole("admin")
+  const { session } = await requireRole("owner")
 
   if (fromId === intoId) return { ok: false, error: "That is the same category." }
 
@@ -171,7 +181,7 @@ export async function mergeCategory(fromId: string, intoId: string): Promise<Ser
  * Uncategorised and remain in the library exactly as before.
  */
 export async function deleteCategory(id: string): Promise<ServiceResult> {
-  const { session } = await requireRole("admin")
+  const { session } = await requireRole("owner")
 
   const result = await txdb.transaction(async (tx) => {
     const [current] = await tx.select().from(categories).where(eq(categories.id, id)).limit(1)

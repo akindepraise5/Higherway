@@ -552,14 +552,29 @@ materials first.
 
 Asked for directly, in the owner's words, and not yet built:
 
-- [ ] **A dedicated "Create category" button** in admin, *alongside* the
-      search-or-create picker rather than replacing it. The picker creates a
-      topic inline while filing a material, which is the right flow when your
-      hands are already on a material; it is the wrong flow when the job you
-      came to do is "set up the topics". Both should exist.
-- [ ] **Category creation and management gated to Owner.** Today's gate needs
-      checking before changing it — a merge already moved 42 materials by
-      accident once, which is the strongest argument for this.
+- [x] **A dedicated "Create category" button** — done. It sits beside the
+      search box on `/admin/categories` and opens a small form taking a name
+      *and a blurb*, which the search-or-create button cannot. The inline
+      button is kept: it is the right flow when you are already hunting for a
+      topic, and the wrong one when the job you came to do is "add a topic".
+- [x] **Category management gated to Owner** — done, all four operations.
+      `createCategory` and `renameCategory` were `requireSession` (any Editor);
+      `mergeCategory` and `deleteCategory` were Admin. All are now
+      `requireRole("owner")`, and there was no Owner gate anywhere in the
+      codebase before this.
+
+      Rename mattered more than it looks: the slug follows the name, so an
+      Editor could change a public URL and break every link already shared.
+      Merge is the one that moved 42 materials out of Faith by accident.
+
+      **Filing is untouched** — Editors and Admins still file into topics that
+      exist. What changed is that `assignCategory` no longer *creates* one as a
+      side-effect: it checks the role and returns a message rather than calling
+      `requireRole`, which redirects, because being thrown to the admin home
+      mid-file with no explanation is a worse answer than being told why. The
+      picker hides the create option to match, and its empty state now
+      distinguishes "already filed there" from "no such topic, and only an
+      Owner can add one" — it previously claimed the former for both.
 - [ ] **Author, treated as a first-class field.** Optional, but present on the
       add *and* edit forms, searchable and filterable on the public site as well
       as in admin, so a reader can follow an author they like. `materials.author`

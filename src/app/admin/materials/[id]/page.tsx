@@ -167,7 +167,12 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
               Filed under
             </h2>
             <div className="mt-3">
-              <CategoryPicker materialId={id} assigned={topics} all={allTopics} />
+              <CategoryPicker
+                materialId={id}
+                assigned={topics}
+                all={allTopics}
+                mayCreate={role === "owner"}
+              />
             </div>
 
             {unfiledNext[0] ? (

@@ -14,8 +14,10 @@ import { assignCategory, unassignCategory } from "../../server/services/material
  * archive's main outstanding job, so this is built for repetition: type, see
  * what matches, pick it or create it, move on.
  *
- * Creating from here is deliberate. Making an editor go to Categories, add a
- * topic and come back is exactly how a material ends up left uncategorised.
+ * Creating from here is deliberate — making someone go to Categories, add a
+ * topic and come back is exactly how a material ends up left uncategorised —
+ * but it is Owner-only, because a topic is a public URL and a shelf in the
+ * library. Everyone else files into the topics that already exist.
  */
 
 type Topic = { id: string; name: string }
@@ -34,10 +36,13 @@ export function CategoryPicker({
   materialId,
   assigned,
   all,
+  mayCreate,
 }: {
   materialId: string
   assigned: Filed[]
   all: Topic[]
+  /** Owner only. The service refuses either way; this decides what is offered. */
+  mayCreate: boolean
 }) {
   const [pending, start] = useTransition()
   const [term, setTerm] = useState("")
@@ -57,9 +62,10 @@ export function CategoryPicker({
     [all, assignedIds, query],
   )
 
-  // Offer to create only when nothing matches exactly — so a near-duplicate
-  // topic is seen before another one is made.
-  const canCreate = query.length >= 2 && !all.some((t) => t.name.toLowerCase() === query)
+  // Offer to create only when nothing matches exactly, so a near-duplicate
+  // topic is seen before another one is made — and only to an Owner.
+  const noExactMatch = query.length >= 2 && !all.some((t) => t.name.toLowerCase() === query)
+  const canCreate = mayCreate && noExactMatch
 
   const run = (action: () => Promise<{ ok: boolean; message?: string; error?: string }>) =>
     start(async () => {
@@ -152,7 +158,14 @@ export function CategoryPicker({
             ) : null}
 
             {matches.length === 0 && !canCreate ? (
-              <p className="px-4 py-2.5 text-[13px] text-taupe">Already filed there.</p>
+              <p className="px-4 py-2.5 text-[13px] text-taupe">
+                {/* Without this split, someone without the right to create a
+                    topic types a brand new name and is told "Already filed
+                    there" — which is simply untrue. */}
+                {noExactMatch
+                  ? "No topic matches that, and only an Owner can add one."
+                  : "Already filed there."}
+              </p>
             ) : null}
           </div>
         ) : null}

@@ -5,7 +5,7 @@ import { and, eq, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { categories, materialCategories, materials } from "../../db/schema"
 import { txdb } from "../../db/tx"
-import { requireRole, requireSession } from "../../lib/session"
+import { hasRole, requireRole, requireSession } from "../../lib/session"
 import { slugify } from "../../lib/slug"
 import { audit } from "../audit"
 
@@ -34,6 +34,7 @@ export async function assignCategory(
   input: { categoryId?: string; newName?: string },
 ): Promise<MaterialResult> {
   const session = await requireSession()
+  const role = (session.user as { role?: "owner" | "admin" | "editor" }).role
 
   const result = await txdb.transaction(async (tx) => {
     const [material] = await tx
@@ -62,6 +63,21 @@ export async function assignCategory(
       if (existing) {
         categoryId = existing.id
       } else {
+        /**
+         * Filing is every editor's daily work, but *creating* a topic is
+         * Owner-only — it adds a public URL and a shelf to the library.
+         *
+         * This refuses with a message rather than calling `requireRole`, which
+         * redirects: being thrown out of the page to the admin home, mid-file,
+         * with no explanation is a worse answer than being told why.
+         */
+        if (!hasRole(role, "owner")) {
+          return {
+            ok: false as const,
+            error: `There is no topic called “${name}” yet, and only an Owner can add one.`,
+          }
+        }
+
         categoryId = randomUUID()
         await tx.insert(categories).values({ id: categoryId, name, slug })
         createdName = name

@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, GitMerge, Pencil, Trash2, X } from "lucide-react"
+import { Check, GitMerge, Pencil, Plus, Trash2, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import type { CategoryRow } from "../../server/categories/queries"
@@ -19,9 +19,10 @@ import { ConfirmDialog } from "./confirm-dialog"
  * audit entry, so what happens here is recorded by construction rather than by
  * remembering to log it.
  *
- * Merge and delete are Admin-only; creating and renaming are not, because
- * filing material is an Editor's daily work and blocking it would push people
- * towards leaving things uncategorised.
+ * All of it is Owner-only: creating, renaming, merging and deleting each change
+ * how the archive is organised in public — renaming moves a topic's URL, and
+ * merging moved 42 materials out of Faith by accident once. Editors and Admins
+ * file materials into the topics that exist; they do not shape the shelves.
  */
 
 type Role = "owner" | "admin" | "editor"
@@ -32,6 +33,7 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
   const [editing, setEditing] = useState<string | null>(null)
   const [merging, setMerging] = useState<string | null>(null)
   const [filter, setFilter] = useState("")
+  const [creating, setCreating] = useState(false)
 
   /**
    * Nothing destructive runs straight from a click. A merge or a delete is
@@ -46,7 +48,10 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
   >(null)
   const router = useRouter()
 
-  const mayMerge = role === "owner" || role === "admin"
+  // Owner only, all of it. A topic is a public URL and a shelf in the library,
+  // so creating, renaming, merging and deleting are all structural decisions
+  // rather than part of filing.
+  const mayManage = role === "owner"
 
   const run = (action: () => Promise<{ ok: boolean; message?: string; error?: string }>) =>
     start(async () => {
@@ -68,7 +73,7 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
   // "Create X" appears only when nothing matches what was typed — the
   // search-or-create pattern, so a near-duplicate is seen before it is made.
   const exact = categories.some((c) => c.name.toLowerCase() === term)
-  const canCreate = term.length >= 2 && !exact
+  const canCreate = mayManage && term.length >= 2 && !exact
 
   return (
     <div className="mt-8">
@@ -87,13 +92,13 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
 
       <div className="flex flex-wrap items-center gap-2">
         <label htmlFor="filter" className="sr-only">
-          Find or create a topic
+          {mayManage ? "Find or create a topic" : "Find a topic"}
         </label>
         <input
           id="filter"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          placeholder="Find a topic, or type a new name"
+          placeholder={mayManage ? "Find a topic, or type a new name" : "Find a topic"}
           className="w-72 rounded-full border border-line bg-paper-2 px-4 py-2.5 text-[14px] outline-none transition-colors focus:border-ink"
         />
         {canCreate ? (
@@ -106,7 +111,81 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
             Create “{filter.trim()}”
           </button>
         ) : null}
+
+        {/* The button above appears only once you have typed a name that does
+            not exist, which is the right flow when you are already hunting for
+            a topic and the wrong one when the job you came to do is "add a
+            topic". This stands on its own, and takes a blurb — the search box
+            cannot. */}
+        {mayManage ? (
+          <button
+            type="button"
+            onClick={() => setCreating((open) => !open)}
+            aria-expanded={creating}
+            className="ml-auto flex items-center gap-1.5 rounded-full border border-line px-4 py-2.5 text-[13.5px] font-medium text-ink-2 transition-colors hover:border-ink hover:text-ink"
+          >
+            <Plus size={15} />
+            New topic
+          </button>
+        ) : null}
       </div>
+
+      {creating ? (
+        <form
+          className="mt-3 flex flex-wrap items-end gap-3 rounded-[3px] border border-line-soft bg-paper-2 px-4 py-4"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const data = new FormData(event.currentTarget)
+            const name = String(data.get("name") ?? "").trim()
+            const blurb = String(data.get("blurb") ?? "").trim()
+            if (name.length < 2) return
+            run(async () => {
+              const result = await createCategory(name, blurb || undefined)
+              if (result.ok) setCreating(false)
+              return result
+            })
+          }}
+        >
+          <div>
+            <label htmlFor="new-name" className="block text-[12px] text-taupe">
+              Name
+            </label>
+            <input
+              id="new-name"
+              name="name"
+              required
+              minLength={2}
+              className="mt-1 w-56 rounded border border-line bg-paper px-3 py-2 text-[14px] outline-none focus:border-ink"
+            />
+          </div>
+
+          <div className="min-w-[14rem] flex-1">
+            <label htmlFor="new-blurb" className="block text-[12px] text-taupe">
+              A line about it (optional)
+            </label>
+            <input
+              id="new-blurb"
+              name="blurb"
+              className="mt-1 w-full rounded border border-line bg-paper px-3 py-2 text-[14px] outline-none focus:border-ink"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded-full bg-ink px-4 py-2.5 text-[13.5px] font-medium text-paper-2 transition-colors hover:bg-forest-2 disabled:opacity-60"
+          >
+            Create
+          </button>
+          <button
+            type="button"
+            onClick={() => setCreating(false)}
+            className="px-2 py-2.5 text-[13.5px] text-taupe transition-colors hover:text-ink"
+          >
+            Cancel
+          </button>
+        </form>
+      ) : null}
 
       <div className="mt-6 overflow-hidden rounded-[3px] border border-line-soft">
         <table className="w-full border-collapse text-left">
@@ -191,28 +270,30 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
                     </div>
                   ) : (
                     <div className="flex items-center justify-end gap-3 text-taupe">
-                      {editing === category.id ? (
-                        <button
-                          type="button"
-                          onClick={() => setEditing(null)}
-                          className="hover:text-ink"
-                          aria-label="Stop editing"
-                        >
-                          <Check size={16} />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={pending}
-                          onClick={() => setEditing(category.id)}
-                          className="hover:text-ink disabled:opacity-40"
-                          aria-label={`Rename ${category.name}`}
-                        >
-                          <Pencil size={16} />
-                        </button>
-                      )}
+                      {mayManage ? (
+                        editing === category.id ? (
+                          <button
+                            type="button"
+                            onClick={() => setEditing(null)}
+                            className="hover:text-ink"
+                            aria-label="Stop editing"
+                          >
+                            <Check size={16} />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() => setEditing(category.id)}
+                            className="hover:text-ink disabled:opacity-40"
+                            aria-label={`Rename ${category.name}`}
+                          >
+                            <Pencil size={16} />
+                          </button>
+                        )
+                      ) : null}
 
-                      {mayMerge ? (
+                      {mayManage ? (
                         <>
                           <button
                             type="button"
