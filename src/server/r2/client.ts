@@ -1,4 +1,10 @@
-import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3"
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 /**
@@ -112,6 +118,19 @@ export async function getObject(key: string): Promise<Uint8Array> {
   const response = await r2().send(new GetObjectCommand({ Bucket: bucket(), Key: key }))
   if (!response.Body) throw new Error(`R2 returned no body for ${key}`)
   return response.Body.transformToByteArray()
+}
+
+/**
+ * Remove an object.
+ *
+ * Deliberately narrow. Materials are never destroyed — archiving is a soft
+ * state (CLAUDE.md) — so this exists for files no row refers to any more: a
+ * rejected upload's bytes, or the copy left behind when a byte-identical
+ * duplicate is archived and the surviving material already holds the same
+ * bytes. It is not a way to delete a material's file out from under it.
+ */
+export async function deleteObject(key: string): Promise<void> {
+  await r2().send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }))
 }
 
 /** Used by the backfill to skip what is already uploaded, so it can resume. */

@@ -173,23 +173,43 @@ Verified against the running site: every route returns 200, both nonsense slugs
 4 for both together.
 
 **The backfill has finished, and it did not finish cleanly.** 624 of 651 materials
-are published with their file in R2 (1.95 GB). **27 are still `staged` with no file
-recorded**, and the process exited 0 regardless — the per-material failures were
-caught and counted rather than raised, so the exit code says nothing about them.
-One is honest — `5 keys for successful building` returns 404 from Drive — and the
-rest failed on the *final* `update materials` after the upload and render had
-already succeeded, which points at `materials_sha256_live_idx` rejecting a file
-the archive already holds. Their bytes are in R2 with no row referencing them.
+are published with their file in R2 (1.95 GB). **27 are still `staged`**, and the
+process exited 0 regardless — per-material failures were caught and counted rather
+than raised, so the exit code says nothing about them.
+
+Every one is accounted for, by hashing the bytes rather than reading the log:
+
+| | |
+|---|---|
+| 24 | byte-identical to a material already live — `materials_sha256_live_idx` refusing a file the archive already holds |
+| 1 | `5 keys for successful building` — Drive returns 404 |
+| 1 | `Youths Without Blemish` — Drive served a sign-in page, not a PDF |
+| 1 | `marks standard handbook for mechanical engineers` — never uploaded, and looks like it strayed into the Drive folder |
+
+The 24 are the unique index doing its job, surfaced as a crash instead of a
+decision. Nearly all match a live material with the *same title*, so the v1
+spreadsheet lists the same Drive file twice. One does not: **"The Foundation of
+Faith Rev. Darrel Lee" is byte-identical to "Document from Daniel Olorunmaiye"** —
+one file under two titles, which is a human judgement, not a merge.
+
+**73.6 MB is orphaned in R2**: uploaded and rendered, then left unreferenced when
+the row update was rejected. It counts against the 10 GB free tier.
+
+A lesson worth keeping: the run was started as `pnpm backfill | tail -40`, so all
+but the last 40 lines of the record were thrown away. 7 of the 27 could not be
+explained from the log at all and had to be reconstructed from R2. Long jobs
+should be redirected to a file, never piped through `tail`.
 
 Still to do, now unblocked:
 
 - A second `pnpm fix:names` run. The backfill was started before `putObject`
   learned to set the download name, so everything from that point landed without
-  the header. Idempotent, so re-running costs nothing.
-- `pnpm ocr:local` — 1,202 pages have no text yet.
+  the header. Idempotent, so re-running costs nothing. Held while OCR runs, to
+  keep two R2-heavy jobs apart.
+- `pnpm ocr:local` — running now.
 - The real `pnpm scan:duplicates`, once the text exists.
-- Handle the 27: they need to become duplicate rows rather than stuck ones, and
-  the orphaned R2 objects need either adopting or removing.
+- Decide what the 24 become, and whether the orphaned objects are adopted or
+  removed.
 
 ### Phase 3 — Auth and admin shell
 - [x] Better Auth, sign-up disabled, seeded Owner. Confirmed working from a real
