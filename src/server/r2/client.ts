@@ -40,6 +40,35 @@ export function r2(): S3Client {
       accessKeyId: env("R2_ACCESS_KEY_ID"),
       secretAccessKey: env("R2_SECRET_ACCESS_KEY"),
     },
+
+    /**
+     * Without these the SDK waits forever. Every timeout below defaults to 0,
+     * which the library documents as "disables the timeout", and a lost
+     * response therefore leaves `await` pending with nothing left to settle it.
+     *
+     * That is not hypothetical: a re-read of 1,162 pages sat at 0% CPU for 53
+     * minutes with no open sockets and no error, having silently stopped after
+     * ~491 pages. The process was alive, the job was dead, and nothing said so.
+     *
+     * `throwOnRequestTimeout` matters as much as the number. Without it a
+     * breach is only logged as a warning — the SDK keeps it opt-in because
+     * `requestTimeout` was for a long time applied as a socket idle timeout —
+     * so setting the timeouts alone would look like a fix and still hang.
+     *
+     * `socketTimeout` is the one that catches the failure seen here: a
+     * connection that opened, then went quiet forever.
+     */
+    requestHandler: {
+      connectionTimeout: 10_000,
+      // Generous: the largest file in this archive is 13.6 MB, and these run
+      // over a home connection.
+      requestTimeout: 120_000,
+      throwOnRequestTimeout: true,
+      socketTimeout: 60_000,
+    },
+
+    // A dropped response should cost seconds, not a whole run.
+    maxAttempts: 3,
   })
   return client
 }
