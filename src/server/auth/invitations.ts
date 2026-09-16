@@ -1,5 +1,6 @@
 "use server"
 
+import { randomUUID } from "node:crypto"
 import { eq } from "drizzle-orm"
 import { db } from "../../db"
 import { invitation, user } from "../../db/schema"
@@ -71,6 +72,56 @@ const REFUSED: Record<InviteProblem, string> = {
   expired: "This link has expired. Ask whoever invited you for a new one.",
 }
 
+/** A name to start from. The person can change it on their profile. */
+const nameFromEmail = (email: string): string => {
+  const local = (email.split("@")[0] ?? email).replace(/[._-]+/g, " ").trim()
+  return local ? local.charAt(0).toUpperCase() + local.slice(1) : email
+}
+
+/**
+ * The account an invitation belongs to — created here if it does not exist.
+ *
+ * This is the fix for invitations never working. The two halves were written
+ * against different shapes:
+ *
+ *   - `db:seed` creates the Owner's *user row* and an invitation together, so
+ *     accepting only has to attach a password to an account already there.
+ *   - Inviting from the admin panel creates *only* the invitation, and refuses
+ *     outright if an account already exists.
+ *
+ * Accepting then looked for an existing account, found none, and failed with
+ * "That invitation no longer matches an account" — for every person invited
+ * from the admin panel, every time. The seeded Owner was the only account that
+ * ever existed, and so the only one that could ever get in.
+ *
+ * The row is created with exactly the fields the seed uses, since that is the
+ * one shape already proven to sign in. `onConflictDoNothing` makes a double
+ * submit harmless: whichever request loses the race reads back the row the
+ * other created, rather than failing on the unique email.
+ *
+ * If a later step fails, this leaves a user row with no password and the
+ * invitation still open — the same state a freshly seeded Owner starts in — so
+ * the very same link works on a second attempt.
+ */
+async function ensureUser(invite: typeof invitation.$inferSelect) {
+  const [existing] = await db.select().from(user).where(eq(user.email, invite.email)).limit(1)
+  if (existing) return existing
+
+  await db
+    .insert(user)
+    .values({
+      id: randomUUID(),
+      email: invite.email,
+      name: nameFromEmail(invite.email),
+      role: invite.role,
+      emailVerified: false,
+    })
+    .onConflictDoNothing({ target: user.email })
+
+  const [created] = await db.select().from(user).where(eq(user.email, invite.email)).limit(1)
+  return created ?? null
+}
+
 /**
  * Accept an invitation by choosing a password.
  *
@@ -93,9 +144,9 @@ export async function acceptInvitation(token: string, password: string): Promise
   }
   const invite = found.row
 
-  const [account] = await db.select().from(user).where(eq(user.email, invite.email)).limit(1)
+  const account = await ensureUser(invite)
   if (!account) {
-    return { ok: false, error: "That invitation no longer matches an account." }
+    return { ok: false, error: "The account could not be created. Try the same link again." }
   }
 
   const ctx = await auth.$context

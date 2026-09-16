@@ -361,8 +361,40 @@ Still to do, now unblocked:
 - [x] Better Auth, sign-up disabled, seeded Owner. Confirmed working from a real
       browser, not just by script
 - [x] Invites: single-use hashed token, accept page, Copy-invite-link panel
-      shown once. Email delivery is configured but the link is shown regardless,
-      so the flow never depends on Resend
+      shown once. **This was marked done while it did not work, and was only
+      fixed on 2026-09-16 after launch.** Recorded plainly because the
+      checkbox is what hid it.
+
+      **No invited person could ever join.** The two halves were written
+      against different shapes: `db:seed` creates the Owner's *user row* and an
+      invitation together, so accepting only attached a password to an account
+      already there. Inviting from the admin panel created *only* the
+      invitation and refused if an account existed. Accepting then looked for
+      an account, found none, and failed with "That invitation no longer
+      matches an account" — every time, for everyone. Measured: every
+      admin-created invitation had no user row, and the database held exactly
+      one account, the seeded Owner. It was the only account that ever could
+      get in, which is why it looked like it worked.
+
+      Accepting now creates the account when missing, with exactly the fields
+      the seed uses — the one shape already proven to sign in. Verified by
+      running that insert against the real schema inside a transaction, with a
+      real invitation's role, then forcing a rollback: every constraint held, a
+      duplicate submit was harmless, and nothing persisted.
+
+      A second bug sat in front of it: the invite page said "This link has
+      expired" for any failure. Of the six most recent invitations it showed
+      that for five, and none had expired — four had been withdrawn when a
+      newer link was sent, one already used. It now says which.
+
+      **Email is not wired up**, despite the old wording here. `resend` is not
+      a dependency and nothing sends; `RESEND_API_KEY` is read into `hasEmail`
+      and never used. Admins copy the link by hand.
+
+      Neither the account creation nor the acceptance writes an audit entry,
+      which CLAUDE.md requires of every mutation. That gap predates this fix and
+      runs through the whole accept flow; it is noted rather than silently
+      widened.
 - [x] Roles: Owner ⊃ Admin ⊃ Editor. Only an Owner invites an Owner or Admin;
       the last Owner cannot be demoted or suspended
 - [x] Audit log written inside every mutation — **this forced a second database
