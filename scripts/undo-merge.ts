@@ -13,7 +13,7 @@
  * fact, which is why merge now requires typing the category name.
  */
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm"
-import { categories, materialCategories, materials } from "../src/db/schema"
+import { categories, materialCategories, materials, user } from "../src/db/schema"
 import { txdb } from "../src/db/tx"
 import { parseSheet } from "../src/lib/sheet/csv"
 import { slugify } from "../src/lib/slug"
@@ -60,6 +60,13 @@ async function main() {
   )
   console.log(`  the sheet files ${wanted.size} materials under "${source.name}"`)
 
+  // Attribute the repair to whoever is running it, so the trail does not
+  // just say "a script" for a change that moved 42 materials.
+  const [runner] = process.env.SEED_OWNER_EMAIL
+    ? await txdb.select().from(user).where(eq(user.email, process.env.SEED_OWNER_EMAIL))
+    : []
+  if (runner) console.log(`  attributing to ${runner.email}`)
+
   const result = await txdb.transaction(async (tx) => {
     const owned = await tx
       .select({ id: materials.id, driveFileId: materials.driveFileId })
@@ -91,6 +98,7 @@ async function main() {
       entityId: source.id,
       before: { mergedInto: target?.name, name: source.name },
       after: { restored: ids.length, reconstructedFrom: "v1 spreadsheet" },
+      actorId: runner?.id ?? null,
     })
 
     return { moved: moved.rowCount ?? ids.length }
