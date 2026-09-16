@@ -192,8 +192,19 @@ spreadsheet lists the same Drive file twice. One does not: **"The Foundation of
 Faith Rev. Darrel Lee" is byte-identical to "Document from Daniel Olorunmaiye"** —
 one file under two titles, which is a human judgement, not a merge.
 
-**73.6 MB is orphaned in R2**: uploaded and rendered, then left unreferenced when
-the row update was rejected. It counts against the 10 GB free tier.
+**Resolved 2026-09-16** by `pnpm resolve:stuck --apply`. 23 were archived against
+the material they copy, each with a reason and a named actor, and their 73 MB of
+unreferenced bytes removed — 86 objects. One was held back by the script's own
+rule, because it is byte-identical to a material under a *different* title and
+naming it is a judgement, not a script's decision. Three were left alone: they
+have no file in R2 at all.
+
+Checked afterwards rather than trusted: 23 archived rows each carry a
+`duplicateOfId` and a `material.archive` entry, no archived material still owns
+page rows, and **every surviving twin still has its file** — the one part of
+that operation which could not have been undone.
+
+The archive now stands at 628 live materials, 1.95 GB.
 
 A lesson worth keeping: the run was started as `pnpm backfill | tail -40`, so all
 but the last 40 lines of the record were thrown away. 7 of the 27 could not be
@@ -202,14 +213,16 @@ should be redirected to a file, never piped through `tail`.
 
 Still to do, now unblocked:
 
-- A second `pnpm fix:names` run. The backfill was started before `putObject`
-  learned to set the download name, so everything from that point landed without
-  the header. Idempotent, so re-running costs nothing. Held while OCR runs, to
-  keep two R2-heavy jobs apart.
-- `pnpm ocr:local` — running now.
-- The real `pnpm scan:duplicates`, once the text exists.
-- Decide what the 24 become, and whether the orphaned objects are adopted or
-  removed.
+- `pnpm ocr:local --force` — running now, re-reading Vision's own pages so the
+  stored text gets the corrected reading order.
+- A second `pnpm fix:names` run, after that. The backfill was started before
+  `putObject` learned to set the download name, so everything from that point
+  landed without the header. Idempotent, so re-running costs nothing. Held while
+  OCR runs, to keep two R2-heavy jobs apart.
+- The real `pnpm scan:duplicates`, once the text has settled.
+- **`TRIGGER_PROJECT_REF` is still missing** — only `TRIGGER_SECRET_KEY` is set,
+  so `hasJobs` is false and adding a material is switched off. Deliberately: the
+  file would upload and then sit in staging with nothing to process it.
 
 ### Phase 3 — Auth and admin shell
 - [x] Better Auth, sign-up disabled, seeded Owner. Confirmed working from a real
