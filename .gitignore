@@ -12,6 +12,10 @@
 
 # testing
 /coverage
+# Playwright regenerates these on every run; the traces alone are megabytes
+/test-results/
+/playwright-report/
+/blob-report/
 
 # next.js
 /.next/

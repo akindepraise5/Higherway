@@ -12,7 +12,7 @@ Living record of where Higherway v2 stands. Update it in the same change as the 
 
 | | |
 |---|---|
-| Docs | `CLAUDE.md`, `ARCHITECTURE.md`, `STATUS.md` written |
+| Docs | All in `docs/`, entered through `CLAUDE.md` at the repo root: `ONBOARDING`, `ARCHITECTURE`, `STATUS`, `RUNBOOK`, plus a `README` |
 | Code | Phases 0 and 1 on the `v2` branch. `main` still serves v1 |
 | Database | Live on Neon. 8 tables, `pg_trgm` 1.6 and `vector` 0.8.6, 651 materials, 69 categories |
 | Files | Moving into R2 bucket `higherway`, served from `cdn-higherway.mavilletech.com` |
@@ -221,8 +221,8 @@ Still to do, now unblocked:
   quality of 0.979, and 1,066 taken straight from the PDFs.
 - [x] `pnpm fix:names` — **done**: 624 objects renamed, none failed, so a
   download now saves under the material's title rather than `original.pdf`.
-- **A second `--force` re-read is running**, to carry de-hyphenation into the
-  stored text. The first attempt **hung after roughly 491 of 1,162 pages** —
+- [x] **De-hyphenation carried into the stored text** — done, and it took three
+  `--force` re-reads. The first attempt **hung after roughly 491 of 1,162 pages** —
   alive at 0% CPU, no sockets, no error — because the R2 client had no
   timeouts and an `await` could never settle. Fixed at the client, so the same
   silence cannot strand a Trigger task. Resumable by design: `--force` re-reads
@@ -256,16 +256,36 @@ Still to do, now unblocked:
     was working the whole time: vision pages with a joinable split went 259 →
     232 while I was busy proving it broken.
 
-- [ ] **De-hyphenation never reaches embedded text.** It lives inside
+  A **third** re-read was needed because the second one damaged the text. The
+  list of prefixes held to be part of a word — `KEEPS_HYPHEN` — included `re`,
+  `pre`, `co` and `ex`, so every ordinary word broken across a line at one of
+  them kept its hyphen and had the two halves merged: 105 pages were left
+  holding "re-ceived", "pre-sence", "ex-perience". Those four came out; only
+  `self`, `anti` and `cross` remain, where the hyphen really does belong to the
+  word. **1,162 pages re-read at 1.39s each, none failed.**
+
+  Verified afterwards rather than assumed, because the obvious measure lies
+  here: a count of `(re|pre|co|ex)-` pages cannot reach zero, since those
+  letters begin real hyphenated words. 40 pages still match, and **all 19
+  distinct hits are genuine English** — 13 `co-workers`, 8 `co-worker`, then
+  `re-anchor`, `co-exist`, `co-operation`, `pre-teenage`, `ex-drunkards`,
+  `re-consecrated` and the rest, one page each, summing to exactly 40. Not one
+  broken word survives. **The stored text is final.**
+
+- [x] **De-hyphenation never reached embedded text** — fixed. It lived inside
   `readingOrder`, and text taken from a PDF's own text layer bypasses that path
-  entirely — it comes straight from `extractText`. 32 pages carry joinable
-  splits that no amount of re-reading will fix, because `--force` excludes
-  `text_layer` by design. The fix is to lift `joinHyphenated` out of
-  `readingOrder` into its own pure function applied to both paths, which also
-  makes it testable without column geometry.
-- [x] `pnpm scan:duplicates` — **done**, now that the text had settled. 628
-  materials compared, 625 with usable text, **87 pairs raised: 49 likely, 38
-  possible, every one `pending`**. Nothing was decided automatically, which is
+  entirely; `--force` excludes `text_layer` by design, so no amount of
+  re-reading could ever have repaired those pages. `joinHyphenatedLines` and
+  `dehyphenate` now live in their own pure module, `src/lib/text/dehyphenate.ts`,
+  applied to both paths and testable without column geometry. `pnpm fix:hyphens`
+  applies it to text already stored, which needs no recogniser at all.
+  Archive-wide there is now **1 joinable split left**, down from 32.
+- [x] `pnpm scan:duplicates` — **done**, and re-run once more after the third
+  re-read, since changed text moves every shingle and containment score. 628
+  materials compared, 625 with usable text, **83 pairs pending: 47 likely, 36
+  possible**. The final pass raised 0 and withdrew 0 — it re-scored all 83
+  against the settled text and found nothing new, which is the result that says
+  the text and the scan now agree. Nothing was decided automatically, which is
   the point of it.
 
   These are a different class from the 23 the backfill left stuck. Those were
@@ -460,9 +480,19 @@ the dialog is what stops it being needed again.
       not the add drawer, the topic picker, the pencil editor, the account menu,
       the reader, or the duplicate review. It typechecks and its queries are
       verified against the real database, which is not the same thing.
-- [ ] **No end-to-end tests exist.** `tests/e2e` is empty and Playwright has
-      nothing to run. CLAUDE.md names three flows: invite → set password → sign
-      in; upload → duplicate flagged → review; search → open reader → download.
+- [ ] **One of the three end-to-end flows is covered; two are not.**
+      `tests/e2e/reading.spec.ts` covers the public journey — home → library,
+      search keeping its state in the URL, a material opening with its page
+      images, a proper 404, robots and sitemap, and `/admin/materials` bouncing
+      to sign-in — **14 passing** across desktop Chromium and mobile WebKit.
+      They assert on structure and behaviour, never on a particular material
+      being present, so filing and duplicate resolution cannot break them.
+      Still unwritten, because both need a seeded session: invite → set
+      password → sign in, and upload → duplicate flagged → review.
+
+      `pnpm test:e2e` needs `pnpm exec playwright install` once per machine —
+      and `install chromium` alone leaves the mobile project failing on a
+      missing WebKit, which reads like a test failure and is not one.
 
 **Functional gap worth deciding on before launch:**
 
