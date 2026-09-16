@@ -26,3 +26,37 @@ export function newToken(): { token: string; tokenHash: string } {
 
 export const invitationExpiry = (): Date =>
   new Date(Date.now() + INVITE_EXPIRES_HOURS * 60 * 60 * 1000)
+
+/** Why a link cannot be used. */
+export type InviteProblem = "not_found" | "accepted" | "revoked" | "expired"
+
+/** The fields that decide whether a link still works. */
+export type InviteState = {
+  acceptedAt: Date | null
+  revokedAt: Date | null
+  expiresAt: Date
+}
+
+/**
+ * Whether an invitation can still be used, and if not, exactly why.
+ *
+ * Pure, so every branch is tested without a database. This decision used to be
+ * one query demanding all four conditions at once, which collapsed them into a
+ * single `null` — and the page said "This link has expired" for a link that
+ * had in fact been *withdrawn* when a newer one was sent.
+ *
+ * `null` means usable. `now` is passed in rather than read here, so a test can
+ * stand at the exact edge of expiry.
+ */
+export function classifyInvitation(
+  row: InviteState | null | undefined,
+  now: Date,
+): InviteProblem | null {
+  if (!row) return "not_found"
+  // Accepted first: for a used link, "sign in instead" is the useful answer.
+  if (row.acceptedAt) return "accepted"
+  if (row.revokedAt) return "revoked"
+  // At the exact moment of expiry the link is already gone.
+  if (row.expiresAt <= now) return "expired"
+  return null
+}
