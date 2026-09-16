@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!**/.next", "!**/node_modules", "!**/docs/legacy"]
+    "includes": ["**", "!**/.next", "!**/node_modules", "!**/docs/legacy", "!**/.trigger"]
   },
   "formatter": {
     "enabled": true,

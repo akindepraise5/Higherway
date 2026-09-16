@@ -1,6 +1,12 @@
-import { asc, count, desc, eq, inArray, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm"
 import { db } from "../../db"
-import { duplicatePairs, materials } from "../../db/schema"
+import {
+  categories,
+  duplicatePairs,
+  materialCategories,
+  materialPages,
+  materials,
+} from "../../db/schema"
 import { lookFor } from "../../lib/art/palette"
 import { pageKey, thumbKey } from "../../lib/r2/keys"
 
@@ -64,33 +70,53 @@ async function sides(ids: string[]): Promise<Map<string, PairSide>> {
       byteSize: materials.byteSize,
       status: materials.status,
       createdAt: materials.createdAt,
-      topics: sql<string[]>`coalesce(array(
-        select c.name from material_categories mc
-        join categories c on c.id = mc.category_id
-        where mc.material_id = ${materials.id}
-        order by mc.ordinal
-      ), '{}')`,
-      hasFirstPage: sql<boolean>`exists (
-        select 1 from material_pages mp
-        where mp.material_id = ${materials.id} and mp.page_number = 1
-      )`,
     })
     .from(materials)
     .where(inArray(materials.id, ids))
 
+  /**
+   * Three queries rather than one, deliberately.
+   *
+   * A correlated subquery built by interpolating a column object into a nested
+   * `sql` template inside `.select()` silently matches nothing — it returns no
+   * error and no rows. `scripts/scan-duplicates.ts` carries the same warning,
+   * and this file had the bug anyway: every pair on the review page rendered as
+   * two blank "Not processed yet" cards marked Uncategorised, while the
+   * database held a first page and topics for both sides.
+   */
+  const [firstPages, topicRows] = await Promise.all([
+    db
+      .select({ materialId: materialPages.materialId })
+      .from(materialPages)
+      .where(and(inArray(materialPages.materialId, ids), eq(materialPages.pageNumber, 1))),
+    db
+      .select({ materialId: materialCategories.materialId, name: categories.name })
+      .from(materialCategories)
+      .innerJoin(categories, eq(categories.id, materialCategories.categoryId))
+      .where(inArray(materialCategories.materialId, ids))
+      .orderBy(materialCategories.ordinal),
+  ])
+
+  const hasFirstPage = new Set(firstPages.map((r) => r.materialId))
+  const topicsById = new Map<string, string[]>()
+  for (const row of topicRows) {
+    topicsById.set(row.materialId, [...(topicsById.get(row.materialId) ?? []), row.name])
+  }
+
   return new Map(
-    rows.map((row) => [
-      row.id,
-      {
-        ...row,
-        thumbUrl: `${base()}/${thumbKey(row.id)}`,
-        firstPageUrl: row.hasFirstPage ? `${base()}/${pageKey(row.id, 1)}` : null,
-        look: lookFor(
-          row.slug,
-          row.topics[0] ? String(row.topics[0]).toLowerCase() : "uncategorised",
-        ),
-      } as PairSide,
-    ]),
+    rows.map((row) => {
+      const topics = topicsById.get(row.id) ?? []
+      return [
+        row.id,
+        {
+          ...row,
+          topics,
+          thumbUrl: `${base()}/${thumbKey(row.id)}`,
+          firstPageUrl: hasFirstPage.has(row.id) ? `${base()}/${pageKey(row.id, 1)}` : null,
+          look: lookFor(row.slug, topics[0] ? topics[0].toLowerCase() : "uncategorised"),
+        } as PairSide,
+      ]
+    }),
   )
 }
 
@@ -99,13 +125,14 @@ async function sides(ids: string[]): Promise<Map<string, PairSide>> {
  * quickest to resolve, and working down from certainty is less tiring than
  * starting with the ambiguous ones.
  */
-export async function pendingPairs(limit = 50): Promise<DuplicatePair[]> {
+export async function pendingPairs(limit = 20, offset = 0): Promise<DuplicatePair[]> {
   const pairs = await db
     .select()
     .from(duplicatePairs)
     .where(eq(duplicatePairs.status, "pending"))
     .orderBy(desc(duplicatePairs.score), asc(duplicatePairs.createdAt))
     .limit(limit)
+    .offset(offset)
 
   const ids = [...new Set(pairs.flatMap((p) => [p.materialAId, p.materialBId]))]
   const byId = await sides(ids)

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import type { DuplicatePair, PairSide } from "../../server/duplicates/queries"
 import { dismissPair, resolvePair } from "../../server/services/duplicates"
+import { Cover } from "../public/cover"
 import { ConfirmDialog } from "./confirm-dialog"
 
 /**
@@ -29,24 +30,64 @@ const fmtBytes = (n: number | null) =>
 function Side({ side, onKeep, busy }: { side: PairSide; onKeep: () => void; busy: boolean }) {
   return (
     <div className="flex flex-col rounded-[3px] border border-line-soft bg-paper">
-      <div className="aspect-[5/7] overflow-hidden bg-paper-3">
+      {/* The page image is the evidence, so it opens full size rather than
+          sitting there as a thumbnail you cannot read. */}
+      <a
+        href={side.firstPageUrl ?? `/admin/materials/${side.id}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group relative block aspect-[5/7] overflow-hidden bg-paper-3"
+        title={side.firstPageUrl ? "Open the full page" : "Open the material"}
+      >
         {side.firstPageUrl ? (
-          /* biome-ignore lint/performance/noImgElement: already sized by our pipeline, served free from R2 */
-          <img
-            src={side.firstPageUrl}
-            alt={`First page of ${side.title}`}
-            loading="lazy"
-            className="h-full w-full object-cover object-top"
-          />
+          <>
+            {/* biome-ignore lint/performance/noImgElement: already sized by our pipeline, served free from R2 */}
+            <img
+              src={side.firstPageUrl}
+              alt={`First page of ${side.title}`}
+              loading="lazy"
+              className="h-full w-full object-cover object-top"
+            />
+            <span className="absolute inset-x-0 bottom-0 bg-forest/75 px-3 py-1.5 text-center text-[11.5px] text-paper-2 opacity-0 transition-opacity group-hover:opacity-100">
+              Open the full page
+            </span>
+          </>
         ) : (
-          <div className="flex h-full items-center justify-center px-4 text-center text-[12.5px] text-taupe">
-            Not processed yet — no page to show
-          </div>
+          <Cover
+            variant="cover"
+            seed={side.slug}
+            look={side.look}
+            title={side.title}
+            topic={side.topics[0]}
+            footer={side.author ?? undefined}
+            className="h-full"
+          />
         )}
-      </div>
+      </a>
 
       <div className="flex flex-1 flex-col p-4">
         <h3 className="font-serif text-[17px] leading-snug">{side.title}</h3>
+
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px]">
+          <a
+            href={`/admin/materials/${side.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="border-b border-line text-ink-2 transition-colors hover:border-ink hover:text-ink"
+          >
+            Open in admin
+          </a>
+          {side.status === "published" ? (
+            <a
+              href={`/m/${side.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="border-b border-line text-ink-2 transition-colors hover:border-ink hover:text-ink"
+            >
+              View public page
+            </a>
+          ) : null}
+        </div>
 
         <dl className="mt-3 space-y-1 text-[12.5px] text-ink-3">
           <div className="flex justify-between gap-3">
