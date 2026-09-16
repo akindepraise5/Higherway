@@ -59,6 +59,9 @@ export type LastChange = {
   at: Date
   byName: string | null
   byEmail: string | null
+  /** Carried so the table can say *which* topic, not just "a topic". */
+  before: unknown
+  after: unknown
 }
 
 /**
@@ -79,6 +82,8 @@ export async function lastChanges(materialIds: string[]): Promise<Map<string, La
       at: auditLog.createdAt,
       byName: user.name,
       byEmail: user.email,
+      before: auditLog.before,
+      after: auditLog.after,
     })
     .from(auditLog)
     .leftJoin(user, eq(user.id, auditLog.actorId))
@@ -93,6 +98,8 @@ export async function lastChanges(materialIds: string[]): Promise<Map<string, La
       at: row.at,
       byName: row.byName,
       byEmail: row.byEmail,
+      before: row.before,
+      after: row.after,
     })
   }
   return byMaterial

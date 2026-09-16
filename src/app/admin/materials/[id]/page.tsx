@@ -116,6 +116,19 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
     ["Pages with text", `${withText} of ${pages.length}`],
     ["Public text", material.textPublic ? "shown" : "hidden"],
     ["Added", material.createdAt.toISOString().slice(0, 10)],
+    // Worth keeping — it is what the v1 sheet called the file, so it traces a
+    // material back to where it came from. It just does not belong under the
+    // title, where it reads like a correction rather than provenance.
+    ...(material.titleOriginal && material.titleOriginal !== material.title
+      ? ([
+          [
+            "Originally",
+            <span key="originally" className="font-mono text-[12px]">
+              {material.titleOriginal}
+            </span>,
+          ],
+        ] as [string, React.ReactNode][])
+      : []),
   ]
 
   return (
@@ -175,14 +188,22 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
         </div>
 
         <div>
-          <h1 className="font-serif text-[clamp(26px,3.2vw,36px)] font-light leading-tight tracking-[-0.02em]">
-            {material.title}
-          </h1>
-          {material.titleOriginal && material.titleOriginal !== material.title ? (
-            <p className="mt-2 text-[13px] text-taupe">
-              Originally filed as <span className="font-mono">{material.titleOriginal}</span>
-            </p>
-          ) : null}
+          <div className="flex items-start gap-3">
+            <h1 className="font-serif text-[clamp(26px,3.2vw,36px)] font-light leading-tight tracking-[-0.02em]">
+              {material.title}
+            </h1>
+            <MaterialEditor
+              materialId={id}
+              title={material.title}
+              author={material.author}
+              summary={material.summary}
+              status={material.status}
+              archived={material.archivedAt !== null}
+              hasFile={material.r2KeyPdf !== null}
+              textPublic={material.textPublic}
+              canModerate={canModerate}
+            />
+          </div>
 
           <dl className="mt-8 grid grid-cols-2 gap-px border border-line-soft bg-line-soft sm:grid-cols-4">
             {facts.map(([label, value]) => (
@@ -214,18 +235,6 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
               This material has not been processed yet.
             </p>
           ) : null}
-
-          <MaterialEditor
-            materialId={id}
-            title={material.title}
-            author={material.author}
-            summary={material.summary}
-            status={material.status}
-            archived={material.archivedAt !== null}
-            hasFile={material.r2KeyPdf !== null}
-            textPublic={material.textPublic}
-            canModerate={canModerate}
-          />
 
           <h2 className="mt-12 text-[11px] font-medium uppercase tracking-[.2em] text-taupe">
             History

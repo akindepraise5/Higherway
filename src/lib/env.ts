@@ -33,6 +33,7 @@ const schema = z.object({
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
   GOOGLE_DRIVE_FOLDER_ID: z.string().optional(),
   TRIGGER_SECRET_KEY: z.string().optional(),
+  TRIGGER_PROJECT_REF: z.string().optional(),
   SEED_OWNER_EMAIL: z.string().email().optional(),
   SEED_OWNER_NAME: z.string().optional(),
 })
@@ -56,6 +57,7 @@ export const env = schema.parse({
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
   GOOGLE_DRIVE_FOLDER_ID: process.env.GOOGLE_DRIVE_FOLDER_ID,
   TRIGGER_SECRET_KEY: process.env.TRIGGER_SECRET_KEY,
+  TRIGGER_PROJECT_REF: process.env.TRIGGER_PROJECT_REF,
   SEED_OWNER_EMAIL: process.env.SEED_OWNER_EMAIL,
   SEED_OWNER_NAME: process.env.SEED_OWNER_NAME,
 })
@@ -75,7 +77,7 @@ export const hasCloudOcr = Boolean(env.GOOGLE_CLOUD_VISION_KEY)
  * processed, so the upload form says so rather than accepting a file it will
  * silently leave sitting in staging.
  */
-export const hasJobs = Boolean(env.TRIGGER_SECRET_KEY)
+export const hasJobs = Boolean(env.TRIGGER_SECRET_KEY && env.TRIGGER_PROJECT_REF)
 
 /** Drive sync, Phase 6. The app never writes to Drive either way. */
 export const hasDrive = Boolean(

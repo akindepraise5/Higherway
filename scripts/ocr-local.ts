@@ -4,6 +4,7 @@
  *   pnpm ocr:local                 everything waiting
  *   pnpm ocr:local --limit 20      a few first
  *   pnpm ocr:local --redo          re-read pages an engine already did
+ *   pnpm ocr:local --force         re-read every page, Vision's own included
  *
  * This is the quality step of the OCR chain (ARCHITECTURE.md §7). The backfill
  * takes embedded text where a PDF has it — free and perfect — and leaves the
@@ -25,12 +26,19 @@ import { GetObjectCommand } from "@aws-sdk/client-s3"
 import { and, eq, isNull, or, sql } from "drizzle-orm"
 import { db } from "../src/db"
 import { materialPages } from "../src/db/schema"
+import { readingOrder, type TextBox } from "../src/lib/text/columns"
 import { scoreText } from "../src/lib/text/quality"
 import { bucket, r2 } from "../src/server/r2/client"
 
 const args = process.argv.slice(2)
 const limit = Number(args[args.indexOf("--limit") + 1]) || Infinity
 const redo = args.includes("--redo")
+/**
+ * Re-read everything, including pages Vision has already done. `--redo` will
+ * not do it, because those pages *are* Vision's — and they are exactly the ones
+ * read before reading order was fixed, so their columns are interleaved.
+ */
+const force = args.includes("--force")
 const BATCH = 8
 
 const HERE = new URL(".", import.meta.url).pathname
@@ -69,12 +77,17 @@ async function main() {
     })
     .from(materialPages)
     .where(
-      redo
-        ? sql`${materialPages.ocrEngine} <> 'vision' and ${materialPages.r2KeyWebp} is not null`
-        : and(
-            or(isNull(materialPages.text), eq(materialPages.ocrEngine, "none")),
-            sql`${materialPages.r2KeyWebp} is not null`,
-          ),
+      force
+        ? // Vision's own pages only. "Every page" would sweep in the 1,074 whose
+          // text came out of the PDF itself — exact, free, and better than any
+          // OCR — and overwrite them with a reading of a photograph.
+          sql`${materialPages.ocrEngine} = 'vision' and ${materialPages.r2KeyWebp} is not null`
+        : redo
+          ? sql`${materialPages.ocrEngine} <> 'vision' and ${materialPages.r2KeyWebp} is not null`
+          : and(
+              or(isNull(materialPages.text), eq(materialPages.ocrEngine, "none")),
+              sql`${materialPages.r2KeyWebp} is not null`,
+            ),
     )
 
   const queue = (waiting as PageRow[]).slice(0, limit === Infinity ? undefined : limit)
@@ -130,7 +143,15 @@ async function main() {
         if (!line.trim()) continue
         try {
           const parsed = JSON.parse(line)
-          byPath.set(parsed.path, { text: parsed.text ?? "", confidence: parsed.confidence ?? 0 })
+          // Vision returns lines in raster order, which reads straight across a
+          // two-column page and weaves the columns together. The geometry is
+          // what puts them right; `text` is only a fallback for a helper binary
+          // compiled before bounding boxes were emitted.
+          const boxes = Array.isArray(parsed.lines) ? (parsed.lines as TextBox[]) : null
+          byPath.set(parsed.path, {
+            text: boxes ? readingOrder(boxes) : (parsed.text ?? ""),
+            confidence: parsed.confidence ?? 0,
+          })
         } catch {
           // A malformed line loses one page, not the batch.
         }

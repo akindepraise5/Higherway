@@ -301,7 +301,37 @@ the dialog is what stops it being needed again.
 
 ### Phase 5 — Reading and duplicates
 - [ ] OCR interface; tesseract.js on the worker
-- [ ] `scripts/ocr-local.ts` — macOS Vision, plus the re-read queue
+- [x] `scripts/ocr-local.ts` — macOS Vision, plus the re-read queue
+- [x] **Reading order on multi-column pages** (`src/lib/text/columns.ts`). Vision
+      returns lines in raster order, straight across the page, so a two-column
+      spread came back with the columns woven together — the reason the stored
+      text read "orn into a Muslim family, I was trained / Not wanting to keep
+      the joy of the Lord to myself". `vision-ocr.swift` now emits each line's
+      bounding box and a pure module rebuilds the order. Its own comment used to
+      claim Vision "keeps the reading order right on two-column pages"; the
+      archive's output disproved that.
+
+      It took six attempts, and every wrong turn came from reasoning about the
+      geometry instead of measuring it:
+      - The gutter must be measured **once for the whole page**. Per band, a
+        couple of wide lines close it and the page collapses to one column.
+      - A gutter is identified by the **depth** of the drop, not its width.
+        Coverage falls from 42 lines to 6 across a single 0.5% slice, because
+        OCR boxes overshoot into the gap from both sides. Demanding a wide gap
+        rejected a gutter that was plainly there.
+      - A line counts as spanning when it **crosses** the gutter, not when it is
+        wider than some guessed fraction — and the margin must be generous, or a
+        byline set into the gap fragments the opening paragraph.
+      - Vision occasionally merges one line across the gutter. Height cannot
+        find it (1.17× median, *below* body lines at 1.34×); span can, because
+        it alone covers the full text block. It is cut at the gutter rather than
+        breaking the page, which would make the article read first column,
+        second column, then first column again.
+
+      Known residual: a drop cap Vision never emits stays lost, so a paragraph
+      can still begin "orn into". Re-read Vision's own pages with
+      `pnpm ocr:local --force` — which deliberately excludes the 1,071 pages
+      whose text came from the PDF itself, since that text is exact and free.
 - [ ] Quality scoring and flagging
 - [ ] Duplicate engine: fingerprint, title, shingles, meaning
 - [ ] Duplicate review page: clusters, keep one, never-again decisions

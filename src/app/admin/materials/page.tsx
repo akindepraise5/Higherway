@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Pagination } from "../../../components/public/pagination"
 import { requireSession } from "../../../lib/session"
 import { exact, timeAgo, who } from "../../../lib/when"
+import { describeChange } from "../../../server/activity"
 import {
   ADMIN_PAGE_SIZE,
   adminCounts,
@@ -11,7 +12,7 @@ import {
   asFilter,
   FILTERS,
 } from "../../../server/materials/admin"
-import { actionLabel, lastChanges } from "../../../server/materials/history"
+import { lastChanges } from "../../../server/materials/history"
 
 /**
  * The materials list: a working surface, not a showcase.
@@ -202,7 +203,8 @@ export default async function AdminMaterialsPage({
                         <span className="text-[12.5px] text-ink-3" title={exact(c.at)}>
                           {timeAgo(c.at)}
                           <span className="block text-taupe">
-                            {actionLabel(c.action)} · {who(c.byName, c.byEmail)}
+                            {describeChange(c.action, c.before, c.after)} ·{" "}
+                            {who(c.byName, c.byEmail)}
                           </span>
                         </span>
                       )
