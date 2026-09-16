@@ -213,13 +213,17 @@ should be redirected to a file, never piped through `tail`.
 
 Still to do, now unblocked:
 
-- `pnpm ocr:local --force` — running now, re-reading Vision's own pages so the
-  stored text gets the corrected reading order.
-- A second `pnpm fix:names` run, after that. The backfill was started before
-  `putObject` learned to set the download name, so everything from that point
-  landed without the header. Idempotent, so re-running costs nothing. Held while
-  OCR runs, to keep two R2-heavy jobs apart.
-- The real `pnpm scan:duplicates`, once the text has settled.
+- [x] `pnpm ocr:local --force` — **done**. 1,162 pages re-read in 2,177s
+  (1.87s a page), none failed, so the corrected reading order is in the stored
+  text and not only in the algorithm. Confirmed by reading a page back out of
+  the database rather than re-running the recogniser over it. The archive now
+  holds 2,223 pages of text out of 2,228: 1,162 read by Vision at an average
+  quality of 0.979, and 1,066 taken straight from the PDFs.
+- `pnpm fix:names` — running. The backfill was started before `putObject`
+  learned to set the download name, so everything from that point landed
+  without the header. Idempotent, so re-running costs nothing.
+- `pnpm scan:duplicates` — running, now that the text has settled. It only
+  raises *pending* pairs; nothing is ever merged without a person deciding.
 - **`TRIGGER_PROJECT_REF` is still missing** — only `TRIGGER_SECRET_KEY` is set,
   so `hasJobs` is false and adding a material is switched off. Deliberately: the
   file would upload and then sit in staging with nothing to process it.
