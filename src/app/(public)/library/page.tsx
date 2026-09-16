@@ -77,7 +77,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
             name="q"
             type="search"
             defaultValue={q}
-            placeholder="Search materials or topics"
+            placeholder="Search materials, topics or authors"
             className="w-full rounded-full border border-line-soft bg-paper-2 py-4 pl-6 pr-28 text-[15px] transition-colors focus:border-ink focus:bg-white focus:outline-none"
           />
           <button

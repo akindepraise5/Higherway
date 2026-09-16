@@ -618,10 +618,24 @@ Asked for directly, in the owner's words, and not yet built:
 
 **Blocking — `main` cannot point at v2 until these are done:**
 
-- [ ] `npx trigger.dev@latest deploy`. The `dev` worker runs tasks on one
-      machine only. Without a deploy, a material added in production uploads to
-      R2, queues a run, and is never processed — and the form will look as
-      though it worked.
+- [ ] **Trigger.dev tasks deployed.** The `dev` worker runs tasks on one machine
+      only. Without a deploy, a material added in production uploads to R2,
+      queues a run, and is never processed — and the form will look as though it
+      worked.
+
+      **Now automated**: `.github/workflows/deploy-trigger.yml` runs on every
+      push to `main`. It needs one repository secret, `TRIGGER_ACCESS_TOKEN` —
+      a personal access token from the Trigger.dev dashboard, *not*
+      `TRIGGER_SECRET_KEY`, which can trigger runs but cannot deploy.
+
+      Deliberately no `paths:` filter. A task bundles far more than
+      `src/trigger/` — `ingest.ts`, `lib/pdf`, `lib/text`, the R2 client — and a
+      filter that misses one transitive file fails silently, leaving an old
+      worker with no error anywhere. A redundant deploy costs a minute; a missed
+      one costs a stale worker nobody notices.
+
+      The first deploy still has to be run by hand, because the token has to
+      exist before a workflow can use it.
 - [ ] Every environment variable set on Vercel, including `TRIGGER_SECRET_KEY`,
       `TRIGGER_PROJECT_REF` and `NEXT_PUBLIC_SITE_URL`. The last one is guarded:
       a production build without it fails loudly rather than publishing
