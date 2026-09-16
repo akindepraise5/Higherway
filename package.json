@@ -62,6 +62,7 @@
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "tailwindcss": "^4",
+    "trigger.dev": "4.6.2",
     "tsx": "^4.23.13",
     "typescript": "^5",
     "vitest": "^5.0.0"

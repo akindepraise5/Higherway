@@ -31,7 +31,21 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Deploy tasks
-        run: pnpm dlx trigger.dev@latest deploy
+        # The CLI is a locked devDependency, installed above by
+        # --frozen-lockfile, so it is always exactly the version of
+        # @trigger.dev/sdk and @trigger.dev/build beside it.
+        #
+        # This used to be `pnpm dlx trigger.dev@latest`, which resolved the CLI
+        # from the network on every run. After the SDK moved to 4.6.2, dlx still
+        # handed back 4.6.1 — and the CLI refuses to deploy against packages
+        # newer than itself, so the first deploy after merging failed. Pinning a
+        # version string here would only drift again at the next bump; the
+        # lockfile moves all three together.
+        #
+        # The package is `trigger.dev` but the binary it installs is `trigger`.
+        # `pnpm exec trigger.dev` finds nothing and fails before deploying —
+        # caught by running it, not by reading it.
+        run: pnpm exec trigger deploy
         env:
           # A personal access token from the Trigger.dev dashboard, stored as a
           # repository secret. Not TRIGGER_SECRET_KEY — that one is for the app
