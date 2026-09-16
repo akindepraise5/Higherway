@@ -1,8 +1,8 @@
 "use client"
 
-import { FileUp, Link2 } from "lucide-react"
+import { FileUp, Link2, X } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { finishUpload, importFromUrl, startUpload } from "../../server/services/uploads"
 
 /**
@@ -18,12 +18,28 @@ import { finishUpload, importFromUrl, startUpload } from "../../server/services/
  *
  * Neither path renders anything here. Both hand off to the background task and
  * return, so a slow scan does not hold a page open.
+ *
+ * Topics are chosen here rather than afterwards, because "I will file it later"
+ * is how 367 of the 651 imported materials ended up with no topic at all.
  */
+
+export type PickableTopic = { id: string; name: string; total: number }
 
 type Mode = "file" | "link"
 type Notice = { ok: boolean; text: string } | null
 
-export function NewMaterialForm({ jobsConfigured }: { jobsConfigured: boolean }) {
+export function NewMaterialForm({
+  jobsConfigured,
+  topics,
+  onBusyChange,
+  onDone,
+}: {
+  jobsConfigured: boolean
+  topics: PickableTopic[]
+  /** Lets a drawer refuse to close while a file is still going up. */
+  onBusyChange?: (busy: boolean) => void
+  onDone?: () => void
+}) {
   const router = useRouter()
   const [mode, setMode] = useState<Mode>("file")
   const [busy, setBusy] = useState<string | null>(null)
@@ -32,6 +48,33 @@ export function NewMaterialForm({ jobsConfigured }: { jobsConfigured: boolean })
   const [file, setFile] = useState<File | null>(null)
   const [title, setTitle] = useState("")
   const [url, setUrl] = useState("")
+
+  const [chosen, setChosen] = useState<string[]>([])
+  const [topicQuery, setTopicQuery] = useState("")
+
+  const byId = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics])
+  const matching = useMemo(() => {
+    const q = topicQuery.trim().toLowerCase()
+    if (!q) return topics
+    return topics.filter((t) => t.name.toLowerCase().includes(q))
+  }, [topics, topicQuery])
+
+  /** One place to set it, so the drawer above is always told. */
+  const working = (state: string | null) => {
+    setBusy(state)
+    onBusyChange?.(state !== null)
+  }
+
+  const succeeded = (message: string) => {
+    setNotice({ ok: true, text: message })
+    setFile(null)
+    setTitle("")
+    setUrl("")
+    setChosen([])
+    router.refresh()
+    // Long enough to read the confirmation before the drawer closes.
+    setTimeout(() => onDone?.(), 1400)
+  }
 
   if (!jobsConfigured) {
     return (
@@ -56,14 +99,14 @@ export function NewMaterialForm({ jobsConfigured }: { jobsConfigured: boolean })
     }
 
     setNotice(null)
-    setBusy("Preparing…")
+    working("Preparing…")
     const ticket = await startUpload()
     if (!ticket.ok) {
-      setBusy(null)
+      working(null)
       return setNotice({ ok: false, text: ticket.error })
     }
 
-    setBusy("Uploading…")
+    working("Uploading…")
     try {
       const response = await fetch(ticket.url, {
         method: "PUT",
@@ -73,37 +116,33 @@ export function NewMaterialForm({ jobsConfigured }: { jobsConfigured: boolean })
       })
       if (!response.ok) throw new Error(`R2 returned ${response.status}`)
     } catch (error) {
-      setBusy(null)
+      working(null)
       return setNotice({
         ok: false,
         text: `The upload failed: ${error instanceof Error ? error.message : "unknown error"}`,
       })
     }
 
-    setBusy("Handing it over…")
-    const result = await finishUpload({ uploadId: ticket.uploadId, title })
-    setBusy(null)
-    setNotice({ ok: result.ok, text: result.ok ? result.message : result.error })
-    if (result.ok) {
-      setFile(null)
-      setTitle("")
-      router.refresh()
-    }
+    working("Handing it over…")
+    const result = await finishUpload({ uploadId: ticket.uploadId, title, categoryIds: chosen })
+    working(null)
+    if (result.ok) succeeded(result.message)
+    else setNotice({ ok: false, text: result.error })
   }
 
   const submitLink = async () => {
     if (!url.trim()) return setNotice({ ok: false, text: "Paste a link first." })
 
     setNotice(null)
-    setBusy("Fetching…")
-    const result = await importFromUrl({ url, title: title.trim() || undefined })
-    setBusy(null)
-    setNotice({ ok: result.ok, text: result.ok ? result.message : result.error })
-    if (result.ok) {
-      setUrl("")
-      setTitle("")
-      router.refresh()
-    }
+    working("Fetching…")
+    const result = await importFromUrl({
+      url,
+      title: title.trim() || undefined,
+      categoryIds: chosen,
+    })
+    working(null)
+    if (result.ok) succeeded(result.message)
+    else setNotice({ ok: false, text: result.error })
   }
 
   return (
@@ -152,13 +191,13 @@ export function NewMaterialForm({ jobsConfigured }: { jobsConfigured: boolean })
               type="file"
               accept="application/pdf,.pdf"
               onChange={(e) => {
-                const chosen = e.target.files?.[0] ?? null
-                setFile(chosen)
+                const picked = e.target.files?.[0] ?? null
+                setFile(picked)
                 // A filename is a decent first guess at a title, and most of
                 // this archive's titles began life exactly that way.
-                if (chosen && !title) {
+                if (picked && !title) {
                   setTitle(
-                    chosen.name
+                    picked.name
                       .replace(/\.pdf$/i, "")
                       .replace(/[-_]+/g, " ")
                       .trim(),
@@ -198,6 +237,77 @@ export function NewMaterialForm({ jobsConfigured }: { jobsConfigured: boolean })
           placeholder={mode === "link" ? "Taken from the link if left empty" : "What it is called"}
           className="mt-1.5 w-full rounded-[4px] border border-line bg-paper-2 px-3.5 py-2.5 text-[14.5px] outline-none transition-colors focus:border-ink"
         />
+
+        <div className="mt-6 border-t border-line-soft pt-5">
+          <p className="text-[13px] text-ink-2">Topics</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-taupe">
+            Leave this empty and it arrives Uncategorised — which is fine, and fixable later. It is
+            simply easier to file now, while you know what it is.
+          </p>
+
+          {chosen.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {chosen.map((id) => (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-[12.5px] text-ink-2"
+                >
+                  {byId.get(id)?.name ?? "Unknown topic"}
+                  <button
+                    type="button"
+                    onClick={() => setChosen((c) => c.filter((x) => x !== id))}
+                    aria-label={`Remove ${byId.get(id)?.name ?? "topic"}`}
+                    className="text-taupe transition-colors hover:text-[#8c2f22]"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          <label htmlFor="topic-filter" className="sr-only">
+            Find a topic
+          </label>
+          <input
+            id="topic-filter"
+            value={topicQuery}
+            onChange={(e) => setTopicQuery(e.target.value)}
+            placeholder={`Search ${topics.length} topics…`}
+            autoComplete="off"
+            className="mt-3 w-full rounded-[4px] border border-line bg-paper-2 px-3.5 py-2 text-[13.5px] outline-none transition-colors focus:border-ink"
+          />
+
+          <div className="mt-2 max-h-44 overflow-y-auto rounded-[4px] border border-line-soft">
+            {matching.length === 0 ? (
+              <p className="px-3 py-3 text-[12.5px] text-taupe">
+                No topic matches that. It can be created from the material's own page once it
+                arrives.
+              </p>
+            ) : (
+              matching.map((topic) => {
+                const picked = chosen.includes(topic.id)
+                return (
+                  <button
+                    key={topic.id}
+                    type="button"
+                    onClick={() =>
+                      setChosen((c) =>
+                        picked ? c.filter((x) => x !== topic.id) : [...c, topic.id],
+                      )
+                    }
+                    className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-[13px] transition-colors ${
+                      picked ? "bg-paper-3 text-ink" : "text-ink-2 hover:bg-paper-2"
+                    }`}
+                  >
+                    <span>{topic.name}</span>
+                    <span className="text-[11.5px] text-taupe">{topic.total}</span>
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
 
         <div className="mt-6 flex items-center gap-3">
           <button

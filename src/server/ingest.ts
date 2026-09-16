@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
-import { and, eq, isNull } from "drizzle-orm"
+import { and, eq, inArray, isNull } from "drizzle-orm"
 import { db } from "../db"
-import { materialPages, materials } from "../db/schema"
+import { categories, materialCategories, materialPages, materials } from "../db/schema"
 import { txdb } from "../db/tx"
 import { looksLikePdf } from "../lib/import/url-guard"
 import {
@@ -57,6 +57,7 @@ export async function ingestPdf({
   source,
   actorId,
   sourceUrl,
+  categoryIds = [],
 }: {
   bytes: Uint8Array
   title: string
@@ -64,6 +65,12 @@ export async function ingestPdf({
   actorId: string
   /** Recorded in the trail so an imported material can be traced to its link. */
   sourceUrl?: string
+  /**
+   * Topics chosen when the material was added. Empty is a real answer, not a
+   * missing one: "Uncategorised" is the absence of rows here, and 367 of the
+   * imported materials are in exactly that state.
+   */
+  categoryIds?: string[]
 }): Promise<IngestResult> {
   const clean = title.trim()
   if (clean.length < 2) {
@@ -131,6 +138,39 @@ export async function ingestPdf({
       after: { name: clean, source, sourceUrl },
       actorId,
     })
+
+    if (categoryIds.length > 0) {
+      // Read the names back so the trail can say *which* topic. Filing is
+      // recorded one entry per topic, exactly as it is when done by hand, so
+      // "Added to Faith" reads the same however the material arrived.
+      const named = await tx
+        .select({ id: categories.id, name: categories.name })
+        .from(categories)
+        .where(inArray(categories.id, categoryIds))
+
+      if (named.length > 0) {
+        await tx.insert(materialCategories).values(
+          named.map((topic, ordinal) => ({
+            materialId: row.id,
+            categoryId: topic.id,
+            // The first topic decides the cover's colours, so the order the
+            // person chose them in is worth keeping.
+            ordinal,
+            assignedBy: actorId,
+          })),
+        )
+
+        for (const topic of named) {
+          await audit(tx, {
+            action: "material.categorise",
+            entityType: "material",
+            entityId: row.id,
+            after: { topic: topic.name },
+            actorId,
+          })
+        }
+      }
+    }
 
     return row.id
   })

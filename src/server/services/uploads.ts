@@ -36,6 +36,18 @@ export type UploadResult =
   | { ok: true; runId: string; message: string }
   | { ok: false; error: string }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * Topic ids arrive from the browser, so they are filtered rather than trusted.
+ * A malformed one would reach a `uuid` column and throw; an invented one is
+ * refused by the foreign key. Deduplicated because the same topic twice would
+ * violate the primary key, and capped because no form should be able to file a
+ * material under a hundred topics.
+ */
+const cleanCategoryIds = (ids: string[] | undefined): string[] =>
+  [...new Set(ids ?? [])].filter((id) => UUID.test(id)).slice(0, 12)
+
 /**
  * A URL the browser can PUT the file to, and the id to quote back afterwards.
  *
@@ -71,6 +83,8 @@ export async function startUpload(): Promise<
 export async function finishUpload(input: {
   uploadId: string
   title: string
+  /** Empty is a real answer: it means Uncategorised. */
+  categoryIds?: string[]
 }): Promise<UploadResult> {
   const session = await requireSession()
 
@@ -92,6 +106,7 @@ export async function finishUpload(input: {
     title,
     source: "admin_upload",
     actorId: session.user.id,
+    categoryIds: cleanCategoryIds(input.categoryIds),
   })
 
   return {
@@ -110,7 +125,11 @@ export async function finishUpload(input: {
  * resolve differently between that check and the fetch — and closing it fully
  * needs a pinned-address agent, which is noted rather than pretended away.
  */
-export async function importFromUrl(input: { url: string; title?: string }): Promise<UploadResult> {
+export async function importFromUrl(input: {
+  url: string
+  title?: string
+  categoryIds?: string[]
+}): Promise<UploadResult> {
   const session = await requireSession()
   if (!hasJobs) return { ok: false, error: "Processing is not configured." }
 
@@ -182,6 +201,7 @@ export async function importFromUrl(input: { url: string; title?: string }): Pro
     source: "url_import",
     actorId: session.user.id,
     sourceUrl: target.toString(),
+    categoryIds: cleanCategoryIds(input.categoryIds),
   })
 
   return {

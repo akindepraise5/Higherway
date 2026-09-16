@@ -1,9 +1,12 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { AddMaterialDrawer } from "../../../components/admin/add-material-drawer"
 import { Pagination } from "../../../components/public/pagination"
+import { hasJobs } from "../../../lib/env"
 import { requireSession } from "../../../lib/session"
 import { exact, timeAgo, who } from "../../../lib/when"
 import { describeChange } from "../../../server/activity"
+import { adminCategories } from "../../../server/categories/queries"
 import {
   ADMIN_PAGE_SIZE,
   adminCounts,
@@ -62,9 +65,10 @@ export default async function AdminMaterialsPage({
   const q = params.q?.trim() ?? ""
   const page = Number(params.page) || 1
 
-  const [result, counts] = await Promise.all([
+  const [result, counts, topics] = await Promise.all([
     adminMaterials({ filter, q, sort, page }),
     adminCounts(),
+    adminCategories(),
   ])
 
   // One query for the whole page, after the rows are known.
@@ -107,12 +111,7 @@ export default async function AdminMaterialsPage({
           </button>
         </form>
 
-        <Link
-          href="/admin/materials/new"
-          className="rounded-full bg-ink px-4 py-2.5 text-[13.5px] font-medium text-paper-2 transition-colors hover:bg-forest-2"
-        >
-          Add a material
-        </Link>
+        <AddMaterialDrawer jobsConfigured={hasJobs} topics={topics} />
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">

@@ -22,6 +22,8 @@ export type ProcessMaterialPayload = {
   /** Who uploaded it, so the audit trail names a person and not a job. */
   actorId: string
   sourceUrl?: string
+  /** Topics picked when it was added. Empty means Uncategorised. */
+  categoryIds?: string[]
 }
 
 export const processMaterial = task({
@@ -36,6 +38,7 @@ export const processMaterial = task({
       source: payload.source,
       actorId: payload.actorId,
       sourceUrl: payload.sourceUrl,
+      categoryIds: payload.categoryIds,
     })
 
     /**

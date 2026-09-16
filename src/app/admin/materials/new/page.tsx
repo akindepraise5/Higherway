@@ -3,6 +3,7 @@ import Link from "next/link"
 import { NewMaterialForm } from "../../../../components/admin/new-material-form"
 import { hasJobs } from "../../../../lib/env"
 import { requireSession } from "../../../../lib/session"
+import { adminCategories } from "../../../../server/categories/queries"
 
 /**
  * Adding a material by hand.
@@ -23,6 +24,7 @@ export const dynamic = "force-dynamic"
 
 export default async function NewMaterialPage() {
   await requireSession()
+  const topics = await adminCategories()
 
   return (
     <>
@@ -44,7 +46,7 @@ export default async function NewMaterialPage() {
         rendered and the text read before it appears.
       </p>
 
-      <NewMaterialForm jobsConfigured={hasJobs} />
+      <NewMaterialForm jobsConfigured={hasJobs} topics={topics} />
     </>
   )
 }
