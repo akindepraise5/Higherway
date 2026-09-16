@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { SignOutButton } from "../../components/admin/sign-out-button"
+import { UserMenu } from "../../components/admin/user-menu"
 import { Logo } from "../../components/public/logo"
 import { requireSession } from "../../lib/session"
 
@@ -33,9 +33,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
           <Link href="/admin" className="flex items-center gap-2.5">
             <Logo className="h-[30px] w-[96px] text-ink" />
-            <span className="rounded-full bg-paper-3 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[.16em] text-taupe">
-              {role}
-            </span>
           </Link>
 
           <nav aria-label="Admin" className="ml-auto hidden items-center gap-5 md:flex">
@@ -50,16 +47,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             ))}
           </nav>
 
-          <div className="ml-auto flex items-center gap-4 md:ml-0">
-            {/* The email is the way to your own account — the conventional place
-                to look, and it keeps a seventh item out of the section nav. */}
-            <Link
-              href="/admin/profile"
-              className="hidden text-[13px] text-taupe transition-colors hover:text-ink sm:inline"
-            >
-              {session.user.email}
-            </Link>
-            <SignOutButton />
+          {/* Initials in the top-right with a menu under them — where people
+              look for their own account. The role moved inside it, so the
+              header carries one control rather than three pieces of text. */}
+          <div className="ml-auto md:ml-0">
+            <UserMenu name={session.user.name} email={session.user.email} role={role} />
           </div>
         </div>
 
@@ -76,10 +68,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               {item.label}
             </Link>
           ))}
-          {/* On a phone the email is hidden, so this is the only way through. */}
-          <Link href="/admin/profile" className="whitespace-nowrap text-[13.5px] text-ink-2">
-            Profile
-          </Link>
         </nav>
       </header>
 

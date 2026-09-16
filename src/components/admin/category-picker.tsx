@@ -3,6 +3,7 @@
 import { Plus, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
+import { timeAgo, who } from "../../lib/when"
 import { assignCategory, unassignCategory } from "../../server/services/materials"
 
 /**
@@ -19,13 +20,23 @@ import { assignCategory, unassignCategory } from "../../server/services/material
 
 type Topic = { id: string; name: string }
 
+/**
+ * A filed topic carries who filed it and when. Both already sit on the join
+ * row, so naming the person costs a join rather than a new column.
+ */
+type Filed = Topic & {
+  byName?: string | null
+  byEmail?: string | null
+  at?: Date | null
+}
+
 export function CategoryPicker({
   materialId,
   assigned,
   all,
 }: {
   materialId: string
-  assigned: Topic[]
+  assigned: Filed[]
   all: Topic[]
 }) {
   const [pending, start] = useTransition()
@@ -65,33 +76,43 @@ export function CategoryPicker({
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2">
-        {assigned.length === 0 ? (
-          <span className="rounded-full bg-gold-wash px-3 py-1.5 text-[12.5px] text-gold">
-            Uncategorised
-          </span>
-        ) : (
-          assigned.map((topic) => (
-            <span
+      {assigned.length === 0 ? (
+        <p className="rounded-[4px] bg-gold-wash px-3 py-2 text-[12.5px] text-gold">
+          Uncategorised
+        </p>
+      ) : (
+        /* A list rather than pills: each row names who filed it and when, which
+           answers "why is this here?" without opening the history. */
+        <ul className="flex flex-col gap-1.5">
+          {assigned.map((topic) => (
+            <li
               key={topic.id}
-              className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[12.5px] text-ink-2"
+              className="flex items-start justify-between gap-2 rounded-[4px] border border-line px-3 py-2"
             >
-              {topic.name}
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] text-ink-2">{topic.name}</span>
+                {topic.byName || topic.byEmail || topic.at ? (
+                  <span className="mt-0.5 block text-[11px] text-taupe">
+                    {who(topic.byName ?? null, topic.byEmail ?? null)}
+                    {topic.at ? ` · ${timeAgo(new Date(topic.at))}` : ""}
+                  </span>
+                ) : null}
+              </span>
               <button
                 type="button"
                 disabled={pending}
                 onClick={() => run(() => unassignCategory(materialId, topic.id))}
-                className="text-taupe transition-colors hover:text-[#8c2f22] disabled:opacity-40"
+                className="mt-0.5 flex-none text-taupe transition-colors hover:text-[#8c2f22] disabled:opacity-40"
                 aria-label={`Remove from ${topic.name}`}
               >
                 <X size={13} />
               </button>
-            </span>
-          ))
-        )}
-      </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
-      <div className="relative mt-3 max-w-sm">
+      <div className="relative mt-3">
         <label htmlFor="topic-search" className="sr-only">
           Find or create a topic
         </label>

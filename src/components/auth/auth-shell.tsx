@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { coverArt } from "../../lib/art/cover"
 import { lookFor } from "../../lib/art/palette"
 import { Logo } from "../public/logo"
@@ -34,7 +35,16 @@ export function AuthShell({
         />
         <div className="absolute inset-0 bg-[linear-gradient(160deg,rgba(12,16,14,.72)_0%,rgba(12,16,14,.45)_45%,rgba(12,16,14,.80)_100%)]" />
 
-        <Logo className="relative h-[44px] w-[140px] text-paper-2" />
+        {/* The way back out. Someone who reaches sign-in by accident — or who
+            signs out and wants the archive again — should not have to edit the
+            URL to leave. */}
+        <Link
+          href="/"
+          aria-label="Higherway — home"
+          className="relative inline-block transition-opacity hover:opacity-80"
+        >
+          <Logo className="h-[44px] w-[140px] text-paper-2" />
+        </Link>
 
         <div className="relative mt-10 lg:mt-0">
           <p className="max-w-[24ch] font-serif text-[clamp(26px,3.4vw,40px)] font-light leading-[1.12] tracking-[-0.02em] text-[#FCFAF5]">

@@ -152,6 +152,11 @@ that phase's migration.
       `window.location.href`, so moving to the real domain needs no change here
 - [x] v1's hero rail restored ("A brighter tomorrow always"), hidden below 900px
       exactly as v1 hid it. The nav's active underline was already carried over
+- [x] One logo everywhere. The cover **plate** — the card on the home page,
+      library and topic shelves — was laying the arc *beside* the word while
+      every other surface put it above. Same lockup now in both variants
+- [x] The sign-in page's logo links home, so someone who lands there by accident
+      is not stuck editing the URL to leave
 - [x] Redirects from the old `#/` links. This has to be a small inline script:
       a hash fragment is never sent to the server, so no redirect rule,
       middleware or rewrite can see it. It is the only client JavaScript on the
@@ -191,6 +196,10 @@ The script is idempotent, so re-running it costs nothing.
       sign-in link appears anywhere on the public site
 - [x] Confirmation dialog for destructive actions, requiring the category's name
       to be typed where materials would move or be unfiled
+- [x] Account menu: initials in the top-right with profile and sign-out under
+      them, where every dashboard keeps it. It replaced a bare email and a flat
+      sign-out link sitting side by side, which read as two unrelated pieces of
+      furniture
 - [x] `/admin/profile` — your own name and password. Gated at `requireSession`
       rather than higher: every role may edit their own account, while acting on
       someone else's stays in People. The name matters because it is what the
@@ -218,10 +227,18 @@ the dialog is what stops it being needed again.
       trail rather than a column on the material — the trail is already written
       inside the same transaction as every change, so a `lastEditedBy` column
       would be a second record of the same fact, free to drift from it
+- [x] Filing built for the backlog rather than for one material at a time: the
+      cover and picker are sticky, so the pages scroll past while the picker
+      stays put — deciding where something belongs means looking at it, not at
+      its title. Each filed topic names who filed it and when, straight from
+      `assignedBy` and `createdAt` on the join row, no new column. A **Next
+      unfiled** link goes to the next one without a detour through the list
 - [ ] Material editor UI. `updateMaterial` and `setTextPublic` exist as audited
       services, but nothing on the page calls them yet
 - [ ] Bulk actions on the materials table (filter and sort are done)
 - [ ] Upload (presigned) and import by URL, with the safety checks in §6
+- [ ] Reading a material properly while filing it. Pages are 4-up thumbnails;
+      once OCR has run the text itself becomes the faster way to judge a topic
 
 ### Phase 5 — Reading and duplicates
 - [ ] OCR interface; tesseract.js on the worker

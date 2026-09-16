@@ -91,8 +91,12 @@ export function Cover({
           </>
         ) : (
           <>
-            <span className="flex items-center gap-[1.8cqw] font-serif text-[5cqw] leading-none tracking-[-0.02em] text-[rgba(247,244,238,.92)]">
-              <Arc className="h-[1.9cqw] w-[6cqw] text-gold-2" />
+            {/* The arc sits *above* the word, never beside it — the same lockup
+                as the masthead and the cover variant. `self-start` shrinks this
+                to the width of the word so `items-center` centres the arc over
+                it rather than over the whole card. */}
+            <span className="flex flex-col items-center self-start font-serif text-[5cqw] leading-none tracking-[-0.02em] text-[rgba(247,244,238,.92)]">
+              <Arc className="mb-[0.5cqw] h-[1.9cqw] w-[6.6cqw] text-gold-2" />
               Higherway
             </span>
             {topic ? (

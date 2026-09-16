@@ -1,11 +1,17 @@
-import { eq } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { CategoryPicker } from "../../../../components/admin/category-picker"
 import { Cover } from "../../../../components/public/cover"
 import { db } from "../../../../db"
-import { categories, materialCategories, materialPages, materials } from "../../../../db/schema"
+import {
+  categories,
+  materialCategories,
+  materialPages,
+  materials,
+  user,
+} from "../../../../db/schema"
 import { lookFor } from "../../../../lib/art/palette"
 import { pageKey, publicUrl } from "../../../../lib/r2/keys"
 import { requireSession } from "../../../../lib/session"
@@ -41,11 +47,20 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
   const [material] = await db.select().from(materials).where(eq(materials.id, id)).limit(1)
   if (!material) notFound()
 
-  const [topics, pages, allTopics, people, history] = await Promise.all([
+  const [topics, pages, allTopics, people, history, unfiledNext] = await Promise.all([
     db
-      .select({ id: categories.id, name: categories.name, slug: categories.slug })
+      .select({
+        id: categories.id,
+        name: categories.name,
+        slug: categories.slug,
+        // Who filed it here, and when. Both already sit on the join row.
+        byName: user.name,
+        byEmail: user.email,
+        at: materialCategories.createdAt,
+      })
       .from(materialCategories)
       .innerJoin(categories, eq(categories.id, materialCategories.categoryId))
+      .leftJoin(user, eq(user.id, materialCategories.assignedBy))
       .where(eq(materialCategories.materialId, id))
       .orderBy(materialCategories.ordinal),
     db
@@ -66,6 +81,18 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
       .orderBy(categories.name),
     contributors(id),
     materialHistory(id, 12),
+    // 367 materials have no topic. Filing them should not mean returning to the
+    // list after every one, so the next unfiled material is always one click on.
+    db
+      .select({ id: materials.id, title: materials.title })
+      .from(materials)
+      .where(
+        sql`${materials.id} <> ${id} and ${materials.archivedAt} is null and not exists (
+          select 1 from material_categories mc where mc.material_id = ${materials.id}
+        )`,
+      )
+      .orderBy(materials.createdAt)
+      .limit(1),
   ])
 
   const base = process.env.R2_PUBLIC_BASE_URL ?? ""
@@ -93,7 +120,10 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
       </Link>
 
       <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,260px)_1fr]">
-        <div>
+        {/* Sticky, so filing can be done while reading. The pages scroll past
+            on the right and the topic picker stays put — deciding where a
+            material belongs usually means looking at it, not at its title. */}
+        <div className="lg:sticky lg:top-24">
           <Cover
             variant="cover"
             seed={material.slug}
@@ -110,6 +140,30 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
               View public page
             </Link>
           ) : null}
+
+          <div className="mt-6 border-t border-line-soft pt-5">
+            <h2 className="text-[11px] font-medium uppercase tracking-[.2em] text-taupe">
+              Filed under
+            </h2>
+            <div className="mt-3">
+              <CategoryPicker materialId={id} assigned={topics} all={allTopics} />
+            </div>
+
+            {unfiledNext[0] ? (
+              <Link
+                href={`/admin/materials/${unfiledNext[0].id}`}
+                className="mt-4 flex items-center justify-between gap-2 rounded-[4px] bg-paper-2 px-3 py-2.5 text-[12.5px] text-ink-3 transition-colors hover:bg-paper-3 hover:text-ink"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[10.5px] font-medium uppercase tracking-[.16em] text-taupe">
+                    Next unfiled
+                  </span>
+                  <span className="mt-0.5 block truncate">{unfiledNext[0].title}</span>
+                </span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         <div>
@@ -121,10 +175,6 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
               Originally filed as <span className="font-mono">{material.titleOriginal}</span>
             </p>
           ) : null}
-
-          <div className="mt-6">
-            <CategoryPicker materialId={id} assigned={topics} all={allTopics} />
-          </div>
 
           <dl className="mt-8 grid grid-cols-2 gap-px border border-line-soft bg-line-soft sm:grid-cols-4">
             {facts.map(([label, value]) => (
