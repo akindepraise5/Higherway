@@ -15,22 +15,27 @@ Read this first when coming back. Everything below it is history and reasoning.
 ### Where it stopped
 
 - **Production runs `main`**, built by Vercel. v2 was merged in PR #5 (`f5624b2`).
-- **One commit is on `v2` but not yet on `main`:** `8b7b55c`, which adds an "Account
-  deleted" label to the activity log. Harmless — merge it with the next PR.
+- **`v2` is a few small commits ahead of `main`:** the "Account deleted" activity-log
+  label and these docs. Harmless — merge them with the next PR. `git log main..v2`
+  lists them.
 - The working tree is clean.
 
 ### Check these first — only the owner can
 
-1. **Did the Trigger.dev deploy succeed?** The last fix (the project ref, `1c2e7b7`)
-   merged in PR #5, but nobody has confirmed a green run — `gh` was not authenticated
-   where the fix was made. Look at GitHub → Actions → *Deploy Trigger.dev tasks*. It
-   needs the repository secret `TRIGGER_ACCESS_TOKEN`, **and the Trigger.dev dashboard
-   needs its own `DATABASE_URL` and `R2_*`**. Vercel's variables never reach it: without
-   them the deploy succeeds and every run then fails at its first query.
+1. ~~Did the Trigger.dev deploy succeed?~~ **Confirmed working** by the owner on
+   2026-09-16, after the project-ref fix (`1c2e7b7`) shipped in PR #5. The automatic
+   deploy on push to `main` is now trusted.
+
+   Note what that does *not* prove: a deploy succeeds even when the Trigger.dev
+   dashboard is missing `DATABASE_URL` and `R2_*`, and runs only fail once they first
+   query. Item 3 below is the check that proves runs work.
 2. **Is CI green?** The build prerenders from the database, so it needs the repository
    secret `DATABASE_URL`.
 3. **Add a material in production, end to end** — upload it, watch it process, see it
-   appear. This has never been verified live.
+   appear. This has never been verified live, and it is now the one check that proves
+   Trigger.dev runs can actually reach the database and R2 — a successful deploy does
+   not. If the upload is accepted but the material never appears, the Trigger.dev
+   dashboard is missing its own `DATABASE_URL` or `R2_*`.
 4. **There are three Owners.** `n***@gmail.com` (the original), `d***@gmail.com` and
    `a***@gmail.com`. Owner can change anyone's role and restructure every topic; if the
    last two should be Admin or Editor, change it in People.
