@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main, v2]
+  pull_request:
+
+# See CLAUDE.md, "Definition of done": these four must pass before anything ships.
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+        env:
+          # This block used to say "the build must not need real credentials",
+          # which stopped being true in Phase 2 and left CI failing ever since.
+          #
+          # The public pages are ISR: /topics/[slug] resolves its slugs in
+          # generateStaticParams, and the home, library, about and sitemap
+          # routes are prerendered too. All of them read the database at build
+          # time. That is deliberate — a visitor gets a cached page instead of a
+          # query — so the fix is to give the build a database, not to make
+          # every page dynamic and put Neon in the path of every request.
+          #
+          # DATABASE_URL is the only real secret here: the build only reads.
+          # Point it at a Neon branch rather than production if you would rather
+          # CI never touched the live database.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+          # Nothing authenticates during a build, so these are placeholders on
+          # purpose — they exist because src/lib/env.ts validates them at import
+          # and refuses to boot without them. Do not put a real secret here.
+          BETTER_AUTH_SECRET: ci-placeholder-not-a-secret-000000000000
+          BETTER_AUTH_URL: http://localhost:3000
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+          # Not a secret: it is the bucket's public hostname, printed in the
+          # HTML of every page. It is needed because prerendering a card builds
+          # a thumbnail URL, and `publicUrl` throws on an empty base rather than
+          # emitting a broken src — a guard worth keeping, so the value has to
+          # be supplied instead.
+          R2_PUBLIC_BASE_URL: https://cdn-higherway.mavilletech.com

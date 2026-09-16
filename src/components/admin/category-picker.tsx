@@ -1,0 +1,184 @@
+"use client"
+
+import { Plus, X } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { useMemo, useState, useTransition } from "react"
+import { timeAgo, who } from "../../lib/when"
+import { assignCategory, unassignCategory } from "../../server/services/materials"
+
+/**
+ * Filing a material, without leaving the page.
+ *
+ * 367 of the 651 imported materials arrived with no topic, because the v1
+ * spreadsheet said "Review manually" against them. Clearing that backlog is the
+ * archive's main outstanding job, so this is built for repetition: type, see
+ * what matches, pick it or create it, move on.
+ *
+ * Creating from here is deliberate — making someone go to Categories, add a
+ * topic and come back is exactly how a material ends up left uncategorised —
+ * but it is Owner-only, because a topic is a public URL and a shelf in the
+ * library. Everyone else files into the topics that already exist.
+ */
+
+type Topic = { id: string; name: string }
+
+/**
+ * A filed topic carries who filed it and when. Both already sit on the join
+ * row, so naming the person costs a join rather than a new column.
+ */
+type Filed = Topic & {
+  byName?: string | null
+  byEmail?: string | null
+  at?: Date | null
+}
+
+export function CategoryPicker({
+  materialId,
+  assigned,
+  all,
+  mayCreate,
+}: {
+  materialId: string
+  assigned: Filed[]
+  all: Topic[]
+  /** Owner only. The service refuses either way; this decides what is offered. */
+  mayCreate: boolean
+}) {
+  const [pending, start] = useTransition()
+  const [term, setTerm] = useState("")
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
+  const router = useRouter()
+
+  const assignedIds = useMemo(() => new Set(assigned.map((t) => t.id)), [assigned])
+  const query = term.trim().toLowerCase()
+
+  const matches = useMemo(
+    () =>
+      query
+        ? all
+            .filter((t) => !assignedIds.has(t.id) && t.name.toLowerCase().includes(query))
+            .slice(0, 8)
+        : [],
+    [all, assignedIds, query],
+  )
+
+  // Offer to create only when nothing matches exactly, so a near-duplicate
+  // topic is seen before another one is made — and only to an Owner.
+  const noExactMatch = query.length >= 2 && !all.some((t) => t.name.toLowerCase() === query)
+  const canCreate = mayCreate && noExactMatch
+
+  const run = (action: () => Promise<{ ok: boolean; message?: string; error?: string }>) =>
+    start(async () => {
+      const result = await action()
+      setNotice({
+        ok: result.ok,
+        text: result.ok ? (result.message ?? "Done.") : (result.error ?? "That did not work."),
+      })
+      if (result.ok) {
+        setTerm("")
+        router.refresh()
+      }
+    })
+
+  return (
+    <div>
+      {assigned.length === 0 ? (
+        <p className="rounded-[4px] bg-gold-wash px-3 py-2 text-[12.5px] text-gold">
+          Uncategorised
+        </p>
+      ) : (
+        /* A list rather than pills: each row names who filed it and when, which
+           answers "why is this here?" without opening the history. */
+        <ul className="flex flex-col gap-1.5">
+          {assigned.map((topic) => (
+            <li
+              key={topic.id}
+              className="flex items-start justify-between gap-2 rounded-[4px] border border-line px-3 py-2"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] text-ink-2">{topic.name}</span>
+                {topic.byName || topic.byEmail || topic.at ? (
+                  <span className="mt-0.5 block text-[11px] text-taupe">
+                    {who(topic.byName ?? null, topic.byEmail ?? null)}
+                    {topic.at ? ` · ${timeAgo(new Date(topic.at))}` : ""}
+                  </span>
+                ) : null}
+              </span>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => run(() => unassignCategory(materialId, topic.id))}
+                className="mt-0.5 flex-none text-taupe transition-colors hover:text-[#8c2f22] disabled:opacity-40"
+                aria-label={`Remove from ${topic.name}`}
+              >
+                <X size={13} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="relative mt-3">
+        <label htmlFor="topic-search" className="sr-only">
+          Find or create a topic
+        </label>
+        <input
+          id="topic-search"
+          value={term}
+          onChange={(e) => setTerm(e.target.value)}
+          placeholder="File under a topic…"
+          autoComplete="off"
+          className="w-full rounded-full border border-line bg-paper-2 px-4 py-2.5 text-[14px] outline-none transition-colors focus:border-ink"
+        />
+
+        {query.length > 0 ? (
+          <div className="absolute left-0 right-0 top-full z-10 mt-1.5 overflow-hidden rounded-[4px] border border-line bg-paper shadow-lg">
+            {matches.map((topic) => (
+              <button
+                key={topic.id}
+                type="button"
+                disabled={pending}
+                onClick={() => run(() => assignCategory(materialId, { categoryId: topic.id }))}
+                className="flex w-full items-center px-4 py-2.5 text-left text-[14px] transition-colors hover:bg-paper-2 disabled:opacity-50"
+              >
+                {topic.name}
+              </button>
+            ))}
+
+            {canCreate ? (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => run(() => assignCategory(materialId, { newName: term.trim() }))}
+                className="flex w-full items-center gap-2 border-t border-line-soft px-4 py-2.5 text-left text-[14px] text-gold transition-colors hover:bg-paper-2 disabled:opacity-50"
+              >
+                <Plus size={14} />
+                Create “{term.trim()}” and file it here
+              </button>
+            ) : null}
+
+            {matches.length === 0 && !canCreate ? (
+              <p className="px-4 py-2.5 text-[13px] text-taupe">
+                {/* Without this split, someone without the right to create a
+                    topic types a brand new name and is told "Already filed
+                    there" — which is simply untrue. */}
+                {noExactMatch
+                  ? "No topic matches that, and only an Owner can add one."
+                  : "Already filed there."}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
+      {notice ? (
+        <p
+          role="status"
+          className={`mt-3 text-[13px] ${notice.ok ? "text-ink-3" : "text-[#8c2f22]"}`}
+        >
+          {notice.text}
+        </p>
+      ) : null}
+    </div>
+  )
+}

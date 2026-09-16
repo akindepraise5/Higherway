@@ -1,0 +1,269 @@
+/**
+ * biome-ignore-all lint/complexity/noImportantStyles: the reduced-motion block at the
+ * foot of this file must win over component and animation styles. That is the whole
+ * point of it — see CLAUDE.md, "a page should be legible and usable with animation
+ * disabled". !important is not used anywhere else in this project.
+ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================================
+   Higherway design tokens — carried over from the v1 site.
+   Paper and ink, a forest green, and a single gold accent. Nothing else.
+   Components reference these names, never raw hex. See CLAUDE.md.
+   ========================================================================= */
+
+@theme {
+  /* paper — backgrounds, lightest to warmest */
+  --color-paper: #f5f1ea;
+  --color-paper-2: #fbf8f3;
+  --color-paper-3: #efe9df;
+
+  /* ink — text, darkest to softest */
+  --color-ink: #141a17;
+  --color-ink-2: #3b443e;
+  --color-ink-3: #6e756e;
+  --color-taupe: #7c7a6e;
+
+  /* forest — dark sections, covers, the footer, the admin sidebar */
+  --color-forest: #1a231e;
+  --color-forest-2: #232e27;
+
+  /* gold — the only accent. Used sparingly: active states, rules, marks. */
+  --color-gold: #b08a3e;
+  --color-gold-2: #d8b25f;
+  --color-gold-wash: #efe3c9;
+
+  /* hairlines */
+  --color-line: rgb(20 26 23 / 0.14);
+  --color-line-soft: rgb(20 26 23 / 0.08);
+  --color-line-dark: rgb(245 241 234 / 0.16);
+
+  /* type — the faces themselves are loaded in layout.tsx via next/font */
+  --font-serif: var(--font-newsreader), "Iowan Old Style", Palatino, Georgia, serif;
+  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+
+  /* motion — one ease for movement, one for settling */
+  --ease-hw: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-hw-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================================================
+   shadcn's semantic tokens, mapped onto the palette above.
+
+   shadcn ships neutral greys in oklch. Left alone, every component it generates
+   would ignore the Higherway palette — `bg-background` would be white, not paper.
+   Mapping them here means a shadcn Button, Dialog or Table is on-brand the moment
+   it is generated, with no per-component overrides. Change a colour once, above,
+   and both the public site and the admin panel follow.
+   ========================================================================= */
+
+:root {
+  /* layout constants that are not Tailwind scales */
+  --gutter: clamp(20px, 5vw, 56px);
+  --measure: 1320px;
+  --header-h: 72px;
+  color-scheme: light;
+
+  --background: var(--color-paper);
+  --foreground: var(--color-ink);
+
+  --card: var(--color-paper-2);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-paper-2);
+  --popover-foreground: var(--color-ink);
+
+  /* "primary" is ink, as in v1: solid dark buttons on paper */
+  --primary: var(--color-ink);
+  --primary-foreground: var(--color-paper-2);
+
+  --secondary: var(--color-paper-3);
+  --secondary-foreground: var(--color-ink);
+  --muted: var(--color-paper-3);
+  --muted-foreground: var(--color-taupe);
+
+  /* gold is an accent, never a surface */
+  --accent: var(--color-gold-wash);
+  --accent-foreground: var(--color-ink);
+
+  --destructive: #8c2f22;
+
+  --border: var(--color-line);
+  --input: var(--color-line);
+  --ring: var(--color-gold);
+
+  /* charts: admin dashboard only. Forest through gold, not primaries. */
+  --chart-1: var(--color-forest);
+  --chart-2: #3f5a4c;
+  --chart-3: var(--color-taupe);
+  --chart-4: var(--color-gold);
+  --chart-5: var(--color-gold-2);
+
+  /* v1 was nearly square: 2px on covers, pills on buttons. Keep it restrained. */
+  --radius: 0.375rem;
+
+  /* the admin sidebar sits on forest, like the v1 footer */
+  --sidebar: var(--color-forest);
+  --sidebar-foreground: var(--color-paper-2);
+  --sidebar-primary: var(--color-gold-2);
+  --sidebar-primary-foreground: var(--color-forest);
+  --sidebar-accent: var(--color-forest-2);
+  --sidebar-accent-foreground: var(--color-paper-2);
+  --sidebar-border: var(--color-line-dark);
+  --sidebar-ring: var(--color-gold);
+}
+
+@media (max-width: 900px) {
+  :root {
+    --header-h: 64px;
+  }
+}
+
+/* Dark mode is unused on the public site, which is paper by design. Kept and
+   mapped to forest so the admin panel can opt in later without inventing a
+   second palette. */
+.dark {
+  color-scheme: dark;
+
+  --background: var(--color-forest);
+  --foreground: var(--color-paper-2);
+
+  --card: var(--color-forest-2);
+  --card-foreground: var(--color-paper-2);
+  --popover: var(--color-forest-2);
+  --popover-foreground: var(--color-paper-2);
+
+  --primary: var(--color-paper-2);
+  --primary-foreground: var(--color-forest);
+
+  --secondary: var(--color-forest-2);
+  --secondary-foreground: var(--color-paper-2);
+  --muted: var(--color-forest-2);
+  --muted-foreground: rgb(245 241 234 / 0.6);
+
+  --accent: var(--color-forest-2);
+  --accent-foreground: var(--color-gold-2);
+
+  --destructive: #c4584a;
+
+  --border: var(--color-line-dark);
+  --input: var(--color-line-dark);
+  --ring: var(--color-gold-2);
+
+  --sidebar: var(--color-forest);
+  --sidebar-foreground: var(--color-paper-2);
+  --sidebar-primary: var(--color-gold-2);
+  --sidebar-primary-foreground: var(--color-forest);
+  --sidebar-accent: var(--color-forest-2);
+  --sidebar-accent-foreground: var(--color-paper-2);
+  --sidebar-border: var(--color-line-dark);
+  --sidebar-ring: var(--color-gold-2);
+}
+
+/* Bridges the variables above into Tailwind utilities (bg-background, etc.).
+   Generated by shadcn; the circular `--font-sans: var(--font-sans)` it wrote has
+   been removed, and --font-heading now points at the serif, as v1 intended. */
+@theme inline {
+  --font-heading: var(--font-serif);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: var(--color-gold-wash);
+    color: var(--color-ink);
+  }
+
+  /* Gold focus ring, declared after shadcn's so it wins. */
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  /* Display type is the serif, set light and tight. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 300;
+    letter-spacing: -0.022em;
+    line-height: 1.02;
+    font-optical-sizing: auto;
+  }
+}
+
+/* Animation must never be required to understand a page. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

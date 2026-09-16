@@ -1,0 +1,39 @@
+name: Deploy Trigger.dev tasks
+
+# Deploying the tasks is not optional and not occasional: `npx trigger.dev deploy`
+# uploads a *version* of the code in src/trigger/, and production keeps running
+# whatever was uploaded last. Forget it after changing a task and an upload is
+# processed by stale code while the form still looks like it worked.
+#
+# So it runs on every push to main rather than on a paths filter. A task bundles
+# far more than src/trigger/ — ingest.ts, lib/pdf, lib/text, the R2 client — and
+# a filter that misses one of those transitive files fails silently, in the worst
+# possible way: no error, just an old worker. A redundant deploy costs a minute.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Deploy tasks
+        run: pnpm dlx trigger.dev@latest deploy
+        env:
+          # A personal access token from the Trigger.dev dashboard, stored as a
+          # repository secret. Not TRIGGER_SECRET_KEY — that one is for the app
+          # triggering runs, and it cannot deploy.
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
