@@ -32,6 +32,7 @@ const schema = z.object({
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
   GOOGLE_DRIVE_FOLDER_ID: z.string().optional(),
+  TRIGGER_SECRET_KEY: z.string().optional(),
   SEED_OWNER_EMAIL: z.string().email().optional(),
   SEED_OWNER_NAME: z.string().optional(),
 })
@@ -54,6 +55,7 @@ export const env = schema.parse({
   GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
   GOOGLE_DRIVE_FOLDER_ID: process.env.GOOGLE_DRIVE_FOLDER_ID,
+  TRIGGER_SECRET_KEY: process.env.TRIGGER_SECRET_KEY,
   SEED_OWNER_EMAIL: process.env.SEED_OWNER_EMAIL,
   SEED_OWNER_NAME: process.env.SEED_OWNER_NAME,
 })
@@ -66,6 +68,14 @@ export const hasSuggestions = Boolean(env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLAR
 
 /** Server-side OCR. Without it, tesseract.js reads new uploads instead. */
 export const hasCloudOcr = Boolean(env.GOOGLE_CLOUD_VISION_KEY)
+
+/**
+ * Background jobs. Rendering a PDF runs off Vercel so it is not bounded by a
+ * function timeout (ARCHITECTURE.md §3, §6). Without the key nothing can be
+ * processed, so the upload form says so rather than accepting a file it will
+ * silently leave sitting in staging.
+ */
+export const hasJobs = Boolean(env.TRIGGER_SECRET_KEY)
 
 /** Drive sync, Phase 6. The app never writes to Drive either way. */
 export const hasDrive = Boolean(

@@ -28,6 +28,7 @@ export const ACTION_LABEL: Record<AuditAction, string> = {
   "category.merge": "Topics merged",
   "category.unmerge": "Merge undone",
   "category.delete": "Topic deleted",
+  "material.create": "Added",
   "material.publish": "Published",
   "material.archive": "Archived",
   "material.restore": "Restored",

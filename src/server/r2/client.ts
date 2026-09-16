@@ -101,6 +101,19 @@ export async function putObject(
   )
 }
 
+/**
+ * Read an object back out of the bucket.
+ *
+ * Browser uploads go straight to R2 with a presigned URL, so the bytes never
+ * pass through the app at all. Whatever renders and reads the file therefore
+ * has to fetch it — there is no request body to work from.
+ */
+export async function getObject(key: string): Promise<Uint8Array> {
+  const response = await r2().send(new GetObjectCommand({ Bucket: bucket(), Key: key }))
+  if (!response.Body) throw new Error(`R2 returned no body for ${key}`)
+  return response.Body.transformToByteArray()
+}
+
 /** Used by the backfill to skip what is already uploaded, so it can resume. */
 export async function objectExists(key: string): Promise<boolean> {
   try {

@@ -172,10 +172,24 @@ Verified against the running site: every route returns 200, both nonsense slugs
 404, and the filters compose — 142 materials, 18 for "faith", 6 under Prayer,
 4 for both together.
 
-**Not yet done, and waiting on the backfill to finish:** a second `pnpm fix:names`
-run. The backfill process was started before `putObject` learned to set the
-download name, so everything it uploads from that point lands without the header.
-The script is idempotent, so re-running it costs nothing.
+**The backfill has finished, and it did not finish cleanly.** 624 of 651 materials
+are published with their file in R2 (1.95 GB). **27 are still `staged` with no file
+recorded**, and the process exited 0 regardless — the per-material failures were
+caught and counted rather than raised, so the exit code says nothing about them.
+One is honest — `5 keys for successful building` returns 404 from Drive — and the
+rest failed on the *final* `update materials` after the upload and render had
+already succeeded, which points at `materials_sha256_live_idx` rejecting a file
+the archive already holds. Their bytes are in R2 with no row referencing them.
+
+Still to do, now unblocked:
+
+- A second `pnpm fix:names` run. The backfill was started before `putObject`
+  learned to set the download name, so everything from that point landed without
+  the header. Idempotent, so re-running costs nothing.
+- `pnpm ocr:local` — 1,202 pages have no text yet.
+- The real `pnpm scan:duplicates`, once the text exists.
+- Handle the 27: they need to become duplicate rows rather than stuck ones, and
+  the orphaned R2 objects need either adopting or removing.
 
 ### Phase 3 — Auth and admin shell
 - [x] Better Auth, sign-up disabled, seeded Owner. Confirmed working from a real

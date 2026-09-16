@@ -5,7 +5,7 @@ import { and, eq, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { categories, materialCategories, materials } from "../../db/schema"
 import { txdb } from "../../db/tx"
-import { requireSession } from "../../lib/session"
+import { requireRole, requireSession } from "../../lib/session"
 import { slugify } from "../../lib/slug"
 import { audit } from "../audit"
 
@@ -268,5 +268,170 @@ export async function setTextPublic(
 
   revalidatePath(`/admin/materials/${materialId}`)
   if (slug) revalidatePath(`/m/${slug}`)
+  return result
+}
+
+/**
+ * Publishing, and taking something back out of the library.
+ *
+ * Gated at Admin rather than Editor. Filing a material is daily work; deciding
+ * what the archive says in public is not the same kind of act.
+ *
+ * `duplicates.ts` has its own restore and this is deliberately not it: that one
+ * also clears `duplicateOfId`, because it means "this was not a duplicate after
+ * all". Reusing it here would quietly undo a duplicate judgement as a
+ * side-effect of unarchiving.
+ *
+ * Nothing here destroys anything, and archiving keeps the slug — the unique
+ * indexes cover live rows only, so an archived row needs no renaming.
+ */
+export async function publishMaterial(materialId: string): Promise<MaterialResult> {
+  const { session } = await requireRole("admin")
+
+  let slug: string | null = null
+
+  const result = await txdb.transaction(async (tx) => {
+    const [material] = await tx
+      .select()
+      .from(materials)
+      .where(eq(materials.id, materialId))
+      .limit(1)
+    if (!material) return { ok: false as const, error: "That material no longer exists." }
+    if (material.archivedAt) {
+      return { ok: false as const, error: "It is archived. Restore it first." }
+    }
+    if (material.status === "published") {
+      return { ok: false as const, error: "It is already published." }
+    }
+    // A record with no file behind it would publish a page that cannot be read.
+    if (!material.r2KeyPdf) {
+      return { ok: false as const, error: "It has no file yet, so there is nothing to publish." }
+    }
+
+    slug = material.slug
+
+    await tx
+      .update(materials)
+      .set({
+        status: "published",
+        // Keep the first publication date if it has one — republishing is not
+        // the same event as publishing, and the library sorts on this.
+        publishedAt: material.publishedAt ?? new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(materials.id, materialId))
+
+    await audit(tx, {
+      action: "material.publish",
+      entityType: "material",
+      entityId: materialId,
+      before: { status: material.status },
+      after: { status: "published", name: material.title },
+      actorId: session.user.id,
+    })
+
+    return { ok: true as const, message: `“${material.title}” is now in the library.` }
+  })
+
+  revalidatePath(`/admin/materials/${materialId}`)
+  revalidatePath("/admin/materials")
+  revalidatePath("/library")
+  if (slug) revalidatePath(`/m/${slug}`)
+  return result
+}
+
+/**
+ * Take a material out of public view. Reversible, and never a deletion.
+ *
+ * The reason is required because CLAUDE.md defines archiving as a soft state
+ * with a reason and an actor — an archived material with no explanation is the
+ * thing nobody can safely undo a year later.
+ */
+export async function archiveMaterial(materialId: string, reason: string): Promise<MaterialResult> {
+  const { session } = await requireRole("admin")
+
+  const why = reason.trim()
+  if (why.length < 3) {
+    return { ok: false, error: "Say why it is being archived — it is what makes it undoable." }
+  }
+
+  let slug: string | null = null
+
+  const result = await txdb.transaction(async (tx) => {
+    const [material] = await tx
+      .select()
+      .from(materials)
+      .where(eq(materials.id, materialId))
+      .limit(1)
+    if (!material) return { ok: false as const, error: "That material no longer exists." }
+    if (material.archivedAt) return { ok: false as const, error: "It is already archived." }
+
+    slug = material.slug
+
+    await tx
+      .update(materials)
+      .set({ status: "archived", archivedAt: new Date(), updatedAt: new Date() })
+      .where(eq(materials.id, materialId))
+
+    await audit(tx, {
+      action: "material.archive",
+      entityType: "material",
+      entityId: materialId,
+      before: { status: material.status },
+      after: { status: "archived", name: material.title, reason: why },
+      actorId: session.user.id,
+    })
+
+    return { ok: true as const, message: `“${material.title}” is out of the library.` }
+  })
+
+  revalidatePath(`/admin/materials/${materialId}`)
+  revalidatePath("/admin/materials")
+  revalidatePath("/library")
+  if (slug) revalidatePath(`/m/${slug}`)
+  return result
+}
+
+/**
+ * Put an archived material back.
+ *
+ * It returns to `review` rather than straight to the library: something was
+ * archived for a reason, and whoever brings it back should say it belongs
+ * before the public sees it again.
+ */
+export async function unarchiveMaterial(materialId: string): Promise<MaterialResult> {
+  const { session } = await requireRole("admin")
+
+  const result = await txdb.transaction(async (tx) => {
+    const [material] = await tx
+      .select()
+      .from(materials)
+      .where(eq(materials.id, materialId))
+      .limit(1)
+    if (!material) return { ok: false as const, error: "That material no longer exists." }
+    if (!material.archivedAt) return { ok: false as const, error: "It is not archived." }
+
+    await tx
+      .update(materials)
+      .set({ status: "review", archivedAt: null, updatedAt: new Date() })
+      .where(eq(materials.id, materialId))
+
+    await audit(tx, {
+      action: "material.restore",
+      entityType: "material",
+      entityId: materialId,
+      before: { status: "archived" },
+      after: { status: "review", name: material.title },
+      actorId: session.user.id,
+    })
+
+    return {
+      ok: true as const,
+      message: `“${material.title}” is back, waiting to be published.`,
+    }
+  })
+
+  revalidatePath(`/admin/materials/${materialId}`)
+  revalidatePath("/admin/materials")
   return result
 }

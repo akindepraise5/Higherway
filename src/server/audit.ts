@@ -31,6 +31,9 @@ export type AuditAction =
       trail as the thing it undid makes the trail worse than useless. */
   | "category.unmerge"
   | "category.delete"
+  /** A material entering the archive through the dashboard rather than the
+      backfill — an upload or an imported link. */
+  | "material.create"
   | "material.publish"
   | "material.archive"
   | "material.restore"

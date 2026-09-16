@@ -39,6 +39,7 @@ const PHRASING: Record<AuditAction, string> = {
   "category.merge": "merged a topic into another",
   "category.unmerge": "reversed a topic merge",
   "category.delete": "deleted a topic",
+  "material.create": "added",
   "material.publish": "published",
   "material.archive": "archived",
   "material.restore": "restored",
