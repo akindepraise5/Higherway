@@ -159,6 +159,26 @@ describe("readingOrder", () => {
     expect(readingOrder(boxes)).toContain("self-denial and what it costs")
   })
 
+  it("leaves a word broken across a page boundary alone", () => {
+    // Real, and found only by accident. The last column line of a page can end
+    // mid-word, with the article continuing overleaf — so what follows it is
+    // not the rest of the word but the folio line. Joining those would splice
+    // "op-" onto "18 Higher Way".
+    //
+    // This is also why "pages still holding a split word" was a hopeless
+    // progress metric: splits like this can never be joined, so the count can
+    // never reach zero however long the re-read runs.
+    const boxes = [
+      line('man wrote, "and prayer is the power that secures that op-', LEFT, COL, 1),
+      line("18 Higher Way", LEFT, 0.18, 2),
+      line("Scanned by CamScanner", LEFT, 0.26, 3),
+    ]
+
+    const out = readingOrder(boxes).split("\n")
+    expect(out[0]).toMatch(/that op-$/)
+    expect(out[1]).toBe("18 Higher Way")
+  })
+
   it("does not join a hyphen to a line that starts a new sentence", () => {
     // The guard is the lower-case check. A hyphen before a capital is a dash
     // doing its own work, not half of a broken word. Written with a hyphen on

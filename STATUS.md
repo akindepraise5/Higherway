@@ -228,10 +228,21 @@ Still to do, now unblocked:
   silence cannot strand a Trigger task. Resumable by design: `--force` re-reads
   Vision's own pages, so the restart only repeats work already done.
 
-  Worth knowing when reading progress: `material_pages` has no `updated_at`, so
-  `created_at` stays at the backfill's timestamp however many times the text is
-  rewritten. Judge progress by the text itself — a page that has been re-read
-  no longer ends a line with a hyphen.
+  Two traps when judging progress, both of which cost me an hour:
+
+  - `material_pages` has no `updated_at`, so `created_at` stays at the
+    backfill's timestamp however often the text is rewritten. It is not a
+    progress signal.
+  - **Do not count pages that end a line with a hyphen.** Of 671 such pages,
+    only **291 are joinable**; the other 380 cannot ever be fixed, because the
+    word runs onto the *next page* or the line below it is a folio line —
+    "18 Higher Way", "Scanned by CamScanner". That counter sat at exactly 671
+    for an hour while the run worked perfectly, and I read its stillness as a
+    fault three separate times.
+
+    The measure that can actually reach zero is
+    `text ~ '[[:alnum:]]-\n[a-z]'` — a trailing hyphen with a continuation
+    line beneath it.
 - [x] `pnpm scan:duplicates` — **done**, now that the text had settled. 628
   materials compared, 625 with usable text, **87 pairs raised: 49 likely, 38
   possible, every one `pending`**. Nothing was decided automatically, which is
