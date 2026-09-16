@@ -30,6 +30,8 @@
  * Coordinates follow Vision's convention: normalised 0–1, origin bottom-left.
  */
 
+import { joinHyphenatedLines } from "./dehyphenate"
+
 export type TextBox = {
   text: string
   confidence: number
@@ -139,55 +141,6 @@ function gutters(boxes: TextBox[]): number[] {
 
 const crosses = (box: TextBox, gutter: number) =>
   box.x < gutter - CROSSING && box.x + box.width > gutter + CROSSING
-
-/**
- * Prefixes that keep their hyphen when a word breaks across a line.
- *
- * "self-" followed by "denial" is a hyphenated word that happened to wrap, not
- * a word split by the typesetter — and this archive has a material called
- * "Exploring the word Self denial", so it is not hypothetical. Everything else
- * rejoins without the hyphen.
- */
-const KEEPS_HYPHEN = new Set([
-  "self",
-  "non",
-  "pre",
-  "re",
-  "anti",
-  "co",
-  "ex",
-  "half",
-  "well",
-  "cross",
-])
-
-/**
- * Put words back together when the printer broke them across a line.
- *
- * A column of justified type is full of these: "admis-" / "sion", "sur-" /
- * "prise", "scholar-" / "ship". Left split, the word is not just ugly — it
- * cannot be searched for, which defeats the reason the text is public at all
- * (ARCHITECTURE.md §7). Only joins when the next line starts lower-case, so a
- * dash ending a sentence does not swallow the line after it.
- */
-function joinHyphenated(lines: string[]): string[] {
-  const out: string[] = []
-
-  for (const line of lines) {
-    const previous = out[out.length - 1]
-
-    if (previous !== undefined && /\w[-–]$/.test(previous) && /^[a-z]/.test(line)) {
-      const stem = previous.slice(0, -1)
-      const lastWord = stem.split(/\s+/).pop()?.toLowerCase() ?? ""
-      out[out.length - 1] = KEEPS_HYPHEN.has(lastWord) ? `${stem}-${line}` : stem + line
-      continue
-    }
-
-    out.push(line)
-  }
-
-  return out
-}
 
 /**
  * Vision reads a drop cap as its own one-character line, leaving the paragraph
@@ -346,5 +299,5 @@ export function readingOrder(boxes: TextBox[]): string {
   }
   flush()
 
-  return joinHyphenated(mergeDropCaps(lines)).join("\n")
+  return joinHyphenatedLines(mergeDropCaps(lines)).join("\n")
 }
