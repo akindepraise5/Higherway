@@ -27,6 +27,9 @@ export type AuditAction =
   | "category.create"
   | "category.rename"
   | "category.merge"
+  /** Reversing a merge. Never recorded as a merge — an undo that hides in the
+      trail as the thing it undid makes the trail worse than useless. */
+  | "category.unmerge"
   | "category.delete"
   | "material.publish"
   | "material.archive"

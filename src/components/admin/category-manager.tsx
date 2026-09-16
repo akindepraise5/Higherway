@@ -10,6 +10,7 @@ import {
   mergeCategory,
   renameCategory,
 } from "../../server/services/categories"
+import { ConfirmDialog } from "./confirm-dialog"
 
 /**
  * Managing categories in place.
@@ -31,6 +32,18 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
   const [editing, setEditing] = useState<string | null>(null)
   const [merging, setMerging] = useState<string | null>(null)
   const [filter, setFilter] = useState("")
+
+  /**
+   * Nothing destructive runs straight from a click. A merge or a delete is
+   * staged here first and only executes once ConfirmDialog is satisfied — the
+   * safeguard that was missing when a stray change on the merge picker moved
+   * 42 materials out of Faith.
+   */
+  const [staged, setStaged] = useState<
+    | { kind: "merge"; from: CategoryRow; into: CategoryRow }
+    | { kind: "delete"; category: CategoryRow }
+    | null
+  >(null)
   const router = useRouter()
 
   const mayMerge = role === "owner" || role === "admin"
@@ -153,9 +166,8 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
                         id={`into-${category.id}`}
                         defaultValue=""
                         onChange={(e) => {
-                          if (e.target.value) {
-                            run(() => mergeCategory(category.id, e.target.value))
-                          }
+                          const into = categories.find((c) => c.id === e.target.value)
+                          if (into) setStaged({ kind: "merge", from: category, into })
                         }}
                         className="rounded border border-line bg-paper-2 px-2 py-1.5 text-[13px]"
                       >
@@ -214,15 +226,7 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
                           <button
                             type="button"
                             disabled={pending}
-                            onClick={() => {
-                              const warning =
-                                category.total > 0
-                                  ? `Delete “${category.name}”? ${category.total} ${
-                                      category.total === 1 ? "material becomes" : "materials become"
-                                    } Uncategorised. They are not deleted.`
-                                  : `Delete “${category.name}”?`
-                              if (confirm(warning)) run(() => deleteCategory(category.id))
-                            }}
+                            onClick={() => setStaged({ kind: "delete", category })}
                             className="hover:text-[#8c2f22] disabled:opacity-40"
                             aria-label={`Delete ${category.name}`}
                           >
@@ -238,6 +242,68 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        open={staged !== null}
+        busy={pending}
+        title={staged?.kind === "merge" ? "Merge these topics?" : "Delete this topic?"}
+        confirmLabel={staged?.kind === "merge" ? "Merge them" : "Delete it"}
+        /* Typing the name is required whenever materials would move or be
+           unfiled. An empty topic is a plain confirmation — the cost of a
+           mistake there is one click to recreate it. */
+        confirmPhrase={
+          staged?.kind === "merge"
+            ? staged.from.name
+            : staged?.kind === "delete" && staged.category.total > 0
+              ? staged.category.name
+              : undefined
+        }
+        description={
+          staged?.kind === "merge" ? (
+            <>
+              Every material on <b>{staged.from.name}</b> moves to <b>{staged.into.name}</b>, and{" "}
+              <b>{staged.from.name}</b> stops being a topic.
+              {staged.from.total > 0 ? (
+                <>
+                  {" "}
+                  <b>
+                    {staged.from.total} {staged.from.total === 1 ? "material" : "materials"}
+                  </b>{" "}
+                  will move.
+                </>
+              ) : null}{" "}
+              This cannot be undone from here — reversing it means reconstructing the original
+              filing from the spreadsheet.
+            </>
+          ) : staged?.kind === "delete" ? (
+            staged.category.total > 0 ? (
+              <>
+                <b>{staged.category.name}</b> is removed and its{" "}
+                <b>
+                  {staged.category.total}{" "}
+                  {staged.category.total === 1 ? "material becomes" : "materials become"}
+                </b>{" "}
+                Uncategorised. The materials themselves are not deleted and stay in the library.
+              </>
+            ) : (
+              <>
+                <b>{staged.category.name}</b> holds no materials, so nothing else changes.
+              </>
+            )
+          ) : null
+        }
+        onCancel={() => setStaged(null)}
+        onConfirm={() => {
+          if (!staged) return
+          const action =
+            staged.kind === "merge"
+              ? () => mergeCategory(staged.from.id, staged.into.id)
+              : () => deleteCategory(staged.category.id)
+          setStaged(null)
+          setMerging(null)
+          run(action)
+        }}
+      />
 
       {shown.length === 0 ? (
         <p className="mt-6 text-center text-[14px] text-ink-3">
