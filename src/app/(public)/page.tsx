@@ -33,6 +33,13 @@ export default async function HomePage() {
         />
         <div className="absolute inset-0 z-0 bg-[linear-gradient(96deg,rgba(10,14,12,.88)_0%,rgba(10,14,12,.72)_30%,rgba(10,14,12,.30)_62%,rgba(10,14,12,.06)_100%)]" />
 
+        {/* v1 kept a quiet line in the hero's top-right corner, over the art
+            where the gradient has thinned out. It is decoration, so it goes
+            when the hero narrows — v1 hid it below 900px and so do we. */}
+        <p className="absolute right-(--gutter) top-0 z-10 hidden max-w-[13ch] text-right text-[10.5px] font-medium uppercase leading-[2] tracking-[.22em] text-[rgba(251,248,243,.55)] min-[901px]:block">
+          A brighter tomorrow always
+        </p>
+
         <div className="relative z-10 mx-auto max-w-(--measure) px-(--gutter) text-paper-2">
           <p className="text-[11px] font-medium uppercase tracking-[.2em] text-[rgba(245,241,234,.6)]">
             Faith. Guidance. A brighter tomorrow.

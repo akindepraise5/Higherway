@@ -5,9 +5,12 @@ import { usePathname } from "next/navigation"
 import { Logo } from "./logo"
 
 /**
- * The masthead. A plain server component: no sticky-scroll JavaScript, no menu
- * state, no hydration. The mobile menu is a details/summary element, which the
- * browser opens and closes on its own.
+ * The masthead.
+ *
+ * A client component for exactly one reason: `usePathname` is what decides
+ * which section carries the underline. Everything else stays off the main
+ * thread — no sticky-scroll JavaScript, no menu state — and the mobile menu is
+ * a details/summary element the browser opens and closes on its own.
  */
 
 const LINKS = [
