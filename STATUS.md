@@ -89,11 +89,33 @@ Notes for whoever picks this up:
         catches an article reprinted inside a booklet
       - `text/quality` — scores an OCR read, feeding the re-read queue
       - `text/chunk` — chunking for embeddings, keeping page numbers
-- [ ] R2 client, storage keys, presigned uploads
-- [ ] `scripts/import-sheet.ts` — seed records and the 69 categories
-- [ ] `lib/pdf` — render pages, extract embedded text
-- [ ] `scripts/backfill.ts` — all 651 from Drive into R2, processed
-- [ ] Local embeddings (`bge-small-en-v1.5`, 384 dimensions)
+- [x] R2 storage keys (`lib/r2/keys`, pure and tested) and the client
+      (`server/r2/client` — it reads the environment and the network, so it sits
+      in `server/`, not `lib/`). Presigned uploads go browser → R2 directly,
+      because Vercel caps request bodies at 4.5 MB and 8.6% of this archive is
+      over 10 MB.
+- [x] `lib/sheet/csv` — the v1 CSV parser carried over, with column mapping and
+      placeholder-topic handling, tested against the real header row
+- [x] `lib/slug` — stable URLs, with numbering for the titles that genuinely
+      repeat (one appears three times)
+- [x] `scripts/import-sheet.ts` — seeds records and categories. Idempotent:
+      matches on Drive file id, so re-running imports only what is new.
+      **Written but never run** — needs `DATABASE_URL`.
+- [x] `lib/pdf` — renders pages to WebP and pulls out embedded text. **Verified
+      on real archive files**: a born-digital sample gave 13,256 characters of
+      text and needs no OCR at all; a phone-photo sample gave none, as expected.
+      220–273 KB per page, ~0.4–0.6s to render one.
+- [x] `scripts/backfill.ts` — Drive → R2, renders pages, takes embedded text,
+      publishes. Resumable: what is already in R2 is skipped, so an interrupted
+      run continues rather than restarting. **Written but never run** — needs
+      `DATABASE_URL` and the four `R2_*` values.
+- [x] Local embeddings (`server/embed`, `bge-small-en-v1.5`) and the pure
+      comparison helpers (`lib/vector`). **Verified**: 384 dimensions,
+      normalised, ~1 ms per document after a one-time 43-second model download.
+      Runs entirely on our own machine — no API, no quota, nothing sent anywhere.
+
+101 tests passing. Nothing in Phase 1 has been executed against a real database
+or bucket yet — that waits on `DATABASE_URL` and the four `R2_*` values.
 
 Auth tables are deliberately **not** hand-written: Better Auth generates them in
 Phase 3. `audit_log.actor_id` therefore has no foreign key yet; it is added in
@@ -154,6 +176,13 @@ that phase's migration.
   pass is worth switching on.
 - How badly skewed and curved-spine photographs score once the whole archive has been
   read — only 8 pages were sampled.
+- **Whether the embedding model is good enough for meaning-based search.** On three
+  short synthetic snippets, the query "trusting God during sickness" ranked an
+  unrelated text lowest (0.626) but separated the two related ones by only 0.018 —
+  and put a generic faith text (0.747) above one explicitly about illness (0.729).
+  Too little evidence to judge either way. Re-test against real material text once
+  the backfill has run. If it disappoints, search still has full text and fuzzy
+  titles to lean on, and a larger model is a schema change away (`vector(384)`).
 
 ---
 

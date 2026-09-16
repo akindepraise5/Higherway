@@ -1,4 +1,8 @@
+import { config } from "dotenv"
 import { defineConfig } from "drizzle-kit"
+
+// drizzle-kit does not read .env.local the way Next.js does.
+config({ path: ".env.local" })
 
 /**
  * Schema lives in src/db/schema/, one file per area (see ARCHITECTURE.md §5).

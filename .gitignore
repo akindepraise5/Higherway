@@ -42,3 +42,4 @@ next-env.d.ts
 
 # .env.example carries no secrets and is the documented reference for every key.
 !.env.example
+note.txt

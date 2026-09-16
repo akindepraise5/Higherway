@@ -295,6 +295,7 @@ this archive, not on a neat sample.
 | Page render | WebP at 1400px: ~200–280 KB/page at quality 72, **~490 KB at quality 80**. These are photographic scans (~275 ppi JPEGs), so they do not compress like text. |
 | Page images total | 0.2–0.7 GB depending on quality chosen |
 | **R2 total** | **2.24–2.74 GB** — roughly a quarter of the 10 GB free tier |
+| Page rendering | ~0.4–0.6s per page, measured through our own pipeline — so ~10 minutes to render the whole archive |
 | Full-archive OCR | **13 minutes** with Vision, ~50 with tesseract.js |
 
 A large file means a high-resolution photograph, not a long document: one 13.6 MB file
