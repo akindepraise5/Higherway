@@ -482,6 +482,47 @@ the dialog is what stops it being needed again.
 - [ ] Duplicate review page: clusters, keep one, never-again decisions
 - [ ] Suggestions: categories, titles, summaries (free path first)
 
+**Stage 5 of the pipeline was never wired in.** `ARCHITECTURE.md` §7 lists
+"5. Embed" between rendering and publishing, and every part of it is built and
+unit-tested — but `src/server/embed/` has **zero importers in the repo**.
+Nothing writes a vector: not `scripts/backfill.ts`, not `src/server/ingest.ts`,
+not `src/trigger/process-material.ts`, not any service. So
+`material_chunks.embedding` and `categories.embedding` are both empty, and
+`src/lib/text/chunk.ts` has no non-test callers either.
+
+Two consequences that look like separate gaps but are the same one:
+
+- `scoreDuplicate` accepts a `meaning` signal (`lib/dedupe/score.ts`), and the
+  scan never passes it — it silently defaults to 0. Every duplicate finding so
+  far rests on titles and shingles alone.
+- Library search is `ilike` over title, summary, author and page text
+  (`server/materials/library.ts`). The comment there promising meaning-based
+  search is waiting on the same vectors.
+
+Also worth knowing: `hasSuggestions` in `src/lib/env.ts` gates a Cloudflare
+Workers AI feature that **does not exist** — the flag is read nowhere, there is
+no Workers AI client, and `src/lib/ai/` (described in `ARCHITECTURE.md`) has
+never been created.
+
+The free path needs no credentials and reuses what is already written. The
+inputs are in the database now that `material_pages.text` is 100% populated, so
+it is read → chunk → embed → insert: no re-render, no re-OCR, no R2 traffic.
+
+1. Seed 69 `categories.embedding` values from name + blurb. Seconds.
+2. `scripts/embed.ts` over the archive, storing a document-level chunk
+   (`pageNumber: null`) as well as page chunks — the document vector is what a
+   suggestion compares against. Minutes at ~1 ms a document. Resumable by
+   skipping materials that already have chunks.
+3. `nearest(doc, categories, 3)` from `lib/vector`, or `order by embedding <=> $1
+   limit 3`. About 15 lines.
+4. Accept/reject on the material editor; on accept write `material_categories`
+   with `suggested` and `assignedBy`, matching the existing audit pattern.
+
+**Do not trust it before looking at it.** The model was only ever judged on the
+three synthetic snippets in Open questions below, where it ranked a generic
+faith text *above* one explicitly about illness. Eyeball the top 3 on 20–30 real
+materials first.
+
 ### Phase 6 — Sync
 - [ ] Drive reader (read-only, service account)
 - [ ] Sync button, progress, run history
