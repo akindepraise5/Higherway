@@ -492,6 +492,12 @@ recipient sets a password and is logged in. Invitations can be resent or revoked
 same transaction** as the change. A change that cannot be audited must not happen. The
 Activity page filters by person, action and entity; each material has its own history tab.
 
+This forced a second database connection. Neon's HTTP driver — fast and pool-free, and
+what every page query uses — has **no transaction support whatsoever**: `db.transaction()`
+throws rather than degrading quietly. Mutations therefore use a pooled WebSocket
+connection (`src/db/tx.ts`), where a real interactive transaction works. Reads stay on
+HTTP. Measured, not assumed: the probe that established this is recorded in §13.
+
 Two separate things, do not confuse them:
 
 - **Audit** — what staff did. Ours, in Postgres, permanent.
@@ -542,6 +548,7 @@ GOOGLE_CLOUD_VISION_KEY           optional — server-side OCR, 1,000 pages/mont
 | 2026-09-16 | Free vision-language models rejected for OCR | Not OCR engines, and unbenchmarked on pages like ours; Vision is free and scores 97–99% |
 | 2026-09-16 | Server-side OCR is Google Cloud Vision, tesseract.js when unset | ~35 pages/month against a 1,000-page free allowance |
 | 2026-09-16 | Measured, not assumed: 2.04 GB, ~1,100 pages, 1.68 pages/document | The archive is a seventh of the assumed workload; everything fits free |
+| 2026-09-16 | Reads use Neon HTTP; **mutations use a pooled WebSocket connection** (`src/db/tx.ts`) | Probed directly: `db.transaction()` on neon-http fails with "No transactions support in neon-http driver". Auditing a change in the same transaction as the change is a requirement, not a preference, so the service layer needs a driver that can actually do it |
 | 2026-09-16 | The OCR text is public by default, collapsed, with a per-material switch | It is the only thing that makes the archive findable |
 | 2026-09-16 | Public submissions designed into the schema now, built after launch | Keeps the first release focused |
 | 2026-09-16 | The backfill publishes directly; no review queue for the v1 archive | These 651 were already published for years in print and on the v1 site. Holding them for approval would be re-deciding something the church already decided. New uploads still go through review |

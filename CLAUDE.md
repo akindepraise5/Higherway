@@ -43,6 +43,18 @@ no deletions, ever. If a task seems to need it, it is the wrong task — raise i
 in the same transaction as the change. A change that cannot be audited must not happen.
 Do not mutate from a route handler, a component or a Trigger task directly.
 
+**Two database handles, and the difference is not cosmetic:**
+
+| Import | Driver | Use for |
+|---|---|---|
+| `db` from `src/db` | Neon HTTP | Reads. One request, no pool, nothing held open. |
+| `txdb` from `src/db/tx` | Neon WebSocket pool | **Every mutation.** Real transactions. |
+
+The HTTP driver has *no transaction support* — `db.transaction()` throws
+"No transactions support in neon-http driver". It does not warn; a service written
+against `db` would simply have no atomicity, and an audit entry could persist while
+the change it describes did not. Mutations use `txdb`.
+
 **`src/lib/` is pure.** No database, no network, no `process.env`. If a module in `lib/`
 needs any of those, it belongs in `server/` or `trigger/`. This is what keeps duplicate
 detection, cover art and text handling testable without infrastructure.
