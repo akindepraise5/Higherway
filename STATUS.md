@@ -333,11 +333,30 @@ the dialog is what stops it being needed again.
       `material.uncategorise` and entries read "Added to Faith" / "Removed from
       Faith", drawn from the payload rather than a new column. Filing no longer
       records the title, which made every entry look like a title edit
-- [x] **Adding materials from the dashboard** — `/admin/materials/new`, by file
-      or by link. Both doors lead to the same pipeline, so an uploaded material
-      is indistinguishable from a backfilled one. **Runtime-gated**: without
-      `TRIGGER_SECRET_KEY` the form says so rather than accepting a file it
-      would leave sitting unprocessed in staging
+- [x] **Adding materials from the dashboard** — by file or by link, from a
+      drawer over the materials list. Both doors lead to the same pipeline, so
+      an uploaded material is indistinguishable from a backfilled one.
+      `/admin/materials/new` still renders the same form, so existing links keep
+      working. **Runtime-gated**: without `TRIGGER_SECRET_KEY` *and*
+      `TRIGGER_PROJECT_REF` the form says so rather than accepting a file it
+      would leave sitting unprocessed in staging.
+
+      The drawer will not close while an upload is in flight, Escape included.
+      The browser PUTs straight to R2 and only then hands off to the job, so a
+      drawer dismissed halfway would strand a file in staging with nobody aware
+      of it.
+- [x] Topics chosen **while** adding, not afterwards. Filing being a separate
+      later step is how 367 of the 651 imported materials ended up with none.
+      They travel with the file into the background task, so the material is
+      filed in the same transaction that creates it, one audit entry per topic.
+      Empty stays a real answer: "Uncategorised" is the absence of rows, not a
+      category
+- [ ] **Destroying a material** is deliberately absent. Archiving is reversible
+      and covers the everyday case; CLAUDE.md reserves true destruction for an
+      Owner as a separate, deliberate act. Building it means Owner-only gating,
+      a typed-name confirmation, and removing the R2 objects in the same
+      breath — an archived row whose file is already gone is worse than either
+      outcome
 
 ### Phase 5 — Reading and duplicates
 - [ ] OCR interface; tesseract.js on the worker
