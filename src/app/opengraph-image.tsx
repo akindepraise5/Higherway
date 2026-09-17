@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og"
+import { ogFonts, Wordmark } from "../server/og/brand"
 
 /**
  * The default social image, for any page without its own.
@@ -8,13 +9,15 @@ import { ImageResponse } from "next/og"
  * had no og:image at all, so a shared link previewed as a bare URL or whatever
  * the platform chose to invent.
  *
- * The mark is the logo's: a small arc above the word, not beside it.
+ * The mark comes from `server/og/brand`, which is the logo's own geometry and
+ * the site's own serif. This route used to draw a hand-written arc with a
+ * different curve to the real one, set in the renderer's default sans.
  */
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 export const alt = "Higherway — a free archive of inspired teachings"
 
-export default function Image() {
+export default async function Image() {
   return new ImageResponse(
     <div
       style={{
@@ -28,31 +31,12 @@ export default function Image() {
         padding: 80,
       }}
     >
-      <svg width="160" height="52" viewBox="0 0 60 20" fill="none" aria-hidden="true">
-        <path
-          d="M3 16C7 6 16 2 30 2s23 4 27 14"
-          stroke="#D8B25F"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-      </svg>
+      <Wordmark size={104} />
 
       <div
         style={{
           display: "flex",
-          marginTop: 2,
-          fontSize: 96,
-          color: "#FCFAF5",
-          letterSpacing: "-0.02em",
-        }}
-      >
-        Higherway
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          marginTop: 28,
+          marginTop: 30,
           fontSize: 30,
           color: "rgba(251,248,243,.66)",
           textAlign: "center",
@@ -74,6 +58,6 @@ export default function Image() {
         Free to read · Free to download
       </div>
     </div>,
-    size,
+    { ...size, fonts: await ogFonts() },
   )
 }

@@ -2,7 +2,7 @@
 
 Living record of where Higherway v2 stands. Update it in the same change as the work.
 
-**Updated:** 2026-09-16, late
+**Updated:** 2026-09-17
 **Now:** v2 is live in production. Launch work is done — start at **Resume here**.
 **Branch:** work on `v2` and open a PR into `main`. Vercel builds `main`.
 
@@ -639,6 +639,85 @@ materials first.
 - [ ] Drive reader (read-only, service account)
 - [ ] Sync button, progress, run history
 - [ ] Held-back handling: duplicates, and files changed in Drive since import
+
+### Requested 2026-09-17
+
+Asked for directly, in the owner's words. The order is A → B → C → D, chosen
+because the sync button in D is a button on top of four pipeline stages that were
+never connected — pulling fifty photographed PDFs in through today's pipeline
+would give fifty materials with no searchable text, no duplicate check beyond a
+byte-for-byte match, and no topic. That is the 340-unfiled problem again, faster.
+
+**A — done.**
+
+- [x] **Admin tables scroll on a phone.** Every one of them sat in
+      `overflow-hidden`, which does not shorten a wide table, it *clips* it: the
+      right-hand columns were unreachable. The materials table went further and
+      hid Topics, Pages, Text and Last change at `sm:`/`md:`/`lg:`, so on a phone
+      the data did not exist rather than sitting off-screen. `TableScroll` now
+      scrolls them horizontally with the first column pinned — a table you scroll
+      sideways is only useful if you can still see which row you are on.
+
+      Categories is deliberately not pinned: its first cell turns into the rename
+      form, and a pinned form floating over the scrolling columns reads as a
+      rendering fault.
+- [x] **The share picture uses the real logo.** Three surfaces drew three
+      different marks. `m/[slug]/opengraph-image.tsx` was not drawing the logo at
+      all — a gold dash beside "HIGHERWAY" in uppercase sans. The other two had
+      an arc over the word, but a deeper curve than the real one and set in
+      whatever face the renderer defaulted to.
+
+      All three now come from `src/server/og/brand.tsx`, which takes the arc
+      straight from `components/public/logo.tsx` and sets the word in Newsreader.
+      **Checked against a screenshot of the real logo rather than reasoned
+      about**, which caught two errors that looked fine in isolation:
+
+      - The SVG element was sized to the path's span, 53.4 units, ignoring that
+        the 4-unit stroke overhangs it by 2 on each side. The whole arc was
+        squeezed into that width: 0.263 of the word where the real mark is 0.290.
+      - The gap has to be measured, not derived. In `logo.tsx` the arc and word
+        share one coordinate space; here the word is a text node carrying its
+        ascender as empty space the arc must clear. Left alone the arc landed
+        *on* the capitals. It is 0.296 of the font size, and the rendered result
+        is within a pixel of the real logo on both measures.
+
+      Two things fell out of doing it: Satori was being given one font, so it set
+      the topic label and strapline in the serif too — both faces are loaded now,
+      sans first. And the scrim that keeps a title readable over a pale cover
+      used `inset: 0`, **which Satori does not implement**: the div collapsed to
+      nothing and the gradient had never drawn at all.
+
+      The fonts are 155 KB of TTF in `assets/`, read off disk rather than
+      fetched. `next.config.ts` traces them into the function bundle, because the
+      material route is dynamic and the path is built at runtime.
+- [x] **The topic picker is a select you can search, not a search that
+      selects.** It was a bare input whose menu appeared only once you had typed:
+      69 topics, none visible, no way to browse. Filing the backlog is the one
+      job the material page exists for and it was asking people to remember shelf
+      names. `TopicSelect` (Base UI's combobox, already a dependency) opens to
+      the full list with counts, filters as you type, ticks what is already
+      filed, and keeps the Owner-only inline create.
+
+      **Clicked, not assumed** — driven in a mobile browser against a throwaway
+      page: opening, filtering, arrow-and-Enter selection, deselection and
+      creating all work, with nothing in the console. The one admin control with
+      a measured mobile path.
+
+**B — batch upload.** Per-file, not per-batch: the owner pointed out that a batch
+can hold several authors, so author and topics belong on each queued file with an
+"apply to all" as a shortcut rather than the only way. No new route — the drawer
+is already a full-height sheet on a phone and `/admin/materials/new` renders the
+same component.
+
+**C — connect pipeline stages 4 to 7.** See *Stage 5 of the pipeline was never
+wired in* under Phase 5, and the note below on what else is written and unused.
+
+**D — the sync button**, Phase 6. Blocked on the Google service account; it will
+ship gated behind `hasDrive` exactly as `hasJobs` gates uploads.
+
+**Written and unused, measured 2026-09-17:** `hasDrive`, `hasCloudOcr` and
+`hasSuggestions` in `src/lib/env.ts` have no readers anywhere, and the `sync_runs`
+table has no writer. C and D are what give all four a caller.
 
 ### Requested before launch (2026-09-16)
 

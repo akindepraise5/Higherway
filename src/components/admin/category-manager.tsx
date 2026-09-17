@@ -11,6 +11,7 @@ import {
   renameCategory,
 } from "../../server/services/categories"
 import { ConfirmDialog } from "./confirm-dialog"
+import { TableScroll } from "./table-scroll"
 
 /**
  * Managing categories in place.
@@ -187,213 +188,215 @@ export function CategoryManager({ categories, role }: { categories: CategoryRow[
         </form>
       ) : null}
 
-      <div className="mt-6 overflow-hidden rounded-[3px] border border-line-soft">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            <tr className="border-b border-line-soft bg-paper-2 text-[11px] font-medium uppercase tracking-[.14em] text-taupe">
-              <th className="px-4 py-3 font-medium">Topic</th>
-              <th className="px-4 py-3 font-medium">Materials</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((category) => (
-              <tr key={category.id} className="border-b border-line-soft last:border-0">
-                <td className="px-4 py-3">
-                  {editing === category.id ? (
-                    /**
-                     * Name *and* sub-text together, and that is a fix as much as
-                     * a feature: this was a lone name input, and renameCategory
-                     * writes `blurb: blurb?.trim() || null`. Renaming without
-                     * passing the blurb therefore erased it — silently, with the
-                     * only record of the old text sitting in the audit trail.
-                     * 57 of 69 topics have no sub-text and this would have
-                     * quietly made more of them.
-                     */
-                    <form
-                      onSubmit={(event) => {
-                        event.preventDefault()
-                        const data = new FormData(event.currentTarget)
-                        const name = String(data.get("name") ?? "").trim()
-                        const blurb = String(data.get("blurb") ?? "").trim()
-                        if (name.length < 2) return
-                        run(() => renameCategory(category.id, name, blurb || undefined))
+      {/* Three columns, the last one a row of actions. It scrolls rather than
+          squeezing the buttons into each other on a phone. Nothing is pinned:
+          the first cell turns into the rename form, and a pinned form sitting
+          over the scrolling columns reads as a rendering fault. */}
+      <TableScroll minWidth="38rem" className="mt-6">
+        <thead>
+          <tr className="border-b border-line-soft bg-paper-2 text-[11px] font-medium uppercase tracking-[.14em] text-taupe">
+            <th className="px-4 py-3 font-medium">Topic</th>
+            <th className="px-4 py-3 font-medium">Materials</th>
+            <th className="px-4 py-3 text-right font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((category) => (
+            <tr key={category.id} className="border-b border-line-soft last:border-0">
+              <td className="px-4 py-3">
+                {editing === category.id ? (
+                  /**
+                   * Name *and* sub-text together, and that is a fix as much as
+                   * a feature: this was a lone name input, and renameCategory
+                   * writes `blurb: blurb?.trim() || null`. Renaming without
+                   * passing the blurb therefore erased it — silently, with the
+                   * only record of the old text sitting in the audit trail.
+                   * 57 of 69 topics have no sub-text and this would have
+                   * quietly made more of them.
+                   */
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault()
+                      const data = new FormData(event.currentTarget)
+                      const name = String(data.get("name") ?? "").trim()
+                      const blurb = String(data.get("blurb") ?? "").trim()
+                      if (name.length < 2) return
+                      run(() => renameCategory(category.id, name, blurb || undefined))
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") setEditing(null)
+                    }}
+                  >
+                    <label htmlFor={`name-${category.id}`} className="sr-only">
+                      Name
+                    </label>
+                    <input
+                      id={`name-${category.id}`}
+                      name="name"
+                      ref={(el) => el?.focus()}
+                      defaultValue={category.name}
+                      required
+                      minLength={2}
+                      className="w-full rounded border border-ink bg-paper-2 px-2 py-1 text-[15px] outline-none"
+                    />
+
+                    <label htmlFor={`blurb-${category.id}`} className="sr-only">
+                      Sub-text
+                    </label>
+                    <input
+                      id={`blurb-${category.id}`}
+                      name="blurb"
+                      defaultValue={category.blurb ?? ""}
+                      placeholder="A line about this topic — shown on the home page and its own page"
+                      className="mt-1.5 w-full rounded border border-line bg-paper-2 px-2 py-1 text-[12.5px] outline-none focus:border-ink"
+                    />
+
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <button
+                        type="submit"
+                        disabled={pending}
+                        className="rounded-full bg-ink px-3 py-1 text-[12px] font-medium text-paper-2 disabled:opacity-60"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(null)}
+                        className="text-[12px] text-taupe hover:text-ink"
+                      >
+                        Cancel
+                      </button>
+                      <span className="text-[11.5px] text-taupe">
+                        Renaming changes the topic's public URL.
+                      </span>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <span className="font-serif text-[16px]">{category.name}</span>
+                    {category.blurb ? (
+                      <span className="mt-0.5 block text-[12.5px] text-taupe">
+                        {category.blurb}
+                      </span>
+                    ) : (
+                      /* 57 of 69 topics have none, and the gap is invisible
+                           until you look at the home page. Naming it here, where
+                           it can be fixed, beats leaving a silent blank. */
+                      <span className="mt-0.5 block text-[12.5px] text-gold">
+                        No sub-text
+                        {mayManage ? (
+                          <button
+                            type="button"
+                            onClick={() => setEditing(category.id)}
+                            className="ml-1.5 border-b border-gold/40 transition-colors hover:border-gold"
+                          >
+                            add one
+                          </button>
+                        ) : null}
+                      </span>
+                    )}
+                  </>
+                )}
+              </td>
+
+              <td className="px-4 py-3">
+                <span
+                  className={`text-[13.5px] ${category.total <= 1 ? "text-gold" : "text-ink-3"}`}
+                >
+                  {category.total}
+                  {category.total !== category.published ? (
+                    <span className="text-taupe"> ({category.published} published)</span>
+                  ) : null}
+                </span>
+              </td>
+
+              <td className="px-4 py-3">
+                {merging === category.id ? (
+                  <div className="flex items-center justify-end gap-2">
+                    <label htmlFor={`into-${category.id}`} className="sr-only">
+                      Merge into
+                    </label>
+                    <select
+                      id={`into-${category.id}`}
+                      defaultValue=""
+                      onChange={(e) => {
+                        const into = categories.find((c) => c.id === e.target.value)
+                        if (into) setStaged({ kind: "merge", from: category, into })
                       }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Escape") setEditing(null)
-                      }}
+                      className="rounded border border-line bg-paper-2 px-2 py-1.5 text-[13px]"
                     >
-                      <label htmlFor={`name-${category.id}`} className="sr-only">
-                        Name
-                      </label>
-                      <input
-                        id={`name-${category.id}`}
-                        name="name"
-                        ref={(el) => el?.focus()}
-                        defaultValue={category.name}
-                        required
-                        minLength={2}
-                        className="w-full rounded border border-ink bg-paper-2 px-2 py-1 text-[15px] outline-none"
-                      />
-
-                      <label htmlFor={`blurb-${category.id}`} className="sr-only">
-                        Sub-text
-                      </label>
-                      <input
-                        id={`blurb-${category.id}`}
-                        name="blurb"
-                        defaultValue={category.blurb ?? ""}
-                        placeholder="A line about this topic — shown on the home page and its own page"
-                        className="mt-1.5 w-full rounded border border-line bg-paper-2 px-2 py-1 text-[12.5px] outline-none focus:border-ink"
-                      />
-
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <button
-                          type="submit"
-                          disabled={pending}
-                          className="rounded-full bg-ink px-3 py-1 text-[12px] font-medium text-paper-2 disabled:opacity-60"
-                        >
-                          Save
-                        </button>
+                      <option value="">Merge into…</option>
+                      {categories
+                        .filter((c) => c.id !== category.id)
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} ({c.total})
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setMerging(null)}
+                      className="text-taupe hover:text-ink"
+                      aria-label="Cancel merge"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-end gap-3 text-taupe">
+                    {mayManage ? (
+                      editing === category.id ? (
                         <button
                           type="button"
                           onClick={() => setEditing(null)}
-                          className="text-[12px] text-taupe hover:text-ink"
+                          className="hover:text-ink"
+                          aria-label="Stop editing"
                         >
-                          Cancel
+                          <Check size={16} />
                         </button>
-                        <span className="text-[11.5px] text-taupe">
-                          Renaming changes the topic's public URL.
-                        </span>
-                      </div>
-                    </form>
-                  ) : (
-                    <>
-                      <span className="font-serif text-[16px]">{category.name}</span>
-                      {category.blurb ? (
-                        <span className="mt-0.5 block text-[12.5px] text-taupe">
-                          {category.blurb}
-                        </span>
                       ) : (
-                        /* 57 of 69 topics have none, and the gap is invisible
-                           until you look at the home page. Naming it here, where
-                           it can be fixed, beats leaving a silent blank. */
-                        <span className="mt-0.5 block text-[12.5px] text-gold">
-                          No sub-text
-                          {mayManage ? (
-                            <button
-                              type="button"
-                              onClick={() => setEditing(category.id)}
-                              className="ml-1.5 border-b border-gold/40 transition-colors hover:border-gold"
-                            >
-                              add one
-                            </button>
-                          ) : null}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </td>
-
-                <td className="px-4 py-3">
-                  <span
-                    className={`text-[13.5px] ${category.total <= 1 ? "text-gold" : "text-ink-3"}`}
-                  >
-                    {category.total}
-                    {category.total !== category.published ? (
-                      <span className="text-taupe"> ({category.published} published)</span>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => setEditing(category.id)}
+                          className="hover:text-ink disabled:opacity-40"
+                          aria-label={`Rename ${category.name}`}
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )
                     ) : null}
-                  </span>
-                </td>
 
-                <td className="px-4 py-3">
-                  {merging === category.id ? (
-                    <div className="flex items-center justify-end gap-2">
-                      <label htmlFor={`into-${category.id}`} className="sr-only">
-                        Merge into
-                      </label>
-                      <select
-                        id={`into-${category.id}`}
-                        defaultValue=""
-                        onChange={(e) => {
-                          const into = categories.find((c) => c.id === e.target.value)
-                          if (into) setStaged({ kind: "merge", from: category, into })
-                        }}
-                        className="rounded border border-line bg-paper-2 px-2 py-1.5 text-[13px]"
-                      >
-                        <option value="">Merge into…</option>
-                        {categories
-                          .filter((c) => c.id !== category.id)
-                          .map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name} ({c.total})
-                            </option>
-                          ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => setMerging(null)}
-                        className="text-taupe hover:text-ink"
-                        aria-label="Cancel merge"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-end gap-3 text-taupe">
-                      {mayManage ? (
-                        editing === category.id ? (
-                          <button
-                            type="button"
-                            onClick={() => setEditing(null)}
-                            className="hover:text-ink"
-                            aria-label="Stop editing"
-                          >
-                            <Check size={16} />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={pending}
-                            onClick={() => setEditing(category.id)}
-                            className="hover:text-ink disabled:opacity-40"
-                            aria-label={`Rename ${category.name}`}
-                          >
-                            <Pencil size={16} />
-                          </button>
-                        )
-                      ) : null}
-
-                      {mayManage ? (
-                        <>
-                          <button
-                            type="button"
-                            disabled={pending}
-                            onClick={() => setMerging(category.id)}
-                            className="hover:text-ink disabled:opacity-40"
-                            aria-label={`Merge ${category.name} into another`}
-                          >
-                            <GitMerge size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={pending}
-                            onClick={() => setStaged({ kind: "delete", category })}
-                            className="hover:text-[#8c2f22] disabled:opacity-40"
-                            aria-label={`Delete ${category.name}`}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    {mayManage ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => setMerging(category.id)}
+                          className="hover:text-ink disabled:opacity-40"
+                          aria-label={`Merge ${category.name} into another`}
+                        >
+                          <GitMerge size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={pending}
+                          onClick={() => setStaged({ kind: "delete", category })}
+                          className="hover:text-[#8c2f22] disabled:opacity-40"
+                          aria-label={`Delete ${category.name}`}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </TableScroll>
 
       <ConfirmDialog
         open={staged !== null}

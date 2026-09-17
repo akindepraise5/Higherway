@@ -11,6 +11,7 @@ import {
   setAccountEnabled,
 } from "../../server/services/invitations"
 import type { PendingInvite, StaffRow } from "../../server/users/queries"
+import { stickyCell, stickyHead, TableScroll } from "./table-scroll"
 
 /**
  * Inviting people and managing who has access.
@@ -180,114 +181,114 @@ export function PeopleManager({
           <h2 className="mt-8 text-[11px] font-medium uppercase tracking-[.2em] text-taupe">
             Waiting to be accepted
           </h2>
-          <div className="mt-3 overflow-hidden rounded-[3px] border border-line-soft">
-            <table className="w-full border-collapse text-left">
-              <tbody>
-                {invites.map((i) => (
-                  <tr key={i.id} className="border-b border-line-soft last:border-0">
-                    <td className="px-4 py-3 text-[14px]">{i.email}</td>
-                    <td className="px-4 py-3 text-[13px] text-ink-3">{i.role}</td>
-                    <td className="px-4 py-3 text-[12.5px] text-taupe">
-                      expires {new Date(i.expiresAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => run(() => revokeInvitation(i.id))}
-                        className="text-[13px] text-taupe transition-colors hover:text-[#8c2f22] disabled:opacity-40"
-                      >
-                        Revoke
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TableScroll minWidth="34rem" className="mt-3">
+            <tbody>
+              {invites.map((i) => (
+                <tr key={i.id} className="border-b border-line-soft last:border-0">
+                  <td className="px-4 py-3 text-[14px]">{i.email}</td>
+                  <td className="px-4 py-3 text-[13px] text-ink-3">{i.role}</td>
+                  <td className="px-4 py-3 text-[12.5px] text-taupe">
+                    expires {new Date(i.expiresAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => run(() => revokeInvitation(i.id))}
+                      className="text-[13px] text-taupe transition-colors hover:text-[#8c2f22] disabled:opacity-40"
+                    >
+                      Revoke
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </TableScroll>
         </>
       ) : null}
 
       <h2 className="mt-8 text-[11px] font-medium uppercase tracking-[.2em] text-taupe">
         Accounts
       </h2>
-      <div className="mt-3 overflow-hidden rounded-[3px] border border-line-soft">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            <tr className="border-b border-line-soft bg-paper-2 text-[11px] font-medium uppercase tracking-[.14em] text-taupe">
-              <th className="px-4 py-3 font-medium">Person</th>
-              <th className="px-4 py-3 font-medium">Role</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">Last seen</th>
-              <th className="px-4 py-3 text-right font-medium">Access</th>
-            </tr>
-          </thead>
-          <tbody>
-            {people.map((person) => (
-              <tr key={person.id} className="border-b border-line-soft last:border-0">
-                <td className="px-4 py-3">
-                  <span className="text-[15px]">{person.name}</span>
-                  <span className="mt-0.5 block text-[12.5px] text-taupe">{person.email}</span>
-                </td>
+      {/* "Last seen" used to disappear below `sm:` rather than move off-screen,
+          so on a phone there was no way to tell a dormant account from a live
+          one. It scrolls now, with the person pinned so you can see whose row
+          you are reading. */}
+      <TableScroll minWidth="44rem" className="mt-3">
+        <thead>
+          <tr className="border-b border-line-soft bg-paper-2 text-[11px] font-medium uppercase tracking-[.14em] text-taupe">
+            <th className={`px-4 py-3 font-medium ${stickyHead}`}>Person</th>
+            <th className="px-4 py-3 font-medium">Role</th>
+            <th className="px-4 py-3 font-medium">Last seen</th>
+            <th className="px-4 py-3 text-right font-medium">Access</th>
+          </tr>
+        </thead>
+        <tbody>
+          {people.map((person) => (
+            <tr key={person.id} className="group border-b border-line-soft last:border-0">
+              <td className={`px-4 py-3 ${stickyCell}`}>
+                <span className="text-[15px]">{person.name}</span>
+                <span className="mt-0.5 block text-[12.5px] text-taupe">{person.email}</span>
+              </td>
 
-                <td className="px-4 py-3">
-                  {isOwner && person.id !== currentUserId ? (
-                    <>
-                      <label htmlFor={`role-${person.id}`} className="sr-only">
-                        Role for {person.name}
-                      </label>
-                      <select
-                        id={`role-${person.id}`}
-                        value={person.role}
-                        disabled={pending}
-                        onChange={(e) => run(() => changeRole(person.id, e.target.value as Role))}
-                        className="rounded border border-line bg-paper-2 px-2 py-1.5 text-[13px]"
-                      >
-                        {ROLES.map((r) => (
-                          <option key={r.value} value={r.value}>
-                            {r.label}
-                          </option>
-                        ))}
-                      </select>
-                    </>
-                  ) : (
-                    <span className="text-[13px] text-ink-3">{person.role}</span>
-                  )}
-                </td>
-
-                <td className="hidden px-4 py-3 text-[12.5px] text-taupe sm:table-cell">
-                  {person.lastSeen ? new Date(person.lastSeen).toLocaleDateString() : "never"}
-                  {person.activeSessions > 0 ? (
-                    <span className="ml-2 text-forest">signed in</span>
-                  ) : null}
-                </td>
-
-                <td className="px-4 py-3 text-right">
-                  {person.disabledAt ? (
-                    <span className="text-[12.5px] text-[#8c2f22]">suspended</span>
-                  ) : (
-                    <span className="text-[12.5px] text-ink-3">active</span>
-                  )}
-                  {isOwner && person.id !== currentUserId ? (
-                    <button
-                      type="button"
+              <td className="px-4 py-3">
+                {isOwner && person.id !== currentUserId ? (
+                  <>
+                    <label htmlFor={`role-${person.id}`} className="sr-only">
+                      Role for {person.name}
+                    </label>
+                    <select
+                      id={`role-${person.id}`}
+                      value={person.role}
                       disabled={pending}
-                      onClick={() =>
-                        run(() => setAccountEnabled(person.id, Boolean(person.disabledAt)))
-                      }
-                      className="ml-3 align-middle text-taupe transition-colors hover:text-ink disabled:opacity-40"
-                      aria-label={
-                        person.disabledAt ? `Restore ${person.name}` : `Suspend ${person.name}`
-                      }
+                      onChange={(e) => run(() => changeRole(person.id, e.target.value as Role))}
+                      className="rounded border border-line bg-paper-2 px-2 py-1.5 text-[13px]"
                     >
-                      {person.disabledAt ? <ShieldCheck size={16} /> : <ShieldOff size={16} />}
-                    </button>
-                  ) : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                      {ROLES.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : (
+                  <span className="text-[13px] text-ink-3">{person.role}</span>
+                )}
+              </td>
+
+              <td className="px-4 py-3 text-[12.5px] text-taupe">
+                {person.lastSeen ? new Date(person.lastSeen).toLocaleDateString() : "never"}
+                {person.activeSessions > 0 ? (
+                  <span className="ml-2 text-forest">signed in</span>
+                ) : null}
+              </td>
+
+              <td className="px-4 py-3 text-right">
+                {person.disabledAt ? (
+                  <span className="text-[12.5px] text-[#8c2f22]">suspended</span>
+                ) : (
+                  <span className="text-[12.5px] text-ink-3">active</span>
+                )}
+                {isOwner && person.id !== currentUserId ? (
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() =>
+                      run(() => setAccountEnabled(person.id, Boolean(person.disabledAt)))
+                    }
+                    className="ml-3 align-middle text-taupe transition-colors hover:text-ink disabled:opacity-40"
+                    aria-label={
+                      person.disabledAt ? `Restore ${person.name}` : `Suspend ${person.name}`
+                    }
+                  >
+                    {person.disabledAt ? <ShieldCheck size={16} /> : <ShieldOff size={16} />}
+                  </button>
+                ) : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </TableScroll>
     </div>
   )
 }

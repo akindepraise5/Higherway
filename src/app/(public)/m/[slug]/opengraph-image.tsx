@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og"
 import { coverArt } from "../../../../lib/art/cover"
 import { materialBySlug } from "../../../../server/materials/queries"
+import { ogFonts, SERIF, Wordmark } from "../../../../server/og/brand"
 
 /**
  * The picture that appears when a material is shared — in a message, on social,
@@ -10,6 +11,11 @@ import { materialBySlug } from "../../../../server/materials/queries"
  * link looks like the thing it points at rather than a generic banner. The
  * artwork is an SVG string, embedded as a data URI because Satori (which
  * renders this) draws images, not arbitrary inline SVG markup.
+ *
+ * The mark in the corner used to be a gold dash beside "HIGHERWAY" set in
+ * uppercase sans — not the logo, and the only surface on the site drawing
+ * something else. It is the real lockup now, from `server/og/brand`, and the
+ * title is set in the archive's own serif rather than the renderer's default.
  */
 
 export const alt = "A material from the Higherway archive"
@@ -61,12 +67,19 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         alt=""
         width={size.width}
         height={size.height}
-        style={{ position: "absolute", inset: 0, objectFit: "cover" }}
+        style={{ position: "absolute", top: 0, left: 0, objectFit: "cover" }}
       />
+      {/* The scrim that keeps the title readable over a pale cover. It was
+          written with `inset: 0`, which Satori does not implement — the div
+          collapsed to nothing and the gradient never drew at all. Explicit
+          sides, and it is back. */}
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          top: 0,
+          left: 0,
+          width: size.width,
+          height: size.height,
           display: "flex",
           background:
             "linear-gradient(120deg, rgba(12,16,14,.88) 0%, rgba(12,16,14,.62) 45%, rgba(12,16,14,.25) 100%)",
@@ -83,19 +96,8 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           color: "#F7F4EE",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div
-            style={{
-              width: 44,
-              height: 4,
-              borderRadius: 2,
-              backgroundColor: "#D8B25F",
-              display: "flex",
-            }}
-          />
-          <div style={{ fontSize: 26, letterSpacing: "0.14em", textTransform: "uppercase" }}>
-            Higherway
-          </div>
+        <div style={{ display: "flex" }}>
+          <Wordmark size={44} color="#F7F4EE" />
         </div>
 
         <div style={{ display: "flex", flexDirection: "column" }}>
@@ -112,7 +114,17 @@ export default async function Image({ params }: { params: Promise<{ slug: string
               {topic}
             </div>
           ) : null}
-          <div style={{ fontSize, lineHeight: 1.05, maxWidth: 940, display: "flex" }}>{title}</div>
+          <div
+            style={{
+              fontFamily: SERIF,
+              fontSize,
+              lineHeight: 1.05,
+              maxWidth: 940,
+              display: "flex",
+            }}
+          >
+            {title}
+          </div>
           <div
             style={{
               marginTop: 28,
@@ -126,6 +138,6 @@ export default async function Image({ params }: { params: Promise<{ slug: string
         </div>
       </div>
     </div>,
-    size,
+    { ...size, fonts: await ogFonts() },
   )
 }

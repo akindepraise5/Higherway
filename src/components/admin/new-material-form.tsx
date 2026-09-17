@@ -4,6 +4,7 @@ import { FileUp, Link2, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"
 import { finishUpload, importFromUrl, startUpload } from "../../server/services/uploads"
+import { TopicSelect } from "./topic-select"
 
 /**
  * Adding a material: a file from this machine, or a link.
@@ -51,14 +52,8 @@ export function NewMaterialForm({
   const [url, setUrl] = useState("")
 
   const [chosen, setChosen] = useState<string[]>([])
-  const [topicQuery, setTopicQuery] = useState("")
 
   const byId = useMemo(() => new Map(topics.map((t) => [t.id, t])), [topics])
-  const matching = useMemo(() => {
-    const q = topicQuery.trim().toLowerCase()
-    if (!q) return topics
-    return topics.filter((t) => t.name.toLowerCase().includes(q))
-  }, [topics, topicQuery])
 
   /** One place to set it, so the drawer above is always told. */
   const working = (state: string | null) => {
@@ -289,46 +284,19 @@ export function NewMaterialForm({
             </div>
           ) : null}
 
-          <label htmlFor="topic-filter" className="sr-only">
-            Find a topic
-          </label>
-          <input
-            id="topic-filter"
-            value={topicQuery}
-            onChange={(e) => setTopicQuery(e.target.value)}
-            placeholder={`Search ${topics.length} topics…`}
-            autoComplete="off"
-            className="mt-3 w-full rounded-[4px] border border-line bg-paper-2 px-3.5 py-2 text-[13.5px] outline-none transition-colors focus:border-ink"
-          />
-
-          <div className="mt-2 max-h-44 overflow-y-auto rounded-[4px] border border-line-soft">
-            {matching.length === 0 ? (
-              <p className="px-3 py-3 text-[12.5px] text-taupe">
-                No topic matches that. It can be created from the material's own page once it
-                arrives.
-              </p>
-            ) : (
-              matching.map((topic) => {
-                const picked = chosen.includes(topic.id)
-                return (
-                  <button
-                    key={topic.id}
-                    type="button"
-                    onClick={() =>
-                      setChosen((c) =>
-                        picked ? c.filter((x) => x !== topic.id) : [...c, topic.id],
-                      )
-                    }
-                    className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-[13px] transition-colors ${
-                      picked ? "bg-paper-3 text-ink" : "text-ink-2 hover:bg-paper-2"
-                    }`}
-                  >
-                    <span>{topic.name}</span>
-                    <span className="text-[11.5px] text-taupe">{topic.total}</span>
-                  </button>
-                )
-              })
-            )}
+          <div className="mt-3">
+            <TopicSelect
+              id="topic-filter"
+              topics={topics}
+              selected={chosen}
+              onSelect={(topic) => setChosen((c) => [...c, topic.id])}
+              onDeselect={(topic) => setChosen((c) => c.filter((x) => x !== topic.id))}
+              placeholder={
+                chosen.length === 0
+                  ? `Choose from ${topics.length} topics…`
+                  : `${chosen.length} chosen — add another…`
+              }
+            />
           </div>
         </div>
 

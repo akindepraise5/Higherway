@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { AddMaterialDrawer } from "../../../components/admin/add-material-drawer"
+import { stickyCell, stickyHead, TableScroll } from "../../../components/admin/table-scroll"
 import { Pagination } from "../../../components/public/pagination"
 import { hasJobs } from "../../../lib/env"
 import { requireSession } from "../../../lib/session"
@@ -142,88 +143,86 @@ export default async function AdminMaterialsPage({
           )}
         </p>
       ) : (
-        <div className="mt-8 overflow-hidden rounded-[3px] border border-line-soft">
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr className="border-b border-line-soft bg-paper-2 text-[11px] font-medium uppercase tracking-[.14em] text-taupe">
-                <th className="px-4 py-3 font-medium">Material</th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">Topics</th>
-                <th className="hidden px-4 py-3 font-medium sm:table-cell">Pages</th>
-                <th className="hidden px-4 py-3 font-medium lg:table-cell">Text</th>
-                <th className="hidden px-4 py-3 font-medium lg:table-cell">Last change</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.items.map((m) => (
-                <tr key={m.id} className="border-b border-line-soft last:border-0 hover:bg-paper-2">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/materials/${m.id}`}
-                      className="font-serif text-[16px] leading-snug hover:text-gold"
-                    >
-                      {m.title}
-                    </Link>
-                    {m.author ? (
-                      <span className="mt-0.5 block text-[12.5px] text-taupe">{m.author}</span>
-                    ) : null}
-                  </td>
+        <TableScroll minWidth="60rem" className="mt-8">
+          <thead>
+            <tr className="border-b border-line-soft bg-paper-2 text-[11px] font-medium uppercase tracking-[.14em] text-taupe">
+              <th className={`px-4 py-3 font-medium ${stickyHead}`}>Material</th>
+              <th className="px-4 py-3 font-medium">Topics</th>
+              <th className="px-4 py-3 font-medium">Pages</th>
+              <th className="px-4 py-3 font-medium">Text</th>
+              <th className="px-4 py-3 font-medium">Last change</th>
+              <th className="px-4 py-3 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.items.map((m) => (
+              <tr
+                key={m.id}
+                className="group border-b border-line-soft last:border-0 hover:bg-paper-2"
+              >
+                <td className={`px-4 py-3 ${stickyCell}`}>
+                  <Link
+                    href={`/admin/materials/${m.id}`}
+                    className="font-serif text-[16px] leading-snug hover:text-gold"
+                  >
+                    {m.title}
+                  </Link>
+                  {m.author ? (
+                    <span className="mt-0.5 block text-[12.5px] text-taupe">{m.author}</span>
+                  ) : null}
+                </td>
 
-                  <td className="hidden px-4 py-3 md:table-cell">
-                    {m.topics.length === 0 ? (
-                      <span className="text-[12.5px] text-gold">Uncategorised</span>
-                    ) : (
-                      <span className="text-[12.5px] text-ink-3">
-                        {m.topics.map((t) => t.name).join(", ")}
-                      </span>
-                    )}
-                  </td>
-
-                  <td className="hidden px-4 py-3 text-[13px] text-ink-3 sm:table-cell">
-                    {m.pageCount ?? "—"}
-                  </td>
-
-                  <td className="hidden px-4 py-3 lg:table-cell">
-                    {m.ocrEngine === "none" ? (
-                      <span className="text-[12.5px] text-taupe">awaiting</span>
-                    ) : (
-                      <span className="text-[12.5px] text-ink-3">
-                        {m.ocrEngine === "text_layer" ? "embedded" : m.ocrEngine}
-                        {m.ocrQuality !== null ? ` · ${Math.round(m.ocrQuality * 100)}%` : ""}
-                      </span>
-                    )}
-                  </td>
-
-                  <td className="hidden px-4 py-3 lg:table-cell">
-                    {(() => {
-                      const c = changes.get(m.id)
-                      if (!c) return <span className="text-[12.5px] text-taupe">—</span>
-                      return (
-                        <span className="text-[12.5px] text-ink-3" title={exact(c.at)}>
-                          {timeAgo(c.at)}
-                          <span className="block text-taupe">
-                            {describeChange(c.action, c.before, c.after)} ·{" "}
-                            {who(c.byName, c.byEmail)}
-                          </span>
-                        </span>
-                      )
-                    })()}
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[.1em] ${
-                        STATUS_STYLE[m.status] ?? "bg-paper-3 text-ink-3"
-                      }`}
-                    >
-                      {m.status}
+                <td className="px-4 py-3">
+                  {m.topics.length === 0 ? (
+                    <span className="text-[12.5px] text-gold">Uncategorised</span>
+                  ) : (
+                    <span className="text-[12.5px] text-ink-3">
+                      {m.topics.map((t) => t.name).join(", ")}
                     </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  )}
+                </td>
+
+                <td className="px-4 py-3 text-[13px] text-ink-3">{m.pageCount ?? "—"}</td>
+
+                <td className="px-4 py-3">
+                  {m.ocrEngine === "none" ? (
+                    <span className="text-[12.5px] text-taupe">awaiting</span>
+                  ) : (
+                    <span className="text-[12.5px] text-ink-3">
+                      {m.ocrEngine === "text_layer" ? "embedded" : m.ocrEngine}
+                      {m.ocrQuality !== null ? ` · ${Math.round(m.ocrQuality * 100)}%` : ""}
+                    </span>
+                  )}
+                </td>
+
+                <td className="px-4 py-3">
+                  {(() => {
+                    const c = changes.get(m.id)
+                    if (!c) return <span className="text-[12.5px] text-taupe">—</span>
+                    return (
+                      <span className="text-[12.5px] text-ink-3" title={exact(c.at)}>
+                        {timeAgo(c.at)}
+                        <span className="block text-taupe">
+                          {describeChange(c.action, c.before, c.after)} · {who(c.byName, c.byEmail)}
+                        </span>
+                      </span>
+                    )
+                  })()}
+                </td>
+
+                <td className="px-4 py-3">
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[.1em] ${
+                      STATUS_STYLE[m.status] ?? "bg-paper-3 text-ink-3"
+                    }`}
+                  >
+                    {m.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </TableScroll>
       )}
 
       <Pagination
