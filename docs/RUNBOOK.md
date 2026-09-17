@@ -64,6 +64,11 @@ Roughly 0.5–1.5s a page.
 holds nothing, and is finished. While the queue asked for empty text, five blank pages
 came back every single run — "read 5 … still waiting 5", for ever.
 
+**A new upload no longer waits for this.** `read-material` reads it on the server —
+Google Cloud Vision when `GOOGLE_CLOUD_VISION_KEY` is set, tesseract.js otherwise.
+`ocr:local` stays for the backlog and for upgrading a tesseract read, because macOS
+Vision is still the best of the three.
+
 ### `pnpm ocr:status`
 Read-only. Says what has no text and *why*, from anywhere — no Mac, no waiting.
 

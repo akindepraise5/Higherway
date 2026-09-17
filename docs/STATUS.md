@@ -559,7 +559,8 @@ the dialog is what stops it being needed again.
       outcome
 
 ### Phase 5 — Reading and duplicates
-- [ ] OCR interface; tesseract.js on the worker
+- [x] OCR interface (`lib/ocr/`); tesseract.js and Google Cloud Vision on the
+      worker (`server/ocr/`, `trigger/read-material.ts`)
 - [x] `scripts/ocr-local.ts` — macOS Vision, plus the re-read queue
 - [x] **Reading order on multi-column pages** (`src/lib/text/columns.ts`). Vision
       returns lines in raster order, straight across the page, so a two-column
@@ -592,9 +593,11 @@ the dialog is what stops it being needed again.
       `pnpm ocr:local --force` — which deliberately excludes the 1,071 pages
       whose text came from the PDF itself, since that text is exact and free.
 - [ ] Quality scoring and flagging
-- [ ] Duplicate engine: fingerprint, title, shingles, meaning
+- [x] Duplicate engine: fingerprint, title, shingles, **and meaning** — the last
+      of these was accepted by `scoreDuplicate` and supplied by nothing
 - [ ] Duplicate review page: clusters, keep one, never-again decisions
-- [ ] Suggestions: categories, titles, summaries (free path first)
+- [x] Suggestions: categories, on the free path, 56% on the top three — measured
+      against 253 hand-filed materials. Titles and summaries are still unbuilt
 
 **Stage 5 of the pipeline was never wired in.** `ARCHITECTURE.md` §7 lists
 "5. Embed" between rendering and publishing, and every part of it is built and
@@ -757,7 +760,7 @@ byte-for-byte match, and no topic. That is the 340-unfiled problem again, faster
       `titleFromUrl`, which was a slightly different copy of the same guess
       inside `importFromUrl`.
 
-**C — stages 5, 6 and 7 are connected. Stage 4 (server-side OCR) is not yet.**
+**C — done. All four stages, 4 to 7, are connected.**
 
 - [x] **Stage 5, embeddings.** `src/server/embed/store.ts` and `pnpm embed`.
       The whole archive is embedded: **542 materials, 4,569 chunks**, about 2 s
@@ -824,10 +827,59 @@ byte-for-byte match, and no topic. That is the 340-unfiled problem again, faster
       **The cheapest available improvement to all of this is a one-line
       description for the 46 topics that have none.** Every name vector is
       currently a single word.
-- [ ] **Stage 4, server-side OCR — still the largest hole.** A photographed PDF
-      added from the dashboard has no searchable text until someone runs
-      `pnpm ocr:local` on a Mac. `lib/ocr/` from ARCHITECTURE.md §7 has never
-      been created. It is next.
+- [x] **Stage 4, server-side OCR — the largest hole, closed.** A photographed
+      PDF added from the dashboard had *no* searchable text until someone ran
+      `pnpm ocr:local` on a Mac. For an archive whose purpose is being findable,
+      a material nobody can search for is barely in it.
+
+      `lib/ocr/` exists now as ARCHITECTURE.md §7 describes: a pure interface
+      plus the junk filter, with the engines in `server/ocr/` because all of them
+      reach a network, a filesystem or a wasm runtime.
+
+      - **Google Cloud Vision** when `GOOGLE_CLOUD_VISION_KEY` is set, over REST
+        — no new dependency, since the official client pulls in the whole Google
+        auth stack for what is one `fetch`. `hasCloudOcr` has sat in
+        `src/lib/env.ts` since Phase 1 with no reader; this is its first.
+      - **tesseract.js otherwise, always**, so the archive is searchable with no
+        credentials of any kind, which CLAUDE.md requires. New dependency, free;
+        its only install script is a donation banner and is declined in
+        `pnpm-workspace.yaml`.
+
+      `read-material` reads the page *images* out of R2 rather than re-rendering
+      the PDF, then hands to `enrich-material`. The order is a real dependency,
+      not a preference: embedding text that has not been recognised yet stores a
+      vector of nothing, and the duplicate scan would then compare two vectors of
+      nothing and find them identical.
+
+      **Two things found by running it on real pages rather than trusting it:**
+
+      - **tesseract returned nothing at all, three pages in a row.** It was
+        recognising fine — 3,500 characters of text sat in `data.text` — but its
+        result object has **no `imageWidth` or `imageHeight`**, so normalising
+        the boxes divided by `undefined` and every one was dropped. A page that
+        recognises perfectly and stores as empty is the worst shape of bug this
+        pipeline can have, because it is indistinguishable from a page that
+        genuinely has no text. `material_pages` already holds the dimensions
+        from rendering, so the caller passes them.
+      - With that fixed, measured against pages macOS Vision had already read:
+        **3,493 / 3,749 / 5,409 characters at quality 0.71 / 0.99 / 0.96**, in
+        3.8–6.4 s a page. Comparable in volume to Vision, which is the right
+        result — Vision remains the better engine and this is the one that works
+        without a Mac or a card on file.
+
+      The junk filter is deliberately conservative: it removes a token only if it
+      is three characters or more, has a letter, has no vowel (**`y` counts**) and
+      is not all-uppercase. `KJV`, `NKJV`, `RSV`, `NLT` and `LXX` are the Bible
+      versions this archive cites constantly and not one has a vowel. Deleting a
+      real word is far worse than keeping an invented one — a reader who searches
+      for a phrase and gets nothing concludes the archive does not hold it, which
+      is a bug this project has already shipped once.
+
+      **Not yet proved in a deployed worker.** It is exercised against real
+      archive pages on this machine. What a Trigger deploy still has to show is
+      that tesseract's wasm and its ~10 MB language file load there — the three
+      externals in `trigger.config.ts` are the known trap, and a missing one
+      builds cleanly and fails at runtime.
 
 **Measured against the live database on 2026-09-17**, and several of these have
 moved a long way since the table above was written — most of all the duplicate
@@ -968,11 +1020,9 @@ Asked for directly, in the owner's words, and not yet built:
 
 **Functional gap worth deciding on before launch:**
 
-- [ ] **A new upload gets no OCR.** `ingestPdf` takes a PDF's embedded text and
-      nothing more, so a photographed document arrives with *no* searchable text
-      until someone runs `pnpm ocr:local` on a Mac. Server-side OCR — tesseract
-      on the worker, or Google Cloud Vision — is designed (§7) and unbuilt. For
-      an archive whose purpose is being findable, this is the largest hole.
+- [x] **A new upload gets no OCR** — fixed 2026-09-17. `read-material` reads it
+      with Google Cloud Vision when a key is set and tesseract.js otherwise. See
+      *Requested 2026-09-17* C.
 - [ ] **Nothing tells the admin when processing finishes.** The drawer says "it
       is being read now" and closes; the material appears on the next refresh.
       No polling, no realtime.

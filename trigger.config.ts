@@ -39,6 +39,14 @@ export default defineConfig({
      * this case — left out, the task builds fine and then fails at runtime,
      * which is the worst order to find out.
      */
-    external: ["sharp", "mupdf", "@huggingface/transformers", "onnxruntime-node"],
+    external: [
+      "sharp",
+      "mupdf",
+      "@huggingface/transformers",
+      "onnxruntime-node",
+      // Loads wasm and spawns a worker from files on disk; bundling it breaks
+      // both, and the language data is fetched at runtime regardless.
+      "tesseract.js",
+    ],
   },
 })
