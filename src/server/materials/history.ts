@@ -23,6 +23,7 @@ import type { AuditAction } from "../audit"
  * nothing complained. Adding a case to `AuditAction` must break this file.
  */
 export const ACTION_LABEL: Record<AuditAction, string> = {
+  "sync.clear": "Sync cleared",
   "category.create": "Topic created",
   "category.rename": "Topic renamed",
   "category.merge": "Topics merged",

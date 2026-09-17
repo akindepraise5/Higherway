@@ -37,7 +37,7 @@ import { putObject } from "./r2/client"
  * one, with its bytes already in R2, is litter nobody knows to look for.
  */
 
-export type IngestSource = "admin_upload" | "url_import"
+export type IngestSource = "admin_upload" | "url_import" | "drive_sync"
 
 /**
  * Why an ingest failed, because the answer decides whether retrying helps.
@@ -58,6 +58,8 @@ export async function ingestPdf({
   source,
   actorId,
   sourceUrl,
+  driveFileId,
+  driveMd5,
   categoryIds = [],
 }: {
   bytes: Uint8Array
@@ -72,6 +74,17 @@ export async function ingestPdf({
   actorId: string
   /** Recorded in the trail so an imported material can be traced to its link. */
   sourceUrl?: string
+  /**
+   * Drive's own identity for the file, when it came from the inbox.
+   *
+   * Stored so a second sync recognises it and a file *edited* in Drive can be
+   * told apart from a new one — Drive changes `md5Checksum` on an edit while the
+   * id stays put. Without these a re-sync would re-import the whole folder and
+   * be caught only by the SHA-256 index, as 24 crashes rather than 24
+   * skips — which is exactly how the backfill ended.
+   */
+  driveFileId?: string
+  driveMd5?: string
   /**
    * Topics chosen when the material was added. Empty is a real answer, not a
    * missing one: "Uncategorised" is the absence of rows here, and 367 of the
@@ -138,6 +151,9 @@ export async function ingestPdf({
         source,
         sha256,
         byteSize: bytes.length,
+        driveFileId: driveFileId ?? null,
+        driveMd5: driveMd5 ?? null,
+        driveCheckedAt: driveFileId ? new Date() : null,
       })
       .returning({ id: materials.id })
 
@@ -147,7 +163,7 @@ export async function ingestPdf({
       action: "material.create",
       entityType: "material",
       entityId: row.id,
-      after: { name: clean, source, sourceUrl },
+      after: { name: clean, source, sourceUrl, driveFileId },
       actorId,
     })
 

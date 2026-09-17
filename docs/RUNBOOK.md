@@ -153,6 +153,34 @@ upload.
 
 ---
 
+## Drive
+
+### The Sync button — `/admin/sync`, Owner only
+Pulls new PDFs out of the read-only Drive inbox. There is no script: it is a Trigger
+task started from the page, because a folder of hundreds is far past any function
+timeout and the run has to survive the browser closing.
+
+**Press *Check the folder* first.** It is a dry run — it lists what would be pulled and
+imports nothing. A sync adds material to a public archive that nobody has read yet.
+
+- **Drive is never written to.** No uploads, no renames, no deletions. The OAuth scope
+  asked for is `drive.readonly`, so a token minted from it could not write even if the
+  code tried. **Give the service account Viewer on the folder and nothing more** — with
+  Editor, the only thing between this project and a write is the code rather than the
+  permission.
+- **One run at a time.** Two over the same folder would both see the same file as new and
+  stage it twice, which the SHA-256 index then rejects as a crash rather than a skip —
+  exactly how the backfill left 27 materials stuck.
+- **A run that dies still closes its row.** If one is somehow left open it blocks the next
+  press for ever; an Owner clears it from the page. Deliberately not a timeout — that
+  would eventually clear a run that was merely slow and let a second start beside it.
+- **Archived materials are never brought back**, and a file edited in Drive since import
+  is **flagged, not re-imported**. Replacing a published material's bytes silently is an
+  edit nobody asked for.
+- Nothing publishes itself. Everything arrives waiting for a person, like any upload.
+
+---
+
 ## People
 
 ### `pnpm reinvite`

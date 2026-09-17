@@ -57,7 +57,8 @@ Read this first when coming back. Everything below it is history and reasoning.
    neither is displayed anywhere in admin.
 7. **Public submissions** — a short form and batch upload. The constraints are under
    *After launch*.
-8. **Drive sync, Phase 6** — blocked on a Google service account with read access.
+8. ~~**Drive sync, Phase 6**~~ — built 2026-09-17, switched off until the service
+   account arrives. See *Requested 2026-09-17* D.
 
 ---
 
@@ -641,9 +642,13 @@ faith text *above* one explicitly about illness. Eyeball the top 3 on 20–30 re
 materials first.
 
 ### Phase 6 — Sync
-- [ ] Drive reader (read-only, service account)
-- [ ] Sync button, progress, run history
-- [ ] Held-back handling: duplicates, and files changed in Drive since import
+- [x] Drive reader (read-only, service account) — `src/server/drive/client.ts`
+- [x] Sync button, run history — `/admin/sync`, Owner only. No progress bar: a
+      run takes minutes and a page that reloads itself is one nobody can read the
+      history on, so refreshing is a button that says so
+- [x] Held-back handling: an archived material is never brought back, and a file
+      changed in Drive since import is flagged rather than re-imported
+- [ ] Run it against the real folder — needs the service account
 
 ### Requested 2026-09-17
 
@@ -896,8 +901,60 @@ queue, which is **empty**:
 | Pages with text | 2,228 | 2,223 of 2,228; every live material with pages has text |
 | Materials with no pages | 3 | **2** |
 
-**D — the sync button**, Phase 6. Blocked on the Google service account; it will
-ship gated behind `hasDrive` exactly as `hasJobs` gates uploads.
+**D — built, and switched off until the service account arrives.**
+
+- [x] **Read-only Drive client** (`src/server/drive/client.ts`). No new
+      dependency: `googleapis` is a very large package for what is two HTTP
+      calls and an RS256 signature `node:crypto` already does. The one rule this
+      project is built around is enforced three ways rather than intended — the
+      scope requested is `drive.readonly`, so a token minted from it *cannot*
+      write; every request is a GET; and there is no function here that could
+      express a write.
+
+      Paged, because `files.list` returns 100 at a time and the folder holds 651
+      — asking once would see the first hundred and report the rest as absent,
+      which reads as "nothing new". `trashed = false`, because re-importing
+      something the church deleted is exactly what a read-only inbox must not do.
+- [x] **`sync-drive` task.** It ingests nothing itself: each new file is staged
+      in R2 and handed to `process-material`, so a file from Drive walks the
+      identical pipeline as one uploaded from the dashboard — rendered, read,
+      embedded, scanned, waiting for a person. That is what the single-entrance
+      pipeline was for.
+
+      Three decisions worth keeping:
+
+      - **An archived material is never brought back.** 82 rows here are archived
+        and every one is a decision someone made; a sync that undid them would
+        turn a decision into a recurring chore.
+      - **A file edited in Drive is held back, not re-imported.** Drive changes
+        `md5Checksum` on an edit and keeps the id, so the two are distinguishable.
+        Silently replacing a published material's bytes is not a sync, it is an
+        edit nobody asked for.
+      - **Nothing publishes automatically**, though §6 stage 8 allows it for
+        Drive-sourced files. That was written when Drive *was* the v1 archive —
+        material already in print for years. A folder someone drops a file into
+        now is not that.
+- [x] **`sync_runs` finally has a writer** — who, when, and what happened to each
+      file, including the reason. A run that dies still closes its own row, or it
+      reads as "still going" for ever and blocks the next press.
+- [x] **`/admin/sync`, Owner only.** Two buttons: *Check the folder* is a dry run
+      that imports nothing, *Pull in what is new* does it. Being able to see the
+      answer before committing is the difference between a button people press
+      and one they avoid. One run at a time — two over the same folder would both
+      see the same file as new and stage it twice, which is how the backfill left
+      27 materials stuck — with an Owner-only way to clear a run that never
+      reported.
+
+      Owner because sync adds material to a public archive without anyone having
+      read it, over a whole folder at once: a larger blast radius than merging a
+      topic, which is already Owner-only.
+- [ ] **Not yet run against a real folder.** It needs
+      `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`; the
+      folder id is already set. Until they arrive `hasDrive` is false and the page
+      says so rather than offering a button that cannot work. **The service
+      account needs Viewer on the folder and nothing more** — if it is ever given
+      Editor, the only thing standing between this project and a write to Drive
+      becomes the code rather than the permission.
 
 **Written and unused, measured 2026-09-17:** `hasDrive`, `hasCloudOcr` and
 `hasSuggestions` in `src/lib/env.ts` had no readers anywhere, and `sync_runs` had

@@ -58,7 +58,14 @@ export type AuditAction =
       The account's email, name and role go in `before`, because once the row
       is gone that snapshot is the only record the account ever existed. */
   | "user.delete"
+  /** An Owner pressed the Sync button. What that run *found* is in `sync_runs`;
+      this records only that a person asked for it, which is the part a human
+      did and the part the trail exists to answer. */
   | "sync.run"
+  /** An Owner closed a run that died without closing itself. Deliberately a
+      person's decision: a timeout would eventually clear a run that was merely
+      slow and let a second one start beside it. */
+  | "sync.clear"
 
 export type AuditEntry = {
   action: AuditAction

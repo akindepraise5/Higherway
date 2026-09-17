@@ -30,6 +30,9 @@ export type ProcessMaterialPayload = {
   /** Who uploaded it, so the audit trail names a person and not a job. */
   actorId: string
   sourceUrl?: string
+  /** Drive's own identity, when the material came from the inbox. */
+  driveFileId?: string
+  driveMd5?: string
   /** Topics picked when it was added. Empty means Uncategorised. */
   categoryIds?: string[]
 }
@@ -47,6 +50,8 @@ export const processMaterial = task({
       source: payload.source,
       actorId: payload.actorId,
       sourceUrl: payload.sourceUrl,
+      driveFileId: payload.driveFileId,
+      driveMd5: payload.driveMd5,
       categoryIds: payload.categoryIds,
     })
 

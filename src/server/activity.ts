@@ -57,6 +57,7 @@ const PHRASING: Record<AuditAction, string> = {
   "user.enable": "restored an account",
   "user.delete": "deleted an account",
   "sync.run": "ran a Drive sync",
+  "sync.clear": "cleared a sync that never finished",
 }
 
 export const describe = (action: string): string =>
