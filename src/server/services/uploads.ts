@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto"
 import { lookup } from "node:dns/promises"
 import { tasks } from "@trigger.dev/sdk"
+import { revalidatePath } from "next/cache"
 import { hasJobs } from "../../lib/env"
 import {
   checkImportUrl,
@@ -15,6 +16,7 @@ import { stagingKey } from "../../lib/r2/keys"
 import { requireSession } from "../../lib/session"
 import { MAX_BATCH, titleFromUrl } from "../../lib/upload/batch"
 import type { processMaterial } from "../../trigger/process-material"
+import { stageMaterial } from "../materials/stage"
 import { presignUpload, putObject } from "../r2/client"
 
 /**
@@ -37,10 +39,24 @@ import { presignUpload, putObject } from "../r2/client"
  * independent tasks — there is no request body to outgrow and no single job to
  * fail halfway. What the form has to supply is a queue, per-file progress, and a
  * retry for the one that fails, rather than anything new here.
+ *
+ * **The material row is created here, not in the task** — pipeline stage 1, which
+ * the schema has always described (`staged`: "in r2://staging/, nothing else done
+ * yet") and the code skipped.
+ *
+ * It was created inside `process-material` instead, which meant a material did
+ * not exist at all until a worker picked the run up. Two files uploaded to a
+ * project whose worker was not running left the form saying "Uploaded. It is
+ * being read now" and **the archive showing nothing, anywhere, for ever** — no
+ * row, no error, no trace outside the bucket. There was no screen that could
+ * have shown it, because there was nothing to show.
+ *
+ * Now the row appears the moment the bytes land. If the pipeline never runs it
+ * sits in `staged` and says so, which is the diagnosis rather than silence.
  */
 
 export type UploadResult =
-  | { ok: true; runId: string; message: string }
+  | { ok: true; materialId: string; runId: string; message: string }
   | { ok: false; error: string }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -144,7 +160,17 @@ export async function finishUpload(input: {
     return { ok: false, error: "That upload reference is not valid." }
   }
 
+  const materialId = await stageMaterial({
+    actorId: session.user.id,
+    title,
+    author: input.author,
+    source: "admin_upload",
+    stagingKey: key,
+    categoryIds: cleanCategoryIds(input.categoryIds),
+  })
+
   const handle = await tasks.trigger<typeof processMaterial>("process-material", {
+    materialId,
     stagingKey: key,
     title,
     author: input.author?.trim() || undefined,
@@ -153,10 +179,12 @@ export async function finishUpload(input: {
     categoryIds: cleanCategoryIds(input.categoryIds),
   })
 
+  revalidatePath("/admin/materials")
   return {
     ok: true,
+    materialId,
     runId: handle.id,
-    message: "Uploaded. It is being read now, and will appear once that finishes.",
+    message: "Uploaded. It is in the list now, and will be read shortly.",
   }
 }
 
@@ -235,7 +263,18 @@ export async function importFromUrl(input: {
   const key = stagingKey(uploadId)
   await putObject(key, Buffer.from(bytes), "application/pdf")
 
+  const materialId = await stageMaterial({
+    actorId: session.user.id,
+    title,
+    author: input.author,
+    source: "url_import",
+    stagingKey: key,
+    sourceUrl: target.toString(),
+    categoryIds: cleanCategoryIds(input.categoryIds),
+  })
+
   const handle = await tasks.trigger<typeof processMaterial>("process-material", {
+    materialId,
     stagingKey: key,
     title,
     author: input.author?.trim() || undefined,
@@ -245,9 +284,11 @@ export async function importFromUrl(input: {
     categoryIds: cleanCategoryIds(input.categoryIds),
   })
 
+  revalidatePath("/admin/materials")
   return {
     ok: true,
+    materialId,
     runId: handle.id,
-    message: `Fetched “${title}”. It is being read now.`,
+    message: `Fetched “${title}”. It is in the list now.`,
   }
 }

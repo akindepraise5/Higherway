@@ -8,6 +8,7 @@ import { env, hasDrive } from "../lib/env"
 import { stagingKey } from "../lib/r2/keys"
 import { titleFromFilename } from "../lib/upload/batch"
 import { type DriveFile, downloadFile, listFolder } from "../server/drive/client"
+import { stageMaterial } from "../server/materials/stage"
 import { putObject } from "../server/r2/client"
 import type { processMaterial } from "./process-material"
 
@@ -193,7 +194,17 @@ async function pull(file: DriveFile, actorId: string): Promise<Outcome> {
     const key = stagingKey(randomUUID())
     await putObject(key, Buffer.from(bytes), "application/pdf")
 
+    const materialId = await stageMaterial({
+      actorId,
+      title: titleFromFilename(file.name),
+      source: "drive_sync",
+      stagingKey: key,
+      driveFileId: file.id,
+      categoryIds: [],
+    })
+
     const handle = await tasks.trigger<typeof processMaterial>("process-material", {
+      materialId,
       stagingKey: key,
       title: titleFromFilename(file.name),
       source: "drive_sync",

@@ -131,6 +131,43 @@ eye. It returns `undefined` now. Verified in a browser both ways round.
       the Cloud Vision API in the Google Cloud console. Google enforcing it cannot
       be bypassed by a bug here. Both are in the RUNBOOK.
 
+### A third bug the owner found, and the design flaw behind it
+
+**Two uploads said "Uploaded" and then vanished completely.** Measured rather
+than guessed: both files are in `r2://staging/` (950,841 bytes each — the same
+file twice), and **no material row was created for either**. So the CORS fix
+worked and the PUT succeeded; what never happened is the Trigger run.
+
+The immediate cause is that no worker is running these tasks yet. The reason it
+was *invisible* is a design flaw worth naming:
+
+**The material row was created inside the background task.** So until a worker
+picked the run up, the material did not exist — not as a draft, not as a
+placeholder, nothing. There was no screen that could have shown it, because
+there was nothing to show. The form's "it is being read now" was a claim about
+work that had not started and might never start.
+
+`materialStatus` has always declared `staged` as "in `r2://staging/`, nothing
+else done yet" — **stage 1 of the pipeline was designed and never built.** It is
+built now:
+
+- `stageMaterial` creates the row the moment the bytes land, as `staged`, with
+  its topics and an audit entry. The task **adopts** that row rather than
+  inserting a second one.
+- A duplicate or an unreadable file now marks the row **`rejected` with the
+  reason in the trail**, which the materials list already surfaces in its "Last
+  change" column. Re-uploading a file the archive holds says so on its own row;
+  before, it said nothing anywhere.
+- A new **In progress** filter shows `staged`, `processing` and `rejected`
+  together — the states that previously had no way to be seen at all.
+- It lives in `server/materials/stage.ts`, not in `services/uploads.ts`, because
+  a `"use server"` module's exports are browser-callable actions and Drive sync
+  needs the same function.
+
+**Left over from the incident:** two orphaned objects in `r2://staging/` with no
+row pointing at them, from before this change. Harmless, ~1.9 MB, and nothing
+cleans staging up yet.
+
 ### Next, in the order worth taking them
 
 1. **Invitation email.** Still nothing is sent — admins copy the link by hand.

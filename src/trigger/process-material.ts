@@ -21,11 +21,22 @@ import type { readMaterial } from "./read-material"
  */
 
 export type ProcessMaterialPayload = {
+  /**
+   * The `staged` row the upload already created. The task adopts it rather than
+   * making a second one, so the material is visible from the moment its bytes
+   * land rather than from the moment a worker happens to pick this up.
+   */
+  materialId: string
   /** Where the browser put the file — `staging/<uploadId>.pdf`. */
   stagingKey: string
   title: string
   /** Optional, and usually unknown for a scan. Empty means "not recorded". */
   author?: string
+  /**
+   * Kept on the payload for the run's own record, though the row it describes
+   * already carries it — a Trigger run should be readable on its own in the
+   * dashboard without a database to hand.
+   */
   source: IngestSource
   /** Who uploaded it, so the audit trail names a person and not a job. */
   actorId: string
@@ -44,15 +55,13 @@ export const processMaterial = task({
     const bytes = await getObject(payload.stagingKey)
 
     const result = await ingestPdf({
+      materialId: payload.materialId,
       bytes,
       title: payload.title,
       author: payload.author,
-      source: payload.source,
       actorId: payload.actorId,
-      sourceUrl: payload.sourceUrl,
       driveFileId: payload.driveFileId,
       driveMd5: payload.driveMd5,
-      categoryIds: payload.categoryIds,
     })
 
     /**

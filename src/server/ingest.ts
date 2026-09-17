@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
-import { and, eq, inArray, isNull } from "drizzle-orm"
+import { and, eq, isNull, ne } from "drizzle-orm"
 import { db } from "../db"
-import { categories, materialCategories, materialPages, materials } from "../db/schema"
+import { materialPages, materials } from "../db/schema"
 import { txdb } from "../db/tx"
 import { looksLikePdf } from "../lib/import/url-guard"
 import {
@@ -35,6 +35,17 @@ import { putObject } from "./r2/client"
  * If the slow middle fails, the row is left as `processing` rather than being
  * deleted. A visible half-finished material is recoverable; a silently removed
  * one, with its bytes already in R2, is litter nobody knows to look for.
+ *
+ * **The row already exists when this runs.** `uploads.ts` creates it as `staged`
+ * the moment the bytes land (pipeline stage 1), and this adopts it. It used to
+ * be created here, which meant a material did not exist at all until a worker
+ * picked up the run — so an upload to a project with no running worker showed
+ * the admin a success message and then nothing, anywhere, for ever.
+ *
+ * The consequence for the failure paths is the point of the change: a duplicate
+ * or an unreadable file **marks the row `rejected` with a reason in the trail**
+ * instead of vanishing. Re-uploading a file the archive already holds now says
+ * so on the material's own row, where before it said nothing at all.
  */
 
 export type IngestSource = "admin_upload" | "url_import" | "drive_sync"
@@ -51,17 +62,48 @@ export type IngestResult =
   | { ok: true; materialId: string; slug: string; pages: number; needsOcr: boolean }
   | { ok: false; reason: IngestFailure; error: string; existingId?: string }
 
+/**
+ * Mark a staged row as refused, and say why in the trail.
+ *
+ * The reason is written as an audit entry rather than a column, so it shows up
+ * in the materials list's "Last change" without a migration — and because *why
+ * a material was refused* is exactly the kind of thing the trail exists for.
+ */
+async function reject(materialId: string, actorId: string, why: string, duplicateOf?: string) {
+  await txdb.transaction(async (tx) => {
+    await tx
+      .update(materials)
+      .set({
+        status: "rejected",
+        duplicateOfId: duplicateOf ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(materials.id, materialId))
+
+    await audit(tx, {
+      action: "material.update",
+      entityType: "material",
+      entityId: materialId,
+      after: { rejected: why },
+      actorId,
+    })
+  })
+}
+
 export async function ingestPdf({
+  materialId: staged,
   bytes,
   title,
   author,
-  source,
   actorId,
-  sourceUrl,
   driveFileId,
   driveMd5,
-  categoryIds = [],
 }: {
+  /**
+   * The `staged` row this file already has. Adopted rather than re-created —
+   * the person who uploaded it is already looking at it in the list.
+   */
+  materialId: string
   bytes: Uint8Array
   title: string
   /**
@@ -70,10 +112,7 @@ export async function ingestPdf({
    * only on the edit screen — but an empty answer is a real one.
    */
   author?: string
-  source: IngestSource
   actorId: string
-  /** Recorded in the trail so an imported material can be traced to its link. */
-  sourceUrl?: string
   /**
    * Drive's own identity for the file, when it came from the inbox.
    *
@@ -85,25 +124,19 @@ export async function ingestPdf({
    */
   driveFileId?: string
   driveMd5?: string
-  /**
-   * Topics chosen when the material was added. Empty is a real answer, not a
-   * missing one: "Uncategorised" is the absence of rows here, and 367 of the
-   * imported materials are in exactly that state.
-   */
-  categoryIds?: string[]
 }): Promise<IngestResult> {
   const clean = title.trim()
   if (clean.length < 2) {
-    return {
-      ok: false,
-      reason: "invalid",
-      error: "Give it a title of at least two characters.",
-    }
+    const error = "Give it a title of at least two characters."
+    await reject(staged, actorId, error)
+    return { ok: false, reason: "invalid", error }
   }
 
   // Judged by the file's own header, never its name. §6.
   if (!looksLikePdf(bytes)) {
-    return { ok: false, reason: "invalid", error: "That file is not a PDF." }
+    const error = "That file is not a PDF."
+    await reject(staged, actorId, error)
+    return { ok: false, reason: "invalid", error }
   }
 
   const sha256 = createHash("sha256").update(bytes).digest("hex")
@@ -116,16 +149,21 @@ export async function ingestPdf({
   const [existing] = await db
     .select({ id: materials.id, title: materials.title })
     .from(materials)
-    .where(and(eq(materials.sha256, sha256), isNull(materials.archivedAt)))
+    .where(
+      and(
+        eq(materials.sha256, sha256),
+        isNull(materials.archivedAt),
+        // Not itself. This row is staged and has no checksum yet, but being
+        // explicit costs nothing and a self-match would be baffling.
+        ne(materials.id, staged),
+      ),
+    )
     .limit(1)
 
   if (existing) {
-    return {
-      ok: false,
-      reason: "duplicate",
-      error: `The archive already has this exact file, as “${existing.title}”.`,
-      existingId: existing.id,
-    }
+    const error = `The archive already has this exact file, as “${existing.title}”.`
+    await reject(staged, actorId, error, existing.id)
+    return { ok: false, reason: "duplicate", error, existingId: existing.id }
   }
 
   // Slugs are unique among live rows only, so archived materials are not
@@ -136,10 +174,12 @@ export async function ingestPdf({
     .where(isNull(materials.archivedAt))
   const slug = uniqueSlug(clean, new Set(live.map((row) => row.slug)))
 
-  const materialId = await txdb.transaction(async (tx) => {
-    const [row] = await tx
-      .insert(materials)
-      .values({
+  const materialId = staged
+
+  await txdb.transaction(async (tx) => {
+    await tx
+      .update(materials)
+      .set({
         slug,
         title: clean,
         // Empty becomes null, not "". An empty string is a value that passes
@@ -148,59 +188,22 @@ export async function ingestPdf({
         // nothing".
         author: author?.trim() || null,
         status: "processing",
-        source,
         sha256,
         byteSize: bytes.length,
         driveFileId: driveFileId ?? null,
         driveMd5: driveMd5 ?? null,
         driveCheckedAt: driveFileId ? new Date() : null,
+        updatedAt: new Date(),
       })
-      .returning({ id: materials.id })
-
-    if (!row) throw new Error("The material row was not created")
+      .where(eq(materials.id, materialId))
 
     await audit(tx, {
-      action: "material.create",
+      action: "material.update",
       entityType: "material",
-      entityId: row.id,
-      after: { name: clean, source, sourceUrl, driveFileId },
+      entityId: materialId,
+      after: { name: clean, stage: "reading the file" },
       actorId,
     })
-
-    if (categoryIds.length > 0) {
-      // Read the names back so the trail can say *which* topic. Filing is
-      // recorded one entry per topic, exactly as it is when done by hand, so
-      // "Added to Faith" reads the same however the material arrived.
-      const named = await tx
-        .select({ id: categories.id, name: categories.name })
-        .from(categories)
-        .where(inArray(categories.id, categoryIds))
-
-      if (named.length > 0) {
-        await tx.insert(materialCategories).values(
-          named.map((topic, ordinal) => ({
-            materialId: row.id,
-            categoryId: topic.id,
-            // The first topic decides the cover's colours, so the order the
-            // person chose them in is worth keeping.
-            ordinal,
-            assignedBy: actorId,
-          })),
-        )
-
-        for (const topic of named) {
-          await audit(tx, {
-            action: "material.categorise",
-            entityType: "material",
-            entityId: row.id,
-            after: { topic: topic.name },
-            actorId,
-          })
-        }
-      }
-    }
-
-    return row.id
   })
 
   try {

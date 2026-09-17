@@ -432,7 +432,7 @@ export function NewMaterialForm({
         {settled ? (
           <>
             <Link
-              href="/admin/materials"
+              href="/admin/materials?filter=in-progress"
               className="rounded-full border border-line px-4 py-2 text-[13px] text-ink-2 transition-colors hover:border-ink"
             >
               See them in the list
@@ -464,8 +464,16 @@ export function NewMaterialForm({
       </div>
 
       <p className="mt-6 text-[12.5px] leading-relaxed text-taupe">
-        Each arrives waiting to be published, not in the library. A file the archive already holds
-        byte for byte is recognised and refused rather than added twice.
+        Each appears in{" "}
+        <Link
+          href="/admin/materials?filter=in-progress"
+          className="border-b border-line text-ink-3 hover:border-ink"
+        >
+          Materials → In progress
+        </Link>{" "}
+        straight away, and moves to <em>In review</em> once its pages have been rendered and read.
+        Nothing reaches the public library until someone publishes it. A file the archive already
+        holds byte for byte is refused rather than added twice, and says so on its own row.
       </p>
     </div>
   )

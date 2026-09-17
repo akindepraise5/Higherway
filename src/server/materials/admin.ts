@@ -32,10 +32,26 @@ import { thumbKey } from "../../lib/r2/keys"
 export const ADMIN_PAGE_SIZE = 40
 
 /** The queues the overview links to, plus the plain list. */
-export type AdminFilter = "all" | "uncategorised" | "needs-ocr" | "archived" | "review"
+export type AdminFilter =
+  | "all"
+  | "in-progress"
+  | "uncategorised"
+  | "needs-ocr"
+  | "archived"
+  | "review"
 
 export const FILTERS: { value: AdminFilter; label: string }[] = [
   { value: "all", label: "All" },
+  /**
+   * Everything the pipeline has not finished with, plus everything it refused.
+   *
+   * It exists because these states had **no way to be seen**. A material was
+   * created inside the background task, so an upload to a project whose worker
+   * was not running left nothing in the archive at all — the form said
+   * "Uploaded" and that was the last anyone heard. Rows are created at upload
+   * time now, and this is where they appear until they are read.
+   */
+  { value: "in-progress", label: "In progress" },
   { value: "uncategorised", label: "Uncategorised" },
   { value: "needs-ocr", label: "Awaiting text" },
   { value: "review", label: "In review" },
@@ -65,6 +81,12 @@ function whereFor(filter: AdminFilter, q?: string): SQL | undefined {
       break
     case "review":
       clauses.push(eq(materials.status, "review"))
+      break
+    case "in-progress":
+      clauses.push(
+        isNull(materials.archivedAt),
+        inArray(materials.status, ["staged", "processing", "rejected"]),
+      )
       break
     case "uncategorised":
       clauses.push(
@@ -189,8 +211,9 @@ export async function adminMaterials({
 
 /** Counts for the filter chips, so each one shows its size before you click. */
 export async function adminCounts() {
-  const [all, uncategorised, needsOcr, review, archived] = await Promise.all([
+  const [all, inProgress, uncategorised, needsOcr, review, archived] = await Promise.all([
     db.select({ n: count() }).from(materials).where(whereFor("all")),
+    db.select({ n: count() }).from(materials).where(whereFor("in-progress")),
     db.select({ n: count() }).from(materials).where(whereFor("uncategorised")),
     db.select({ n: count() }).from(materials).where(whereFor("needs-ocr")),
     db.select({ n: count() }).from(materials).where(whereFor("review")),
@@ -199,6 +222,7 @@ export async function adminCounts() {
 
   return {
     all: all[0]?.n ?? 0,
+    "in-progress": inProgress[0]?.n ?? 0,
     uncategorised: uncategorised[0]?.n ?? 0,
     "needs-ocr": needsOcr[0]?.n ?? 0,
     review: review[0]?.n ?? 0,
