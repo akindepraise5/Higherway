@@ -42,6 +42,8 @@ export function PeopleManager({
   const [pending, start] = useTransition()
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
   const [link, setLink] = useState<string | null>(null)
+  /** Whether the email actually went. It changes what the link panel is *for*. */
+  const [emailed, setEmailed] = useState(false)
   const [copied, setCopied] = useState(false)
   const [email, setEmail] = useState("")
   const [inviteRole, setInviteRole] = useState<Role>("editor")
@@ -68,6 +70,7 @@ export function PeopleManager({
       }
       setNotice({ ok: true, text: result.message })
       setLink(result.link)
+      setEmailed(result.emailed)
       setCopied(false)
       setEmail("")
       router.refresh()
@@ -89,10 +92,24 @@ export function PeopleManager({
       ) : null}
 
       {link ? (
-        <div className="mb-6 rounded-[3px] border border-gold bg-gold-wash/40 p-4">
+        /* Gold when the link is the only way this reaches them, quiet when the
+           email went and it is merely a spare. The panel used to shout either
+           way, which trained people to ignore it in exactly the case where it
+           matters. */
+        <div
+          className={`mb-6 rounded-[3px] border p-4 ${
+            emailed ? "border-line bg-paper-2" : "border-gold bg-gold-wash/40"
+          }`}
+        >
           <div className="flex items-start justify-between gap-4">
-            <p className="text-[13px] font-medium uppercase tracking-[.14em] text-gold">
-              Invitation link — shown once
+            <p
+              className={`text-[13px] font-medium uppercase tracking-[.14em] ${
+                emailed ? "text-taupe" : "text-gold"
+              }`}
+            >
+              {emailed
+                ? "The same link, in case it does not arrive"
+                : "Invitation link — shown once"}
             </p>
             <button
               type="button"

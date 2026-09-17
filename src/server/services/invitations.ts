@@ -5,10 +5,12 @@ import { and, eq, isNull } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { invitation, user } from "../../db/schema"
 import { txdb } from "../../db/tx"
+import { inviteEmail } from "../../lib/email/invite"
 import { hasEmail } from "../../lib/env"
 import { INVITE_EXPIRES_HOURS, invitationExpiry, newToken } from "../../lib/invite-token"
 import { type Role, requireRole } from "../../lib/session"
 import { audit } from "../audit"
+import { sendEmail } from "../email/send"
 
 /**
  * Issuing invitations from the admin panel.
@@ -19,7 +21,8 @@ import { audit } from "../audit"
  * recorded by construction.
  *
  * The plain token is returned **once**, to be shown to the admin who created
- * it. Only its hash is stored, so if the link is lost the invitation has to be
+ * it — and emailed, now that `sendEmail` exists. Only its hash is stored, so if
+ * the link is lost the invitation has to be
  * reissued — which is the correct trade: a database leak must not hand anyone
  * a way in.
  */
@@ -106,16 +109,55 @@ export async function inviteUser(email: string, role: Role): Promise<InviteResul
 
   revalidatePath("/admin/users")
 
-  // Email delivery needs a verified sending domain. Until that exists, the
-  // admin copies the link — the flow works either way, which is why the
-  // invitation does not depend on Resend being configured.
+  const link = `${siteUrl()}/invite/${token}`
+
+  /**
+   * Sent **after** the transaction has committed, and its failure cannot undo
+   * it.
+   *
+   * The invitation is the real thing: the row exists, the token is valid, and
+   * the link below works whether or not Resend was reachable. Sending inside the
+   * transaction would mean a network blip at a third party destroyed a perfectly
+   * good invitation, and sending before it would mean emailing a link to a row
+   * that might not be written.
+   *
+   * The link is still shown either way. It is the fallback when delivery fails,
+   * and it is also how someone hands over an invitation in person — which,
+   * for a church office, is the normal case rather than the exception.
+   */
+  const mail = inviteEmail({
+    link,
+    from: session.user.name?.trim() || session.user.email,
+    role,
+    hours: INVITE_EXPIRES_HOURS,
+  })
+
+  const delivery = hasEmail
+    ? await sendEmail({
+        to: address,
+        subject: mail.subject,
+        html: mail.html,
+        text: mail.text,
+        // A reply goes to whoever invited them, not to a no-reply address.
+        replyTo: session.user.email,
+      })
+    : ({ sent: false, why: "email is not configured" } as const)
+
+  if (!delivery.sent) {
+    // Named in the server log, because the admin is told only that it did not
+    // go — and "why not" is the thing to look up later.
+    console.warn(`invite email to ${address} was not sent: ${delivery.why}`)
+  }
+
   return {
     ok: true,
-    link: `${siteUrl()}/invite/${token}`,
-    emailed: false,
-    message: hasEmail
-      ? `Invitation created for ${address}. Copy the link below — email delivery is not wired up yet.`
-      : `Invitation created for ${address}. Copy the link below and send it to them; it works once and expires in ${INVITE_EXPIRES_HOURS} hours.`,
+    link,
+    emailed: delivery.sent,
+    message: delivery.sent
+      ? `Invitation sent to ${address}. The link below is the same one — useful if the email does not arrive.`
+      : hasEmail
+        ? `Invitation created for ${address}, but the email did not send. Copy the link below and send it yourself.`
+        : `Invitation created for ${address}. Copy the link below and send it to them; it works once and expires in ${INVITE_EXPIRES_HOURS} hours.`,
   }
 }
 

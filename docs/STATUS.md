@@ -231,17 +231,50 @@ targeting the search box by placeholder, which had changed when author filtering
 shipped; there are three search inputs on the page now, so it targets `#q`.
 **14 passing.**
 
+### Invitations are sent — done 2026-09-18
+
+`hasEmail` had sat in `src/lib/env.ts` since Phase 1 with **no reader anywhere**,
+`resend` was not a dependency, and every invitation was copied out by hand.
+
+- `lib/email/invite.ts` builds the email and is pure — subject, HTML and text
+  from a link, a name, a role and an expiry. 8 tests, including that a display
+  name containing markup is escaped and that a link's `&` is escaped in the HTML
+  while staying literal in the text part.
+- `server/email/send.ts` is the Resend client, and it **never throws**. An email
+  that fails must not undo the thing it was announcing: the invitation is already
+  created, the token is already valid, and the link still works. It reports
+  `sent: false` with a reason, and the panel says so.
+- It sends **after** the transaction commits. Inside it, a blip at a third party
+  would destroy a good invitation; before it, we would email a link to a row that
+  might not be written.
+- The link is still shown either way — it is the fallback when delivery fails,
+  and it is how an invitation gets handed over in person, which for a church
+  office is the normal case. The panel is gold when the link is the only route
+  and quiet when the email went; shouting in both cases trained people to ignore
+  it exactly when it mattered.
+
+**Verified by sending a real one** through `mavilletech.com` to the owner's
+address, not by trusting the wiring.
+
+**Hand-written HTML, not React Email**, which ARCHITECTURE §3 names. There is one
+email; `@react-email/components` is a large dependency for sixty lines of table
+markup. Revisit when there is a second and a third.
+
+**And the audit gap is closed.** Accepting an invitation was three unaudited
+statements on the read handle — the moment a person gains access to the archive,
+with no entry in the trail at all. It is one transaction now and writes
+`invitation.accept`, with the new account as the actor, which is honest: there is
+no session yet, and the person who accepted is who acted.
+
 ### Next, in the order worth taking them
 
-1. **Invitation email.** Still nothing is sent — admins copy the link by hand.
-   `resend` is not a dependency, and `RESEND_API_KEY` is read into `hasEmail` and
-   never used. This is now the oldest untouched item on the list.
+1. ~~**Invitation email.**~~ **Done** — see *Invitations are sent* below.
 2. ~~**Search relevance.**~~ **Done** — see *Ranked search* below. Meaning is the
    one method of the four still missing, and it needs a decision rather than
    code: embedding the *query* means loading a 33 MB model inside a public page
    request.
-3. **Audit the invitation flow.** Creating an account and accepting an invitation
-   write no audit entry, which CLAUDE.md requires of every mutation.
+3. ~~**Audit the invitation flow.**~~ **Done** — accepting is one transaction now
+   and writes `invitation.accept`.
 4. **Show why a material was archived, and what it duplicates.** Both are stored;
    neither is displayed anywhere in admin.
 5. **Delete `hasSuggestions`** from `src/lib/env.ts`. It gates a Cloudflare
@@ -1285,7 +1318,8 @@ Asked for directly, in the owner's words, and not yet built:
 
 - [ ] Analytics: Vercel, PostHog, Search Console
 - [ ] Performance budget, accessibility pass
-- [ ] Verified sending domain for invitations
+- [x] Verified sending domain for invitations — `mavilletech.com`, confirmed by
+      sending a real one on 2026-09-18
 - [x] Duplicate pairs reviewed — **the queue is empty**: 0 pending, 59 merged,
       24 dismissed, measured 2026-09-17
 - [ ] **314 materials still unfiled** (was 367). Topic suggestions now appear on
