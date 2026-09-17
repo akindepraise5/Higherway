@@ -159,6 +159,28 @@ export async function resolvePair(pairId: string, keepId: string): Promise<Dupli
       actorId: session.user.id,
     })
 
+    /**
+     * A second entry, against the **material** that was archived.
+     *
+     * The one above is filed against the pair, which is right for "this pair was
+     * decided" — but it left the archived material's own history saying nothing
+     * about the largest thing that ever happened to it. 82 materials here are
+     * archived by a merge and not one of them can explain itself from its own
+     * page. Whoever opens a material should not have to know that duplicate
+     * pairs exist in order to find out why it is gone.
+     */
+    await audit(tx, {
+      action: "material.archive",
+      entityType: "material",
+      entityId: dropId,
+      after: {
+        status: "archived",
+        name: drop.title,
+        reason: `A duplicate of “${keep.title}”, which was kept instead.`,
+      },
+      actorId: session.user.id,
+    })
+
     return {
       ok: true as const,
       message: `Kept “${keep.title}”. “${drop.title}” is archived and can be restored.`,

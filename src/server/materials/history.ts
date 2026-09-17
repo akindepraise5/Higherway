@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm"
 import { db } from "../../db"
-import { auditLog, user } from "../../db/schema"
+import { auditLog, materials, user } from "../../db/schema"
 import type { AuditAction } from "../audit"
 
 /**
@@ -148,4 +148,122 @@ export async function materialHistory(materialId: string, limit = 20) {
     .where(sql`${auditLog.entityType} = 'material' and ${auditLog.entityId} = ${materialId}`)
     .orderBy(desc(auditLog.createdAt))
     .limit(limit)
+}
+
+/**
+ * Why a material was taken out of the library, and what it duplicates.
+ *
+ * Both facts have always been recorded and **neither was shown anywhere**. The
+ * reason is collected in the archive dialog precisely so it exists — "a reason
+ * collected afterwards is one nobody writes" — and it went straight into the
+ * audit trail and out of sight. `duplicate_of_id` is set by the duplicate review
+ * and by an ingest that refuses a copy, and pointed at nothing a person could
+ * follow.
+ *
+ * The reason comes from the trail rather than a column because that is where it
+ * is, and adding a column would be a second copy of the same fact, free to
+ * drift. The most recent `material.archive` entry is the operative one: a
+ * material can be archived, restored and archived again for a different reason.
+ */
+export async function whyArchived(materialId: string): Promise<{
+  reason: string | null
+  by: { name: string | null; email: string | null } | null
+  at: Date | null
+  duplicateOf: { id: string; title: string; slug: string; live: boolean } | null
+}> {
+  const [entry] = await db
+    .select({
+      after: auditLog.after,
+      at: auditLog.createdAt,
+      byName: user.name,
+      byEmail: user.email,
+    })
+    .from(auditLog)
+    .leftJoin(user, eq(user.id, auditLog.actorId))
+    .where(
+      and(
+        eq(auditLog.entityType, "material"),
+        eq(auditLog.entityId, materialId),
+        eq(auditLog.action, "material.archive"),
+      ),
+    )
+    .orderBy(desc(auditLog.createdAt))
+    .limit(1)
+
+  const after = (entry?.after ?? null) as { reason?: unknown } | null
+  let reason = typeof after?.reason === "string" && after.reason.trim() ? after.reason : null
+  let by = entry ? { name: entry.byName, email: entry.byEmail } : null
+  let at = entry?.at ?? null
+
+  /**
+   * Fall back to the duplicate review's own entry.
+   *
+   * A merge writes `material.archive` against the material *now*, but the 82
+   * materials archived before that only have `duplicate.merge` filed against the
+   * **pair** — so looking only at the material's own entries finds nothing for
+   * almost every archived material in the archive. This reads the pair entry by
+   * the id it recorded.
+   */
+  if (!reason) {
+    const [merged] = await db
+      .select({
+        before: auditLog.before,
+        at: auditLog.createdAt,
+        byName: user.name,
+        byEmail: user.email,
+      })
+      .from(auditLog)
+      .leftJoin(user, eq(user.id, auditLog.actorId))
+      .where(
+        and(
+          eq(auditLog.action, "duplicate.merge"),
+          sql`${auditLog.after}->>'archivedId' = ${materialId}`,
+        ),
+      )
+      .orderBy(desc(auditLog.createdAt))
+      .limit(1)
+
+    if (merged) {
+      const kept = (merged.before as { kept?: unknown } | null)?.kept
+      reason =
+        typeof kept === "string"
+          ? `A duplicate of “${kept}”, which was kept instead.`
+          : "Merged with a duplicate."
+      by = { name: merged.byName, email: merged.byEmail }
+      at = merged.at
+    }
+  }
+
+  const [self] = await db
+    .select({ duplicateOfId: materials.duplicateOfId })
+    .from(materials)
+    .where(eq(materials.id, materialId))
+    .limit(1)
+
+  let duplicateOf: { id: string; title: string; slug: string; live: boolean } | null = null
+  if (self?.duplicateOfId) {
+    const [twin] = await db
+      .select({
+        id: materials.id,
+        title: materials.title,
+        slug: materials.slug,
+        archivedAt: materials.archivedAt,
+      })
+      .from(materials)
+      .where(eq(materials.id, self.duplicateOfId))
+      .limit(1)
+
+    if (twin) {
+      duplicateOf = {
+        id: twin.id,
+        title: twin.title,
+        slug: twin.slug,
+        // Worth saying. "Kept instead of this one" is only true while the other
+        // one is actually still in the library.
+        live: twin.archivedAt === null,
+      }
+    }
+  }
+
+  return { reason, by, at, duplicateOf }
 }

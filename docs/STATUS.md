@@ -266,6 +266,30 @@ with no entry in the trail at all. It is one transaction now and writes
 `invitation.accept`, with the new account as the actor, which is honest: there is
 no session yet, and the person who accepted is who acted.
 
+### An archived material explains itself — done 2026-09-18
+
+Both facts were recorded and **neither was shown anywhere**. The reason is
+collected in the archive dialog precisely so it exists — "a reason collected
+afterwards is one nobody writes" — and went straight into the trail and out of
+sight. `duplicate_of_id` pointed at a material nobody could follow.
+
+There is a banner on the material's page now: the reason, the twin as a link,
+whether that twin is itself still live, and who decided it, when.
+
+**Measuring it found a second gap.** Of 83 archived materials, exactly **one**
+had a reason. The duplicate review writes `duplicate.merge` against the *pair*,
+so the other 82 had nothing at all in their own history about the largest thing
+that ever happened to them — you had to know that duplicate pairs exist to find
+out why a material was gone.
+
+Fixed in both directions: a merge now also writes `material.archive` against the
+archived material, and `whyArchived` falls back to reading the pair's entry by
+the id it recorded, so all 83 explain themselves — *"A duplicate of 'Questions
+and answers Vol 2', which was kept instead"*, with the person and the date.
+
+`hasSuggestions` is deleted, with a comment in its place recording that it gated
+a Cloudflare Workers AI client that was never written, so it is not reinvented.
+
 ### Next, in the order worth taking them
 
 1. ~~**Invitation email.**~~ **Done** — see *Invitations are sent* below.
@@ -275,11 +299,10 @@ no session yet, and the person who accepted is who acted.
    request.
 3. ~~**Audit the invitation flow.**~~ **Done** — accepting is one transaction now
    and writes `invitation.accept`.
-4. **Show why a material was archived, and what it duplicates.** Both are stored;
-   neither is displayed anywhere in admin.
-5. **Delete `hasSuggestions`** from `src/lib/env.ts`. It gates a Cloudflare
-   Workers AI client that has never existed, and suggestions now need no
-   credentials, so there is nothing left for it to gate.
+4. ~~**Show why a material was archived, and what it duplicates.**~~ **Done** —
+   see below.
+5. ~~**Delete `hasSuggestions`.**~~ **Done** — gone, with a note in its place
+   saying why, so it is not reinvented.
 6. **Public submissions** — a short form and batch upload. The batch queue built
    in B is most of the second half already.
 7. **Bulk actions on the materials table.** Filter and sort are done.

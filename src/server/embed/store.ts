@@ -114,8 +114,8 @@ export async function documentVector(materialId: string): Promise<number[] | nul
  *
  * This is the whole of the free category suggestion: a material's document
  * vector against 69 topic vectors, nearest three. No account, no credentials,
- * no `hasSuggestions` flag — which is just as well, since that flag gates a
- * Cloudflare Workers AI client that has never existed.
+ * no flag to switch it on. There was a `hasSuggestions` here once, gating a
+ * Cloudflare Workers AI client that was never written; it has been removed.
  *
  * The blurb matters more than it looks. "Faith" alone is a single word with
  * little to distinguish it; "Faith — trusting God when the way is not visible"

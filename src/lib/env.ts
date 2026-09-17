@@ -65,8 +65,17 @@ export const env = schema.parse({
 /** Invite emails can actually be delivered. Without it, admins copy the link. */
 export const hasEmail = Boolean(env.RESEND_API_KEY && env.EMAIL_FROM)
 
-/** Title, summary and category suggestions. Without it, embeddings do the job. */
-export const hasSuggestions = Boolean(env.CLOUDFLARE_ACCOUNT_ID && env.CLOUDFLARE_AI_TOKEN)
+/**
+ * There is deliberately no `hasSuggestions` here.
+ *
+ * It existed from Phase 1 to Phase 5 and was read by nothing, because the
+ * Cloudflare Workers AI client it gated was never written. Topic suggestions now
+ * run on the local embeddings with no credentials at all
+ * (`server/suggest/topics.ts`), so there is nothing left for it to gate. The
+ * `CLOUDFLARE_*` variables stay in the schema: titles and summaries are still
+ * unbuilt and Workers AI remains the plan for them, and a flag can come back
+ * when something reads it.
+ */
 
 /** Server-side OCR. Without it, tesseract.js reads new uploads instead. */
 export const hasCloudOcr = Boolean(env.GOOGLE_CLOUD_VISION_KEY)

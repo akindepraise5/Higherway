@@ -21,7 +21,7 @@ import { requireSession } from "../../../../lib/session"
 import { exact, timeAgo, who } from "../../../../lib/when"
 import { describeChange } from "../../../../server/activity"
 import { adminAuthors } from "../../../../server/materials/admin"
-import { contributors, materialHistory } from "../../../../server/materials/history"
+import { contributors, materialHistory, whyArchived } from "../../../../server/materials/history"
 import { suggestTopics } from "../../../../server/suggest/topics"
 
 /**
@@ -114,6 +114,14 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
    * 252 materials that are already filed, which is most of them.
    */
   const suggestions = topics.length === 0 ? await suggestTopics(id) : []
+
+  /**
+   * Why it was taken out, and what it duplicates. Only fetched when one of them
+   * can be true — a published material that duplicates nothing has neither, and
+   * that is most of them.
+   */
+  const removed =
+    material.archivedAt !== null || material.duplicateOfId !== null ? await whyArchived(id) : null
 
   const base = process.env.R2_PUBLIC_BASE_URL ?? ""
   const look = lookFor(material.slug, topics[0]?.slug ?? "uncategorised")
@@ -212,6 +220,37 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
         </div>
 
         <div>
+          {/* Both of these have always been recorded and neither was shown
+              anywhere: the reason is collected in the archive dialog precisely
+              so it exists, and went straight into the trail and out of sight. */}
+          {removed && (removed.reason || removed.duplicateOf) ? (
+            <div className="mb-5 rounded-[4px] border-l-2 border-[#8c2f22] bg-paper-2 px-4 py-3">
+              <p className="text-[11px] font-medium uppercase tracking-[.16em] text-[#8c2f22]">
+                {material.archivedAt ? "Taken out of the library" : "Refused"}
+              </p>
+              {removed.reason ? (
+                <p className="mt-1.5 text-[14px] leading-relaxed text-ink-2">{removed.reason}</p>
+              ) : null}
+              {removed.duplicateOf ? (
+                <p className="mt-1.5 text-[13px] text-ink-3">
+                  {removed.duplicateOf.live ? "Kept instead: " : "Against: "}
+                  <Link
+                    href={`/admin/materials/${removed.duplicateOf.id}`}
+                    className="border-b border-line hover:border-ink"
+                  >
+                    {removed.duplicateOf.title}
+                  </Link>
+                  {removed.duplicateOf.live ? null : " — which is itself archived"}
+                </p>
+              ) : null}
+              {removed.by && removed.at ? (
+                <p className="mt-1.5 text-[11.5px] text-taupe">
+                  {who(removed.by.name, removed.by.email)} · {timeAgo(removed.at)}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="flex items-start gap-3">
             <h1 className="font-serif text-[clamp(26px,3.2vw,36px)] font-light leading-tight tracking-[-0.02em]">
               {material.title}
