@@ -1,11 +1,13 @@
 import { Plus } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
+import { BulkSelect, RowSelect, SelectAll } from "../../../components/admin/bulk-select"
 import { stickyCell, stickyHead, TableScroll } from "../../../components/admin/table-scroll"
 import { Pagination } from "../../../components/public/pagination"
 import { requireSession } from "../../../lib/session"
 import { exact, timeAgo, who } from "../../../lib/when"
 import { describeChange } from "../../../server/activity"
+import { adminCategories } from "../../../server/categories/queries"
 import {
   ADMIN_PAGE_SIZE,
   adminCounts,
@@ -56,7 +58,12 @@ export default async function AdminMaterialsPage({
 }: {
   searchParams: Promise<Search>
 }) {
-  await requireSession()
+  const session = await requireSession()
+  const role = (session.user as { role?: string }).role ?? "editor"
+  // Filing is every editor's daily work; publishing and archiving decide what
+  // the archive says in public, so they stay Admin — in the bar exactly as they
+  // are on a single material.
+  const canModerate = role === "admin" || role === "owner"
   const params = await searchParams
 
   const filter = asFilter(params.filter)
@@ -64,9 +71,10 @@ export default async function AdminMaterialsPage({
   const q = params.q?.trim() ?? ""
   const page = Number(params.page) || 1
 
-  const [result, counts] = await Promise.all([
+  const [result, counts, topics] = await Promise.all([
     adminMaterials({ filter, q, sort, page }),
     adminCounts(),
+    adminCategories(),
   ])
 
   // One query for the whole page, after the rows are known.
@@ -150,86 +158,96 @@ export default async function AdminMaterialsPage({
           )}
         </p>
       ) : (
-        <TableScroll minWidth="60rem" className="mt-8">
-          <thead>
-            <tr className="border-b border-line-soft bg-paper-2 text-[11px] font-medium uppercase tracking-[.14em] text-taupe">
-              <th className={`px-4 py-3 font-medium ${stickyHead}`}>Material</th>
-              <th className="px-4 py-3 font-medium">Topics</th>
-              <th className="px-4 py-3 font-medium">Pages</th>
-              <th className="px-4 py-3 font-medium">Text</th>
-              <th className="px-4 py-3 font-medium">Last change</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.items.map((m) => (
-              <tr
-                key={m.id}
-                className="group border-b border-line-soft last:border-0 hover:bg-paper-2"
-              >
-                <td className={`px-4 py-3 ${stickyCell}`}>
-                  <Link
-                    href={`/admin/materials/${m.id}`}
-                    className="font-serif text-[16px] leading-snug hover:text-gold"
-                  >
-                    {m.title}
-                  </Link>
-                  {m.author ? (
-                    <span className="mt-0.5 block text-[12.5px] text-taupe">{m.author}</span>
-                  ) : null}
-                </td>
-
-                <td className="px-4 py-3">
-                  {m.topics.length === 0 ? (
-                    <span className="text-[12.5px] text-gold">Uncategorised</span>
-                  ) : (
-                    <span className="text-[12.5px] text-ink-3">
-                      {m.topics.map((t) => t.name).join(", ")}
-                    </span>
-                  )}
-                </td>
-
-                <td className="px-4 py-3 text-[13px] text-ink-3">{m.pageCount ?? "—"}</td>
-
-                <td className="px-4 py-3">
-                  {m.ocrEngine === "none" ? (
-                    <span className="text-[12.5px] text-taupe">awaiting</span>
-                  ) : (
-                    <span className="text-[12.5px] text-ink-3">
-                      {m.ocrEngine === "text_layer" ? "embedded" : m.ocrEngine}
-                      {m.ocrQuality !== null ? ` · ${Math.round(m.ocrQuality * 100)}%` : ""}
-                    </span>
-                  )}
-                </td>
-
-                <td className="px-4 py-3">
-                  {(() => {
-                    const c = changes.get(m.id)
-                    if (!c) return <span className="text-[12.5px] text-taupe">—</span>
-                    return (
-                      <span className="text-[12.5px] text-ink-3" title={exact(c.at)}>
-                        {timeAgo(c.at)}
-                        <span className="block text-taupe">
-                          {describeChange(c.action, c.before, c.after)} · {who(c.byName, c.byEmail)}
-                        </span>
-                      </span>
-                    )
-                  })()}
-                </td>
-
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[.1em] ${
-                      STATUS_STYLE[m.status] ?? "bg-paper-3 text-ink-3"
-                    }`}
-                  >
-                    {m.status}
-                  </span>
-                </td>
+        <BulkSelect ids={result.items.map((m) => m.id)} topics={topics} canModerate={canModerate}>
+          <TableScroll minWidth="62rem" className="mt-4">
+            <thead>
+              <tr className="border-b border-line-soft bg-paper-2 text-[11px] font-medium uppercase tracking-[.14em] text-taupe">
+                <th className="w-10 px-4 py-3 font-medium">
+                  <SelectAll ids={result.items.map((m) => m.id)} />
+                  <span className="sr-only">Select</span>
+                </th>
+                <th className={`px-4 py-3 font-medium ${stickyHead}`}>Material</th>
+                <th className="px-4 py-3 font-medium">Topics</th>
+                <th className="px-4 py-3 font-medium">Pages</th>
+                <th className="px-4 py-3 font-medium">Text</th>
+                <th className="px-4 py-3 font-medium">Last change</th>
+                <th className="px-4 py-3 font-medium">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </TableScroll>
+            </thead>
+            <tbody>
+              {result.items.map((m) => (
+                <tr
+                  key={m.id}
+                  className="group border-b border-line-soft last:border-0 hover:bg-paper-2"
+                >
+                  <td className="px-4 py-3 align-top">
+                    <RowSelect id={m.id} title={m.title} />
+                  </td>
+                  <td className={`px-4 py-3 ${stickyCell}`}>
+                    <Link
+                      href={`/admin/materials/${m.id}`}
+                      className="font-serif text-[16px] leading-snug hover:text-gold"
+                    >
+                      {m.title}
+                    </Link>
+                    {m.author ? (
+                      <span className="mt-0.5 block text-[12.5px] text-taupe">{m.author}</span>
+                    ) : null}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {m.topics.length === 0 ? (
+                      <span className="text-[12.5px] text-gold">Uncategorised</span>
+                    ) : (
+                      <span className="text-[12.5px] text-ink-3">
+                        {m.topics.map((t) => t.name).join(", ")}
+                      </span>
+                    )}
+                  </td>
+
+                  <td className="px-4 py-3 text-[13px] text-ink-3">{m.pageCount ?? "—"}</td>
+
+                  <td className="px-4 py-3">
+                    {m.ocrEngine === "none" ? (
+                      <span className="text-[12.5px] text-taupe">awaiting</span>
+                    ) : (
+                      <span className="text-[12.5px] text-ink-3">
+                        {m.ocrEngine === "text_layer" ? "embedded" : m.ocrEngine}
+                        {m.ocrQuality !== null ? ` · ${Math.round(m.ocrQuality * 100)}%` : ""}
+                      </span>
+                    )}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {(() => {
+                      const c = changes.get(m.id)
+                      if (!c) return <span className="text-[12.5px] text-taupe">—</span>
+                      return (
+                        <span className="text-[12.5px] text-ink-3" title={exact(c.at)}>
+                          {timeAgo(c.at)}
+                          <span className="block text-taupe">
+                            {describeChange(c.action, c.before, c.after)} ·{" "}
+                            {who(c.byName, c.byEmail)}
+                          </span>
+                        </span>
+                      )
+                    })()}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-[.1em] ${
+                        STATUS_STYLE[m.status] ?? "bg-paper-3 text-ink-3"
+                      }`}
+                    >
+                      {m.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </TableScroll>
+        </BulkSelect>
       )}
 
       <Pagination

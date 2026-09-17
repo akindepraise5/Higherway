@@ -290,6 +290,38 @@ and answers Vol 2', which was kept instead"*, with the person and the date.
 `hasSuggestions` is deleted, with a comment in its place recording that it gated
 a Cloudflare Workers AI client that was never written, so it is not reinvented.
 
+### Acting on a selection — done 2026-09-18
+
+**314 published materials have no topic.** Filing them one at a time is a page
+load, a picker and a round trip each: the archive's main outstanding job, turned
+by the interface into a thousand small errands.
+
+Checkboxes on the list, a bar when anything is selected, and three actions —
+file under a topic, publish, take out of the library. Filing is Editor work;
+publishing and archiving stay Admin, exactly as they are on a single material.
+
+**Three rules, and they are what make bulk safe rather than merely fast:**
+
+1. **One audit entry per material**, as if each had been done by hand. A single
+   "filed 40 materials" entry records the *operation* and not the *changes*, and
+   the trail's job is to answer "why is this material here" one material at a
+   time. This project learned that the hard way: `mergeCategory` moved 42
+   materials with one UPDATE, recorded how many moved but not which, and was
+   recoverable only because the v1 spreadsheet still existed.
+2. **One transaction.** Either the selection is done or none of it is.
+3. **Skipping is not failing.** One archived material in a selection of forty
+   does not stop the other thirty-nine; the result says how many changed and how
+   many were left alone.
+
+Archiving asks for its reason *before* it will run — a reason collected
+afterwards is one nobody writes, and over forty materials that matters more, not
+less. It is capped at 100 per action, which covers "everything on this page" with
+room to spare and refuses anything that could only come from a crafted request.
+
+**Driven in a browser**, which turned up a real one: the bar is sticky and the
+table header is not, so once the bar is up the header's "select all" checkbox
+sits underneath it. Selecting all now lives in the bar as well.
+
 ### Next, in the order worth taking them
 
 1. ~~**Invitation email.**~~ **Done** — see *Invitations are sent* below.
@@ -305,7 +337,7 @@ a Cloudflare Workers AI client that was never written, so it is not reinvented.
    saying why, so it is not reinvented.
 6. **Public submissions** — a short form and batch upload. The batch queue built
    in B is most of the second half already.
-7. **Bulk actions on the materials table.** Filter and sort are done.
+7. ~~**Bulk actions on the materials table.**~~ **Done** — see below.
 
 ---
 
@@ -761,7 +793,8 @@ the dialog is what stops it being needed again.
       filename could not be fixed without a database client. Correcting details
       is Editor work, moderating is Admin, and archiving asks for its reason in
       the dialog itself — a reason collected afterwards is one nobody writes
-- [ ] Bulk actions on the materials table (filter and sort are done)
+- [x] Bulk actions on the materials table — file, publish, take out, done
+      2026-09-18
 - [x] Adding in bulk — a queue, per-file fields, three at a time. See
       *Requested 2026-09-17* B
 - [x] Upload (presigned) and import by URL, with the safety checks in §6. The
