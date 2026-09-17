@@ -512,6 +512,8 @@ the dialog is what stops it being needed again.
       is Editor work, moderating is Admin, and archiving asks for its reason in
       the dialog itself — a reason collected afterwards is one nobody writes
 - [ ] Bulk actions on the materials table (filter and sort are done)
+- [x] Adding in bulk — a queue, per-file fields, three at a time. See
+      *Requested 2026-09-17* B
 - [x] Upload (presigned) and import by URL, with the safety checks in §6. The
       file goes browser → R2 directly and never through the app, because Vercel
       refuses bodies over 4.5 MB and 8.6% of this archive is over 10 MB. A
@@ -703,11 +705,57 @@ byte-for-byte match, and no topic. That is the 340-unfiled problem again, faster
       creating all work, with nothing in the console. The one admin control with
       a measured mobile path.
 
-**B — batch upload.** Per-file, not per-batch: the owner pointed out that a batch
-can hold several authors, so author and topics belong on each queued file with an
-"apply to all" as a shortcut rather than the only way. No new route — the drawer
-is already a full-height sheet on a phone and `/admin/materials/new` renders the
-same component.
+**B — done.**
+
+- [x] **Several materials at once.** The form took exactly one file and one set
+      of fields, so a folder of forty scans was forty passes through it. It is a
+      queue now: pick any number, each row keeps its own title, author and
+      topics, and they go up three at a time with progress on each.
+
+      **Per-file, not per-batch** — the owner's correction, and it decided the
+      design. The obvious version has one author and one set of topics for the
+      whole batch, and a folder of scans routinely holds several authors. *Apply
+      to all* is a shortcut for when a batch does share one, and it **fills rows
+      left empty and never overwrites an answered one**, so it cannot undo the
+      thing it sits above.
+
+      **No new route, and no fields made optional.** The drawer is already a
+      full-height sheet the width of the viewport on a phone — a page in
+      everything but the URL — and the queue scrolls inside it; a second surface
+      would have been two places to keep in step. And nothing needed to become
+      optional to make a batch bearable: the title is the only required field and
+      it is *inferred* from the filename, which is where most of this archive's
+      titles came from in the first place. Author and topics were already
+      optional.
+
+      A batch is not a new mechanism on the server, because the bytes already
+      bypass the app: N presigned PUTs and N independent tasks. What it needed
+      was `startUploads(n)` issuing the whole batch's tickets in one call — fifty
+      round trips doing fifty identical session checks is a visible pause before
+      anything appears to move — plus a queue, per-file progress and a per-row
+      retry. One bad file must not abandon the forty-nine behind it.
+
+      Two things that are not obvious and are written down in the code:
+      `fetch` **cannot report upload progress**, so the PUT is an
+      `XMLHttpRequest`; on a phone a 13 MB photograph is thirty seconds of a
+      control that looks frozen, and a frozen control is one people press again.
+      And the concurrency is 3 rather than 50 deliberately: fifty parallel PUTs
+      over one phone's uplink do not finish sooner in total, they just make all
+      fifty look stalled at once.
+
+      **Measured in a mobile browser**, not assumed. Titles derived from
+      filenames (`Higher Way (1).pdf` → "Higher Way"); *apply to all* filling
+      empty rows while leaving an answered one alone; a one-character title
+      disabling Send; removing a row; and separately the upload loop itself
+      against a stubbed R2 — peak concurrency exactly 3, the one refused file
+      failing alone while the other six succeeded, the content type arriving as
+      `application/pdf`. No console errors in either run.
+
+      Links take a list too, one per line, through the same queue.
+
+      `lib/upload/batch.ts` holds the pure parts with 11 tests — including
+      `titleFromUrl`, which was a slightly different copy of the same guess
+      inside `importFromUrl`.
 
 **C — connect pipeline stages 4 to 7.** See *Stage 5 of the pipeline was never
 wired in* under Phase 5, and the note below on what else is written and unused.
