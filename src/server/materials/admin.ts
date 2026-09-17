@@ -7,6 +7,7 @@ import {
   exists,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   or,
   type SQL,
@@ -203,4 +204,26 @@ export async function adminCounts() {
     review: review[0]?.n ?? 0,
     archived: archived[0]?.n ?? 0,
   } satisfies Record<AdminFilter, number>
+}
+
+/**
+ * Every author name in use, busiest first — including on materials that are not
+ * published yet.
+ *
+ * Distinct from the public `authorList`, which counts only published materials
+ * because it builds the library's filter chips. Here the point is the opposite:
+ * an editor filing a new material needs to see a name that was used yesterday on
+ * something still in review, or they will type it again and spell it differently.
+ *
+ * `author` is stored null when unknown, never "", so a NOT NULL test is enough.
+ */
+export async function adminAuthors(): Promise<{ name: string; count: number }[]> {
+  const rows = await db
+    .select({ name: materials.author, count: count(materials.id) })
+    .from(materials)
+    .where(and(isNull(materials.archivedAt), isNotNull(materials.author)))
+    .groupBy(materials.author)
+    .orderBy(desc(count(materials.id)), materials.author)
+
+  return rows.map((row) => ({ name: row.name ?? "", count: row.count })).filter((r) => r.name)
 }

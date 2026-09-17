@@ -1,13 +1,11 @@
+import { Plus } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
-import { AddMaterialDrawer } from "../../../components/admin/add-material-drawer"
 import { stickyCell, stickyHead, TableScroll } from "../../../components/admin/table-scroll"
 import { Pagination } from "../../../components/public/pagination"
-import { hasJobs } from "../../../lib/env"
 import { requireSession } from "../../../lib/session"
 import { exact, timeAgo, who } from "../../../lib/when"
 import { describeChange } from "../../../server/activity"
-import { adminCategories } from "../../../server/categories/queries"
 import {
   ADMIN_PAGE_SIZE,
   adminCounts,
@@ -66,10 +64,9 @@ export default async function AdminMaterialsPage({
   const q = params.q?.trim() ?? ""
   const page = Number(params.page) || 1
 
-  const [result, counts, topics] = await Promise.all([
+  const [result, counts] = await Promise.all([
     adminMaterials({ filter, q, sort, page }),
     adminCounts(),
-    adminCategories(),
   ])
 
   // One query for the whole page, after the rows are known.
@@ -112,7 +109,17 @@ export default async function AdminMaterialsPage({
           </button>
         </form>
 
-        <AddMaterialDrawer jobsConfigured={hasJobs} topics={topics} />
+        {/* A link, not a drawer. Adding is a queue of up to sixty files with
+            uploads in flight; that belongs on a page with an address, not in a
+            modal that cannot be dismissed while it works. Editing is still a
+            drawer, because editing really is one material at a time. */}
+        <Link
+          href="/admin/materials/new"
+          className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-[13.5px] font-medium text-paper-2 transition-colors hover:bg-forest-2"
+        >
+          <Plus size={15} />
+          Add materials
+        </Link>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">

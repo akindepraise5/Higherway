@@ -20,6 +20,7 @@ import { pageKey, publicUrl } from "../../../../lib/r2/keys"
 import { requireSession } from "../../../../lib/session"
 import { exact, timeAgo, who } from "../../../../lib/when"
 import { describeChange } from "../../../../server/activity"
+import { adminAuthors } from "../../../../server/materials/admin"
 import { contributors, materialHistory } from "../../../../server/materials/history"
 import { suggestTopics } from "../../../../server/suggest/topics"
 
@@ -57,7 +58,7 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
   const [material] = await db.select().from(materials).where(eq(materials.id, id)).limit(1)
   if (!material) notFound()
 
-  const [topics, pages, allTopics, people, history, unfiledNext] = await Promise.all([
+  const [topics, pages, allTopics, people, history, unfiledNext, authors] = await Promise.all([
     db
       .select({
         id: categories.id,
@@ -103,6 +104,7 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
       )
       .orderBy(materials.createdAt)
       .limit(1),
+    adminAuthors(),
   ])
 
   /**
@@ -216,6 +218,7 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
             </h1>
             <MaterialEditor
               materialId={id}
+              authors={authors}
               title={material.title}
               author={material.author}
               summary={material.summary}

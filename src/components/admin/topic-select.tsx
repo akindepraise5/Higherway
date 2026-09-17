@@ -2,7 +2,15 @@
 
 import { Combobox } from "@base-ui/react/combobox"
 import { Check, ChevronsUpDown, Plus } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import {
+  ITEM_CLASS,
+  LIST_CLASS,
+  POPUP_CLASS,
+  SEARCH_CLASS,
+  TRIGGER_CLASS,
+  useDialogContainer,
+} from "./combobox-parts"
 
 /**
  * Choosing a topic, from a list you can actually see.
@@ -23,13 +31,10 @@ import { useCallback, useMemo, useState } from "react"
  * topic and when, the add form as removable pills — and a third copy inside the
  * control would be the same fact in two places, free to disagree.
  *
- * **The popup portals into the nearest `<dialog>`, not to `<body>`.** A dialog
- * opened with `showModal()` is in the browser's *top layer*, which sits above
- * everything in the normal stacking context no matter what `z-index` says. A
- * popup portalled to `<body>` therefore renders underneath it: invisible, and
- * inert to clicks. That is not a styling bug with a `z-index` fix — the top
- * layer is outside the z-index system entirely. It shipped exactly that way and
- * made the topic picker in the add drawer impossible to open.
+ * The shell it is built from — the dialog-aware portal and the shared styling —
+ * is in `combobox-parts`, with `AuthorSelect`. The two are the same control with
+ * different meanings: a topic is a shared entity with a public URL and an Owner
+ * gate on creating one, an author is text on a single material.
  */
 
 export type Topic = { id: string; name: string; total?: number }
@@ -66,18 +71,7 @@ export function TopicSelect({
 }) {
   const [query, setQuery] = useState("")
 
-  /**
-   * The nearest dialog ancestor, or null to portal to `<body>` as usual.
-   *
-   * Found from the trigger rather than passed in: every call site would
-   * otherwise have to know whether it happens to be inside a drawer, and the
-   * one that forgot would fail silently and invisibly, which is precisely how
-   * this went unnoticed.
-   */
-  const [container, setContainer] = useState<HTMLElement | null>(null)
-  const anchor = useCallback((node: HTMLButtonElement | null) => {
-    setContainer(node?.closest("dialog") ?? null)
-  }, [])
+  const { container, ref: anchor } = useDialogContainer()
 
   const chosen = useMemo(() => new Set(selected), [selected])
   const trimmed = query.trim()
@@ -134,11 +128,7 @@ export function TopicSelect({
         <Combobox.Label className="mb-1.5 block text-[13px] text-ink-2">{label}</Combobox.Label>
       ) : null}
 
-      <Combobox.Trigger
-        ref={anchor}
-        id={id}
-        className="flex w-full min-h-11 cursor-default items-center justify-between gap-3 rounded-[4px] border border-line bg-paper-2 px-3.5 py-2.5 text-left text-[14px] text-ink-2 transition-colors select-none hover:border-ink focus-visible:border-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink disabled:opacity-40"
-      >
+      <Combobox.Trigger ref={anchor} id={id} className={`${TRIGGER_CLASS} text-ink-2`}>
         <span className="truncate">{placeholder}</span>
         <Combobox.Icon className="flex-none text-taupe">
           <ChevronsUpDown size={15} />
@@ -147,16 +137,8 @@ export function TopicSelect({
 
       <Combobox.Portal container={container}>
         <Combobox.Positioner align="start" sideOffset={4} className="z-50 outline-none">
-          <Combobox.Popup
-            aria-label="Topics"
-            className="max-h-[min(22rem,var(--available-height))] w-[var(--anchor-width)] min-w-[15rem] max-w-[var(--available-width)] origin-[var(--transform-origin)] overflow-hidden rounded-[4px] border border-line bg-paper shadow-lg"
-          >
-            <Combobox.Input
-              placeholder="Search topics…"
-              /* 16px on a coarse pointer: below that, iOS zooms the page in on
-                 focus and the popup is left half off-screen. */
-              className="h-11 w-full border-b border-line-soft bg-paper-2 px-3.5 text-[14px] any-pointer-coarse:text-[16px] text-ink outline-none placeholder:text-taupe"
-            />
+          <Combobox.Popup aria-label="Topics" className={POPUP_CLASS}>
+            <Combobox.Input placeholder="Search topics…" className={SEARCH_CLASS} />
 
             <Combobox.Empty className="px-3.5 py-3 text-[13px] text-taupe empty:p-0">
               {onCreate
@@ -164,12 +146,12 @@ export function TopicSelect({
                 : "No topic matches that, and only an Owner can add one."}
             </Combobox.Empty>
 
-            <Combobox.List className="max-h-[min(18rem,calc(var(--available-height)-2.75rem))] overflow-y-auto overscroll-contain py-1">
+            <Combobox.List className={LIST_CLASS}>
               {(topic: Row) => (
                 <Combobox.Item
                   key={topic.id}
                   value={topic}
-                  className={`flex min-h-11 cursor-default items-center gap-2.5 px-3.5 py-2 text-[14px] outline-none select-none data-highlighted:bg-paper-3 ${
+                  className={`${ITEM_CLASS} ${
                     topic.creating ? "border-t border-line-soft text-gold" : "text-ink-2"
                   }`}
                 >

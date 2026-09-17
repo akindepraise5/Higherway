@@ -73,6 +73,46 @@ Read this first when coming back. Everything below it is history and reasoning.
    token gets `AccessDenied` — the existing one does — so either issue an Admin
    Read & Write token or set the same rules in the Cloudflare dashboard.
 
+### Also asked for on 2026-09-17, and done
+
+- [x] **Authors are picked, not retyped.** `AuthorSelect` offers every name
+      already in use with a count, and adds a new one inline when none matches.
+      It matters more than convenience: the library filters authors by **exact**
+      match — a chip click must not make "Rev. Darrel Lee" also collect "Darrel
+      Lee Jr" — so "Rev Darrel Lee" and "Rev. Darrel Lee" would be two authors
+      with half the materials each and neither findable from the other.
+
+      Unlike a topic, anyone may add one and nothing confirms: an author is text
+      on one material, not a shared entity with a public URL, so getting it wrong
+      costs an edit. Clearing is a first-class action, because most of this
+      archive is unattributed, and it stores `null` rather than `""`.
+
+      On the add page **and** the edit drawer, from `adminAuthors()` — which
+      counts unpublished materials too, unlike the public `authorList`. An editor
+      needs to see a name used yesterday on something still in review, or they
+      will type it again and spell it differently.
+- [x] **Adding is a page; editing stays a drawer.** The owner's call and the
+      right one. A drawer was right when adding took one file and four fields; a
+      queue of up to sixty with uploads in flight is a different thing. It cannot
+      be dismissed while it works, it has no address, and being a modal `<dialog>`
+      it sits in the browser's top layer — which is what broke the topic picker
+      inside it. Editing really is one material and a handful of fields, so it
+      stays where it is.
+
+      `AddMaterialDrawer` is deleted. `/admin/materials` links to
+      `/admin/materials/new`, which already rendered the same form. Leaving
+      mid-upload now asks, because a page cannot refuse the back button the way a
+      drawer refused Escape.
+
+**A regression caught by running it, worth recording.** The first version of the
+dialog fix returned `null` when there was no dialog, and **Base UI reads an
+explicit `container={null}` as "nowhere", not "the default"**. The popup mounted
+into nothing: `aria-expanded` flipped to true, no listbox rendered, and the
+control looked dead — in exactly the way it looks when it is hidden *under* a
+dialog. So the fix for the picker inside the drawer broke every picker outside
+one, including the material page, and the two failures are indistinguishable by
+eye. It returns `undefined` now. Verified in a browser both ways round.
+
 ### Next, in the order worth taking them
 
 1. **Invitation email.** Still nothing is sent — admins copy the link by hand.

@@ -1,8 +1,9 @@
 "use client"
 
 import { AlertCircle, Check, ChevronDown, FileUp, Link2, Loader2, X } from "lucide-react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   MAX_BATCH,
   titleFromFilename,
@@ -11,6 +12,7 @@ import {
   UPLOAD_CONCURRENCY,
 } from "../../lib/upload/batch"
 import { finishUpload, importFromUrl, startUploads } from "../../server/services/uploads"
+import { AuthorSelect } from "./author-select"
 import { TopicSelect } from "./topic-select"
 import { pool, putWithProgress } from "./upload-queue"
 
@@ -37,6 +39,14 @@ import { pool, putWithProgress } from "./upload-queue"
  * Nothing here is made optional to make a batch bearable. The title is the only
  * field that is required, and it is *inferred* — from the filename, which is
  * where most of this archive's titles came from in the first place.
+ *
+ * **A page, not a drawer.** It began as a drawer over the materials list, which
+ * was right when this took one file and four fields. A queue of fifty inside a
+ * modal is a different thing: the dialog cannot be dismissed while anything is
+ * in flight, it sits in the browser's top layer and so breaks any popup
+ * portalled to `<body>` (which it did — the topic picker could not be opened),
+ * and the work has an address worth having. Editing stays a drawer, because
+ * editing really is one material and a handful of fields.
  */
 
 export type PickableTopic = { id: string; name: string; total: number }
@@ -80,14 +90,12 @@ const sizeOf = (item: Item) => {
 export function NewMaterialForm({
   jobsConfigured,
   topics,
-  onBusyChange,
-  onDone,
+  authors,
 }: {
   jobsConfigured: boolean
   topics: PickableTopic[]
-  /** Lets a drawer refuse to close while an upload is still in flight. */
-  onBusyChange?: (busy: boolean) => void
-  onDone?: () => void
+  /** Names already in use, so one does not get spelled three ways. */
+  authors: { name: string; count: number }[]
 }) {
   const router = useRouter()
   const [mode, setMode] = useState<Mode>("file")
@@ -98,13 +106,22 @@ export function NewMaterialForm({
   const [open, setOpen] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const working = useCallback(
-    (state: boolean) => {
-      setBusy(state)
-      onBusyChange?.(state)
-    },
-    [onBusyChange],
-  )
+  const working = useCallback((state: boolean) => setBusy(state), [])
+
+  /**
+   * Leaving mid-upload loses the queue, and the files already sent are sitting
+   * in staging with nothing pointing at them.
+   *
+   * The drawer this replaced simply refused to close. A page cannot refuse —
+   * the browser owns the back button — so it asks, which is the only thing a
+   * page is allowed to do.
+   */
+  useEffect(() => {
+    if (!busy) return
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault()
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [busy])
 
   const patch = useCallback((key: string, change: Partial<Item>) => {
     setItems((current) => current.map((i) => (i.key === key ? { ...i, ...change } : i)))
@@ -365,7 +382,13 @@ export function NewMaterialForm({
       </div>
 
       {items.length > 1 ? (
-        <ApplyToAll topics={topics} disabled={busy} onApply={applyToAll} count={items.length} />
+        <ApplyToAll
+          topics={topics}
+          authors={authors}
+          disabled={busy}
+          onApply={applyToAll}
+          count={items.length}
+        />
       ) : null}
 
       {items.length > 0 ? (
@@ -375,6 +398,7 @@ export function NewMaterialForm({
               key={item.key}
               item={item}
               topics={topics}
+              authors={authors}
               /* A lone file behaves exactly as the old single form did: its
                  fields are simply there, with nothing to open first. */
               expanded={items.length === 1 || open === item.key}
@@ -406,16 +430,21 @@ export function NewMaterialForm({
         </button>
 
         {settled ? (
-          <button
-            type="button"
-            onClick={() => {
-              setItems([])
-              onDone?.()
-            }}
-            className="rounded-full border border-line px-4 py-2 text-[13px] text-ink-2 transition-colors hover:border-ink"
-          >
-            Close
-          </button>
+          <>
+            <Link
+              href="/admin/materials"
+              className="rounded-full border border-line px-4 py-2 text-[13px] text-ink-2 transition-colors hover:border-ink"
+            >
+              See them in the list
+            </Link>
+            <button
+              type="button"
+              onClick={() => setItems([])}
+              className="text-[13px] text-taupe underline-offset-4 transition-colors hover:text-ink hover:underline"
+            >
+              Add more
+            </button>
+          </>
         ) : null}
 
         {notice ? (
@@ -452,11 +481,13 @@ export function NewMaterialForm({
  */
 function ApplyToAll({
   topics,
+  authors,
   count,
   disabled,
   onApply,
 }: {
   topics: PickableTopic[]
+  authors: { name: string; count: number }[]
   count: number
   disabled: boolean
   onApply: (change: { author?: string; topics?: string[] }) => void
@@ -475,19 +506,14 @@ function ApplyToAll({
       </p>
 
       <div className="mt-3 flex flex-col gap-2.5">
-        <div>
-          <label htmlFor="all-author" className="sr-only">
-            Author for all {count}
-          </label>
-          <input
-            id="all-author"
-            value={author}
-            disabled={disabled}
-            onChange={(e) => setAuthor(e.target.value)}
-            placeholder="Author"
-            className="w-full rounded-[4px] border border-line bg-paper px-3.5 py-2.5 text-[14px] outline-none transition-colors focus:border-ink disabled:opacity-40"
-          />
-        </div>
+        <AuthorSelect
+          id="all-author"
+          authors={authors}
+          value={author}
+          disabled={disabled}
+          onChange={setAuthor}
+          placeholder="Author"
+        />
 
         <TopicSelect
           id="all-topics"
@@ -523,6 +549,7 @@ function ApplyToAll({
 function Row({
   item,
   topics,
+  authors,
   expanded,
   onToggle,
   onChange,
@@ -533,6 +560,7 @@ function Row({
 }: {
   item: Item
   topics: PickableTopic[]
+  authors: { name: string; count: number }[]
   expanded: boolean
   onToggle: () => void
   onChange: (change: Partial<Item>) => void
@@ -598,19 +626,13 @@ function Row({
 
       {expanded ? (
         <div id={`details-${item.key}`} className="mt-2.5 flex flex-col gap-2.5">
-          <div>
-            <label htmlFor={authorId} className="sr-only">
-              Author for {label}
-            </label>
-            <input
-              id={authorId}
-              value={item.author}
-              disabled={locked}
-              onChange={(e) => onChange({ author: e.target.value })}
-              placeholder="Author (leave empty if it is not credited)"
-              className="w-full rounded-[4px] border border-line bg-paper-2 px-3 py-2 text-[13.5px] outline-none transition-colors focus:border-ink disabled:opacity-60"
-            />
-          </div>
+          <AuthorSelect
+            id={authorId}
+            authors={authors}
+            value={item.author}
+            disabled={locked}
+            onChange={(name) => onChange({ author: name })}
+          />
 
           <TopicSelect
             topics={topics}

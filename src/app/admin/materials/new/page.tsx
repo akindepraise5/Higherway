@@ -4,6 +4,7 @@ import { NewMaterialForm } from "../../../../components/admin/new-material-form"
 import { hasJobs } from "../../../../lib/env"
 import { requireSession } from "../../../../lib/session"
 import { adminCategories } from "../../../../server/categories/queries"
+import { adminAuthors } from "../../../../server/materials/admin"
 
 /**
  * Adding a material by hand.
@@ -24,7 +25,7 @@ export const dynamic = "force-dynamic"
 
 export default async function NewMaterialPage() {
   await requireSession()
-  const topics = await adminCategories()
+  const [topics, authors] = await Promise.all([adminCategories(), adminAuthors()])
 
   return (
     <>
@@ -46,7 +47,7 @@ export default async function NewMaterialPage() {
         the pages are rendered and the text read before anything appears.
       </p>
 
-      <NewMaterialForm jobsConfigured={hasJobs} topics={topics} />
+      <NewMaterialForm jobsConfigured={hasJobs} topics={topics} authors={authors} />
     </>
   )
 }

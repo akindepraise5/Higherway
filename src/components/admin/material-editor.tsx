@@ -9,6 +9,7 @@ import {
   unarchiveMaterial,
   updateMaterial,
 } from "../../server/services/materials"
+import { AuthorSelect } from "./author-select"
 import { ConfirmDialog } from "./confirm-dialog"
 
 /**
@@ -32,6 +33,8 @@ type Props = {
   materialId: string
   title: string
   author: string | null
+  /** Names already in use, so the same person is not spelled two ways. */
+  authors: { name: string; count: number }[]
   summary: string | null
   status: string
   archived: boolean
@@ -46,6 +49,7 @@ export function MaterialEditor({
   materialId,
   title,
   author,
+  authors,
   summary,
   status,
   archived,
@@ -156,13 +160,18 @@ export function MaterialEditor({
               <label htmlFor="author" className="mt-5 block text-[13px] text-ink-2">
                 Author
               </label>
-              <input
-                id="author"
-                value={nextAuthor}
-                onChange={(e) => setNextAuthor(e.target.value)}
-                placeholder="Unknown"
-                className="mt-1.5 w-full rounded-[4px] border border-line bg-paper-2 px-3.5 py-2.5 text-[14.5px] outline-none transition-colors focus:border-ink"
-              />
+              {/* Picked rather than typed. The library filters authors by
+                  *exact* match, so "Rev Darrel Lee" and "Rev. Darrel Lee" are
+                  two authors with half the materials each and neither findable
+                  from the other. A new name can still be added from here. */}
+              <div className="mt-1.5">
+                <AuthorSelect
+                  id="author"
+                  authors={authors}
+                  value={nextAuthor}
+                  onChange={setNextAuthor}
+                />
+              </div>
 
               <label htmlFor="summary" className="mt-5 block text-[13px] text-ink-2">
                 Summary
