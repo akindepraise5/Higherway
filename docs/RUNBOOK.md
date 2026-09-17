@@ -64,6 +64,27 @@ Roughly 0.5–1.5s a page.
 holds nothing, and is finished. While the queue asked for empty text, five blank pages
 came back every single run — "read 5 … still waiting 5", for ever.
 
+### Google Cloud Vision, and staying inside the free allowance
+Set `GOOGLE_CLOUD_VISION_KEY` and Vision takes over from tesseract on the server
+automatically. Nothing else changes.
+
+**Two protections, and the important one is not in this codebase.**
+
+1. **Set a hard quota in the Google Cloud console** — Cloud Vision API → Quotas →
+   *Requests per day* → a low number such as 50. This archive reads ~35 pages a *month*
+   against an allowance of 1,000, so 50 a day is generous and makes overspending
+   impossible. A limit enforced by Google cannot be bypassed by a bug here; a check in
+   application code always can be.
+2. **A quota refusal falls back to tesseract**, per page, and the run carries on. 429
+   (rate or quota) and 403 (API disabled, no billing account, key without permission) all
+   mean the same thing operationally, and a 200 carrying a quota message is treated the
+   same way. An ordinary failure — a dropped connection, a corrupt file — **does not**
+   fall back: it surfaces and is retried, because silently downgrading every page over
+   one timeout would leave the archive read at 90–95% with nothing recording why.
+
+`ocr_engine` stores the engine that actually read each page, so anything the fallback
+took is findable afterwards and can be upgraded with `ocr:local`.
+
 **A new upload no longer waits for this.** `read-material` reads it on the server —
 Google Cloud Vision when `GOOGLE_CLOUD_VISION_KEY` is set, tesseract.js otherwise.
 `ocr:local` stays for the backlog and for upgrading a tesseract read, because macOS

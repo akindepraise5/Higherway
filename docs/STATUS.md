@@ -113,6 +113,24 @@ dialog. So the fix for the picker inside the drawer broke every picker outside
 one, including the material page, and the two failures are indistinguishable by
 eye. It returns `undefined` now. Verified in a browser both ways round.
 
+- [x] **Vision falls back rather than failing or overspending.** Asked for
+      directly. Its free tier is 1,000 pages a month against this archive's ~35,
+      so it should never be reached — but "should never" is not a plan, and being
+      wrong means either a surprise bill or a page stored with no text.
+
+      A quota refusal (429, or 403 for a disabled API or missing billing account,
+      or a 200 carrying a quota message) falls through to tesseract for that page
+      and the run continues. An **ordinary** failure does not: a dropped
+      connection or a corrupt file surfaces and is retried, because silently
+      downgrading every page over one timeout would leave the archive read at
+      90–95% with nothing recording why. `OcrQuotaError` is its own type so that
+      distinction is narrow rather than a message match, and four tests cover it,
+      including the case that must *not* fall back.
+
+      **The stronger protection is not in this codebase**: a hard quota limit on
+      the Cloud Vision API in the Google Cloud console. Google enforcing it cannot
+      be bypassed by a bug here. Both are in the RUNBOOK.
+
 ### Next, in the order worth taking them
 
 1. **Invitation email.** Still nothing is sent — admins copy the link by hand.

@@ -1,4 +1,4 @@
-import type { RecognisedPage, Recogniser } from "../../lib/ocr/types"
+import { OcrQuotaError, type RecognisedPage, type Recogniser } from "../../lib/ocr/types"
 import type { TextBox } from "../../lib/text/columns"
 
 /**
@@ -70,7 +70,25 @@ export function googleVision(apiKey: string): Recogniser {
       })
 
       if (!response.ok) {
-        throw new Error(`Google Cloud Vision returned ${response.status}`)
+        const detail = await response.text().catch(() => "")
+
+        /**
+         * Out of allowance, or not permitted to spend.
+         *
+         * 429 is the rate or quota limit. 403 covers a disabled API, a missing
+         * billing account and a key without permission — all of which mean the
+         * same thing operationally: Vision will not read this page today, and
+         * retrying it will not change that. Raised as its own type so the caller
+         * falls back to the free engine rather than leaving the page unread.
+         */
+        if (response.status === 429 || response.status === 403) {
+          throw new OcrQuotaError(
+            `Google Cloud Vision refused (${response.status}). ${detail.slice(0, 160)}`,
+            response.status,
+          )
+        }
+
+        throw new Error(`Google Cloud Vision returned ${response.status}. ${detail.slice(0, 160)}`)
       }
 
       const json = (await response.json()) as Response
@@ -83,6 +101,11 @@ export function googleVision(apiKey: string): Recogniser {
        * looks exactly like a page that genuinely has no text.
        */
       if (first?.error?.message) {
+        // A 200 can still carry a quota failure per image, so the same
+        // distinction has to be made here and not only on the status code.
+        if (/quota|exhaust|billing|limit/i.test(first.error.message)) {
+          throw new OcrQuotaError(`Google Cloud Vision: ${first.error.message}`, 429)
+        }
         throw new Error(`Google Cloud Vision: ${first.error.message}`)
       }
 

@@ -52,3 +52,23 @@ export type Recogniser = {
    */
   read(image: Uint8Array, size?: PageSize): Promise<RecognisedPage>
 }
+
+/**
+ * The cloud engine has nothing left this month, or is not allowed to spend.
+ *
+ * Its own class rather than a message match, so the caller can fall back to the
+ * free engine on *this* and on nothing else. A quota error must not be confused
+ * with a corrupt file or a network blip: those should surface and be retried,
+ * while this one should quietly change engine and keep reading. Getting that
+ * wrong in either direction is bad — silently downgrading every page because of
+ * one timeout, or refusing to read anything for the rest of the month.
+ */
+export class OcrQuotaError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message)
+    this.name = "OcrQuotaError"
+  }
+}
