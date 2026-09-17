@@ -4,7 +4,7 @@
 > If code and this document disagree, one of them is a bug. Update this file in the
 > same change that alters the structure it describes.
 >
-> Last updated: 2026-09-16
+> Last updated: 2026-09-17
 
 ---
 
@@ -69,8 +69,8 @@ Versions are what was current on 2026-09-16; keep them pinned in `package.json`.
 | Email | Resend + React Email | Invites and password resets |
 | Jobs | Trigger.dev | Runs off Vercel, so no function timeouts on PDF work |
 | PDF | `mupdf` (render pages + extract text), `sharp` (WebP) | Both free and local |
-| OCR | embedded text → macOS Vision (local) → Google Cloud Vision (server) → tesseract.js | See §7 |
-| Suggestions | Cloudflare Workers AI, small instruct model | 10,000 neurons/day free — covers the whole backlog; contractually no training on our content |
+| OCR | embedded text → macOS Vision (local) → Google Cloud Vision (server) → tesseract.js. All four are built | See §7 |
+| Suggestions | **The local embeddings** — topics, with no credentials at all (§8). Cloudflare Workers AI remains the plan for titles and summaries, unbuilt | Measured at 56% on the top three topics against 253 hand-filed materials. Workers AI gives 10,000 neurons/day free and contractually does not train on our content |
 | Embeddings | `@huggingface/transformers` running `bge-small-en-v1.5` (384 dimensions) | Free forever, no external quota, small enough for Neon's free tier |
 | Analytics | Vercel Analytics + Speed Insights, PostHog | Free tiers cover us many times over |
 | Abuse | Cloudflare Turnstile | Free, for public submissions later |
@@ -140,7 +140,8 @@ higherway/
 ├── CLAUDE.md               how to work in this repo (read first)
 ├── ARCHITECTURE.md         this file — the source of truth
 ├── STATUS.md               what is done, in progress, and next
-├── trigger.config.ts       background jobs; mupdf and sharp are external (§6)
+├── assets/                 the two font files the social images are set in
+├── trigger.config.ts       background jobs; four packages are external (§6)
 ├── drizzle.config.ts  next.config.ts  biome.json  playwright.config.ts
 ├── docs/
 │   └── legacy/index.html   the v1 site, kept for reference
@@ -150,6 +151,7 @@ higherway/
 │   ├── ocr-local.ts        re-read the queue with macOS Vision
 │   ├── vision-ocr.swift    the Vision call itself (VNRecognizeTextRequest)
 │   ├── scan-duplicates.ts  score every pair, write duplicate_pairs (§8)
+│   ├── embed.ts            chunk + embed the archive, and the topics (§9)
 │   ├── resolve-stuck.ts    settle what the backfill left staged
 │   ├── fix-download-names.ts   re-set Content-Disposition on stored objects
 │   ├── undo-merge.ts       rebuild a category merged by mistake
@@ -159,7 +161,7 @@ higherway/
 │   ├── app/
 │   │   ├── (public)/       home, library, topics/[slug], m/[slug], about
 │   │   ├── admin/          overview, materials (+ [id], new), categories,
-│   │   │                   duplicates, users, activity, profile
+│   │   │                   duplicates, sync, users, activity, profile
 │   │   ├── sign-in/        not in a route group: proxy.ts matches /sign-in
 │   │   ├── invite/[token]/ accepting an invitation, then setting a password
 │   │   ├── api/auth/[...all]/   the Better Auth handler
@@ -180,18 +182,25 @@ higherway/
 │   │   ├── art/            cover generation (seeded, deterministic)
 │   │   ├── dedupe/         fingerprints, title normalising, scoring
 │   │   ├── import/         the guard on an imported link (§6)
+│   │   ├── ocr/            the engine interface, and the junk filter (§7)
 │   │   ├── pdf/            render pages, extract embedded text
 │   │   ├── r2/             storage keys and download names
 │   │   ├── sheet/          the v1 CSV parser
-│   │   └── text/           clean, chunk, shingle, quality score
+│   │   ├── text/           clean, chunk, shingle, quality score
+│   │   └── upload/         batch limits, and a title from a filename
 │   ├── server/             the database, the network, the environment
 │   │   ├── ingest.ts       one pipeline, whatever the source (§6)
 │   │   ├── audit.ts        writes the trail — activity.ts only reads it
 │   │   ├── services/       every mutation, each audited in its own transaction
 │   │   ├── r2/             the storage client
-│   │   ├── embed/          local embeddings
-│   │   └── materials/ categories/ duplicates/ users/ auth/   read queries
-│   └── trigger/            Trigger.dev tasks (process-material)
+│   │   ├── drive/          the read-only Drive client (§2) — GETs only
+│   │   ├── embed/          local embeddings, and storing them (§9)
+│   │   ├── ocr/            Google Cloud Vision and tesseract.js (§7)
+│   │   ├── og/             the logo and fonts for the social images
+│   │   ├── suggest/        topics for an unfiled material (§8)
+│   │   └── materials/ categories/ duplicates/ users/ auth/ sync/  read queries
+│   └── trigger/            Trigger.dev tasks, chained: process-material →
+│                           read-material → enrich-material; plus sync-drive
 └── tests/
     ├── unit/               vitest — though most unit tests sit beside
     │                       the module they cover, as `*.test.ts`
@@ -579,7 +588,7 @@ GOOGLE_CLOUD_VISION_KEY           optional — server-side OCR, 1,000 pages/mont
 | 2026-09-16 | Records live in Postgres; the spreadsheet is imported once, then retired | One place to edit a record |
 | 2026-09-16 | OCR: embedded text → macOS Vision locally → tesseract.js on the server | Measured: Vision is 3.7× faster and clearly better, but macOS-only |
 | 2026-09-16 | Embeddings run locally at 384 dimensions | Free forever, and fits Neon's 0.5 GB free plan |
-| 2026-09-16 | AI suggestions run on Cloudflare Workers AI, free | 10,000 neurons/day covers the backlog, and their terms forbid training on our content |
+| ~~2026-09-16~~ | ~~AI suggestions run on Cloudflare Workers AI~~ — **superseded 2026-09-17** | Never built: `hasSuggestions` gated a client that has never existed. Topic suggestions now run on the local embeddings with no credentials at all, so there is nothing left for it to gate. Titles and summaries are still unbuilt, and Workers AI remains the plan for those |
 | 2026-09-16 | Gemini and Mistral free tiers rejected for suggestions | Both train on free-tier content by default |
 | 2026-09-16 | Free vision-language models rejected for OCR | Not OCR engines, and unbenchmarked on pages like ours; Vision is free and scores 97–99% |
 | 2026-09-16 | Server-side OCR is Google Cloud Vision, tesseract.js when unset | ~35 pages/month against a 1,000-page free allowance |
@@ -598,4 +607,14 @@ GOOGLE_CLOUD_VISION_KEY           optional — server-side OCR, 1,000 pages/mont
 | 2026-09-16 | The 27 materials the backfill left stuck are archived as duplicates, not retried | Hashing the bytes proved 24 of them byte-identical to a material already live: the v1 sheet lists the same Drive file twice, and `materials_sha256_live_idx` refused the copy. The index was working; only its failure was being treated as a crash. Byte-identical matches under a *different* title are held back for a person, because naming them is a judgement |
 | 2026-09-16 | Every R2 request carries explicit timeouts, with `throwOnRequestTimeout` set | The SDK defaults every timeout to 0, which it documents as "disables the timeout". A re-read of 1,162 pages sat at 0% CPU for 53 minutes — no open sockets, no error, no output — having silently stopped after ~491 pages: an `await` that could never settle, because the response had gone and nothing was counting. Setting the numbers alone is not enough; without `throwOnRequestTimeout` a breach is only logged as a warning, since `requestTimeout` was for years applied as a socket idle timeout. `ingestPdf` uses the same client, so this was one dropped packet away from stranding a background job instead |
 | 2026-09-16 | A differing trailing series number sets the title signal to 0 | "Questions and answers Vol 1" against "Vol 2" scored 0.510 on three shared words of four, with no content evidence. The number is the difference between the materials, not noise. Narrow by design: only when the rest of the title matches exactly, and content signals are untouched, so a contained reprint is still raised |
+| 2026-09-17 | Each pipeline stage is its own Trigger task, chained: `process-material` → `read-material` → `enrich-material` | §6 always said one task per stage; it was one task doing three. Separated, a plain upload never waits on a recogniser or a 33 MB model download, and a failed embed never costs a second render of a 13 MB photograph. The chain order is a real dependency, not a preference: embedding text nobody has read yet stores a vector of nothing, and the duplicate scan would then compare two such vectors and call them identical |
+| 2026-09-17 | Topic suggestions are a **nearest-neighbour vote merged with the topic-name comparison**, not the name comparison alone | Measured against 253 hand-filed materials: names alone 45%, neighbours alone 38% (but 58% on the third of materials they answer for), merged **56%**. `categories.embedding` exists for the name comparison and it is the weaker half — 46 of 58 topics have no sub-text, so each vector is one generic word, and "Faith" and "Prayer" sit near the middle of everything a church publication says. Writing a one-line description for those 46 is the cheapest improvement available to this feature |
+| 2026-09-17 | Suggestions are never applied automatically, and say **why** in checkable terms | 56% is a useful prompt and nowhere near good enough to file on. "6 of the 15 most similar materials are filed here" can be checked in a second; a confidence number can only be taken or left |
+| 2026-09-17 | `@huggingface/transformers`, `onnxruntime-node` and `tesseract.js` join `mupdf` and `sharp` in `build.external` | Same reason and the same trap: native `.node` binaries and wasm cannot be bundled, and a missing one builds cleanly and fails at runtime |
+| 2026-09-17 | Adding materials is a **queue with per-file fields**, not one form repeated, and not one set of fields for the batch | A folder of scans routinely holds several authors, so batch-level author and topics would flatten a real distinction. *Apply to all* fills rows left empty and never overwrites an answered one. No field became optional: the title is inferred from the filename, which is where most of this archive's titles came from |
+| 2026-09-17 | Browser uploads use `XMLHttpRequest`, not `fetch` | `fetch` cannot report upload progress at all. On a phone a 13 MB photograph is thirty seconds of a control that looks frozen, and a frozen control is one people press again |
+| 2026-09-17 | Three uploads at a time, not all of them | Fifty parallel PUTs over one phone's uplink finish no sooner in total and make all fifty look stalled at once |
+| 2026-09-17 | Sync is Owner-only, one run at a time, and publishes nothing | Larger blast radius than merging a topic, which is already Owner-only. Two concurrent runs would both see the same file as new and stage it twice — how the backfill left 27 materials stuck. §6 stage 8 allows Drive files to publish themselves; that was written when Drive *was* the v1 archive, already in print for years, which a folder someone drops a file into today is not |
+| 2026-09-17 | The Drive client is hand-rolled over `fetch` and `node:crypto` rather than `googleapis` | Two HTTP calls and an RS256 signature. The read-only rule is enforced three ways rather than intended: the scope requested is `drive.readonly` so a token minted from it cannot write, every request is a GET, and no function in the module could express a write. The service account must have **Viewer and nothing more** — with Editor, the only thing between this project and a write to Drive is the code rather than the permission |
+| 2026-09-17 | Social images take their geometry from `components/public/logo.tsx` and are **checked against a screenshot of the real logo** | Three surfaces were drawing three different marks, and the material share card was not drawing the logo at all. Measuring caught two errors that looked right: the SVG element had been sized to the arc path's span, ignoring the stroke that overhangs it by two units on each side, and the gap to the word cannot be read off `logo.tsx` at all — there they share a coordinate space, here the word is a text node carrying its own ascender |
 | 2026-09-16 | OCR line geometry is emitted by Swift; reading order is rebuilt in TypeScript | Ordering inside `vision-ocr.swift` could not be tested without a Mac and an image. As a pure module the awkward layouts — two columns, three, a byline in the gutter, a line Vision ran across it — are testable, which mattered: the fix took six attempts and every wrong turn came from reasoning about the geometry instead of measuring it |

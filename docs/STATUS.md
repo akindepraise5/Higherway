@@ -2,8 +2,10 @@
 
 Living record of where Higherway v2 stands. Update it in the same change as the work.
 
-**Updated:** 2026-09-17
-**Now:** v2 is live in production. Launch work is done — start at **Resume here**.
+**Updated:** 2026-09-17, late
+**Now:** v2 is live in production. The ingestion pipeline is connected end to end
+for the first time, and Drive sync is built but switched off. Start at
+**Resume here**.
 **Branch:** work on `v2` and open a PR into `main`. Vercel builds `main`.
 
 ---
@@ -15,50 +17,53 @@ Read this first when coming back. Everything below it is history and reasoning.
 ### Where it stopped
 
 - **Production runs `main`**, built by Vercel. v2 was merged in PR #5 (`f5624b2`).
-- **`v2` is a few small commits ahead of `main`:** the "Account deleted" activity-log
-  label and these docs. Harmless — merge them with the next PR. `git log main..v2`
-  lists them.
-- The working tree is clean.
+- **`v2` is well ahead of `main` now** — A, B, C and D below, plus the earlier
+  docs commits. `git log main..v2` lists them. The working tree is clean and the
+  full gate passes: lint, typecheck, 282 tests, build.
+- **Nothing here has been deployed.** Everything below was verified on this
+  machine against the live database and the real bucket; the Trigger tasks have
+  not run on a deployed worker.
 
 ### Check these first — only the owner can
 
-1. ~~Did the Trigger.dev deploy succeed?~~ **Confirmed working** by the owner on
-   2026-09-16, after the project-ref fix (`1c2e7b7`) shipped in PR #5. The automatic
-   deploy on push to `main` is now trusted.
-
-   Note what that does *not* prove: a deploy succeeds even when the Trigger.dev
-   dashboard is missing `DATABASE_URL` and `R2_*`, and runs only fail once they first
-   query. Item 3 below is the check that proves runs work.
-2. **Is CI green?** The build prerenders from the database, so it needs the repository
-   secret `DATABASE_URL`.
-3. **Add a material in production, end to end** — upload it, watch it process, see it
-   appear. This has never been verified live, and it is now the one check that proves
-   Trigger.dev runs can actually reach the database and R2 — a successful deploy does
-   not. If the upload is accepted but the material never appears, the Trigger.dev
-   dashboard is missing its own `DATABASE_URL` or `R2_*`.
-4. **There are three Owners.** `n***@gmail.com` (the original), `d***@gmail.com` and
-   `a***@gmail.com`. Owner can change anyone's role and restructure every topic; if the
-   last two should be Admin or Editor, change it in People.
+1. **Deploy the Trigger tasks, and watch the first run.** There are four now,
+   chained: `process-material` → `read-material` → `enrich-material`, plus
+   `sync-drive`. The one thing a deploy has to prove is that the three new
+   externals load — `@huggingface/transformers`, `onnxruntime-node` and
+   `tesseract.js`. A missing external **builds cleanly and fails at runtime**,
+   which is the trap `trigger.config.ts` has always named for `mupdf` and
+   `sharp`.
+2. **Add a photographed PDF in production, end to end.** This is now the check
+   that proves the whole pipeline: it should arrive, render, be *read by
+   tesseract on the server*, be embedded, be scanned against the archive, and
+   land in review with topic suggestions on its page. Before today it would have
+   arrived with no searchable text at all.
+3. **Is CI green?** The build prerenders from the database, so it needs the
+   repository secret `DATABASE_URL`.
+4. **Two Owner decisions are waiting**, both recorded below rather than assumed:
+   the Google service account for Drive sync (Viewer on the folder, nothing
+   more), and whether to write one-line descriptions for the 46 topics that have
+   none — that is the cheapest improvement available to topic suggestions.
 
 ### Next, in the order worth taking them
 
-1. **Invitation email.** Nothing is sent — admins copy the link by hand. `resend` is not
-   a dependency, and `RESEND_API_KEY` is read into `hasEmail` and never used.
-2. **OCR for new uploads.** A photographed PDF added from the dashboard has no
-   searchable text until someone runs `pnpm ocr:local` on a Mac. `pnpm ocr:status`
-   reports what is waiting.
-3. **Embeddings — pipeline stage 5.** Built and tested, never connected: 0 chunks are
-   stored. It unlocks auto-filing for the 340 unfiled materials, meaning-based search,
-   and the duplicate scan's meaning signal. The four steps are written up under Phase 5.
-4. **Search relevance.** "prayer" matches 59% of the archive, and nothing is ranked.
-5. **Audit the invitation flow.** Creating an account and accepting an invitation write
-   no audit entry, which CLAUDE.md requires of every mutation.
-6. **Show why a material was archived, and what it duplicates.** Both are stored;
+1. **Invitation email.** Still nothing is sent — admins copy the link by hand.
+   `resend` is not a dependency, and `RESEND_API_KEY` is read into `hasEmail` and
+   never used. This is now the oldest untouched item on the list.
+2. **Search relevance.** "prayer" matches 59% of the archive and nothing is
+   ranked. **The blocker is gone**: 4,569 chunk vectors exist, so hybrid search —
+   Postgres full text for rank, pg_trgm for fuzzy titles, pgvector for meaning —
+   is wiring rather than building. This is the largest remaining gap for readers.
+3. **Audit the invitation flow.** Creating an account and accepting an invitation
+   write no audit entry, which CLAUDE.md requires of every mutation.
+4. **Show why a material was archived, and what it duplicates.** Both are stored;
    neither is displayed anywhere in admin.
-7. **Public submissions** — a short form and batch upload. The constraints are under
-   *After launch*.
-8. ~~**Drive sync, Phase 6**~~ — built 2026-09-17, switched off until the service
-   account arrives. See *Requested 2026-09-17* D.
+5. **Delete `hasSuggestions`** from `src/lib/env.ts`. It gates a Cloudflare
+   Workers AI client that has never existed, and suggestions now need no
+   credentials, so there is nothing left for it to gate.
+6. **Public submissions** — a short form and batch upload. The batch queue built
+   in B is most of the second half already.
+7. **Bulk actions on the materials table.** Filter and sort are done.
 
 ---
 
