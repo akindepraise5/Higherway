@@ -30,8 +30,21 @@ test.describe("reading the archive", () => {
   test("searching keeps its state in the URL", async ({ page }) => {
     await page.goto("/library")
 
-    await page.getByPlaceholder(/search materials or topics/i).fill("faith")
-    await page.getByRole("button", { name: /^search$/i }).click()
+    /**
+     * The library's own box, by id.
+     *
+     * Not by placeholder: that is prose and has already changed once, to
+     * "Search materials, topics or authors" when author filtering shipped,
+     * which broke this test without breaking search. Not by label either —
+     * there are three search inputs on the page now, since the masthead gained
+     * one, and all three are labelled "Search materials…".
+     *
+     * Enter rather than the button, for the same reason: "Search" is no longer
+     * a unique name on the page. It is also the more honest test — this is a
+     * plain GET form and submitting it from the keyboard is what most people do.
+     */
+    await page.locator("#q").fill("faith")
+    await page.locator("#q").press("Enter")
 
     // The state of the list lives in the URL, so a colleague can be sent a link
     // to exactly what you are looking at.

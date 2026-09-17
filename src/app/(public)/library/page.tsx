@@ -26,13 +26,19 @@ const href = (params: Search) => {
   if (params.q) qs.set("q", params.q)
   if (params.topic && params.topic !== "all") qs.set("topic", params.topic)
   if (params.author) qs.set("author", params.author)
-  if (params.sort && params.sort !== "recent") qs.set("sort", params.sort)
+  // "recent" is the browsing default and "relevance" the searching one, so
+  // neither needs to appear in a URL — a link that carries its own default is a
+  // link that stops meaning the same thing when the default changes.
+  if (params.sort && params.sort !== "recent" && params.sort !== "relevance") {
+    qs.set("sort", params.sort)
+  }
   if (params.page && params.page !== "1") qs.set("page", params.page)
   const s = qs.toString()
   return s ? `/library?${s}` : "/library"
 }
 
 const SORT_LABELS: Record<Sort, string> = {
+  relevance: "Best match",
   recent: "Recently added",
   oldest: "Oldest first",
   title: "A–Z",
@@ -44,7 +50,9 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
   const q = params.q?.trim() ?? ""
   const topic = params.topic ?? "all"
   const author = params.author?.trim() ?? ""
-  const sort = asSort(params.sort)
+  // "Best match" is only meaningful against a query, and it is the right
+  // default when there is one: a searcher wants the best answer, not the newest.
+  const sort = asSort(params.sort, q.length > 0)
   const page = Number(params.page) || 1
 
   const [result, topics, authors] = await Promise.all([
@@ -68,7 +76,12 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
         {/* A plain GET form: no JavaScript, and the result has a shareable URL. */}
         <form action="/library" method="get" className="relative mt-[clamp(26px,3vw,38px)] flex">
           {topic !== "all" ? <input type="hidden" name="topic" value={topic} /> : null}
-          {sort !== "recent" ? <input type="hidden" name="sort" value={sort} /> : null}
+          {/* Carried only when it is not a default, matching `href` above: a
+              form that posts back the default turns it into an explicit choice
+              that then survives a change of default. */}
+          {sort !== "recent" && sort !== "relevance" ? (
+            <input type="hidden" name="sort" value={sort} />
+          ) : null}
           <label htmlFor="q" className="sr-only">
             Search materials
           </label>
@@ -151,19 +164,23 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
           </p>
 
           <div className="flex flex-wrap gap-2">
-            {(Object.keys(SORT_LABELS) as Sort[]).map((option) => (
-              <Link
-                key={option}
-                href={href({ q, topic, author, sort: option })}
-                className={`rounded-full border px-3.5 py-1.5 text-[12.5px] transition-colors ${
-                  sort === option
-                    ? "border-ink bg-ink text-paper-2"
-                    : "border-line text-ink-3 hover:border-ink"
-                }`}
-              >
-                {SORT_LABELS[option]}
-              </Link>
-            ))}
+            {/* "Best match" is offered only while searching — there is nothing
+                for an unsearched library to be relevant to. */}
+            {(Object.keys(SORT_LABELS) as Sort[])
+              .filter((option) => option !== "relevance" || q.length > 0)
+              .map((option) => (
+                <Link
+                  key={option}
+                  href={href({ q, topic, author, sort: option })}
+                  className={`rounded-full border px-3.5 py-1.5 text-[12.5px] transition-colors ${
+                    sort === option
+                      ? "border-ink bg-ink text-paper-2"
+                      : "border-line text-ink-3 hover:border-ink"
+                  }`}
+                >
+                  {SORT_LABELS[option]}
+                </Link>
+              ))}
           </div>
         </div>
       </div>
@@ -190,6 +207,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
                   key={material.id}
                   material={material}
                   shelf={topic !== "all" ? topics.find((t) => t.slug === topic)?.name : undefined}
+                  matchedPage={material.matchedPage}
                 />
               ))}
             </div>

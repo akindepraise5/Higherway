@@ -168,15 +168,78 @@ built now:
 row pointing at them, from before this change. Harmless, ~1.9 MB, and nothing
 cleans staging up yet.
 
+### Ranked search — done 2026-09-18
+
+The library matched with `ilike '%term%'` and sorted by date. "prayer" returned
+**345 of 566** materials with a material *about* prayer sorting below one that
+mentions it once, purely because it was older. A result set that is 61% of the
+archive in no particular order is not a search.
+
+Four retrievals fused by **reciprocal rank** — chunk full text, title/author/
+summary full text, fuzzy titles, topic names — with the old substring match kept
+as a fifth. RRF rather than adding scores: `ts_rank` and trigram `similarity` are
+different quantities on different scales, and summing them lets whichever runs
+larger win.
+
+Measured on the live archive, before → after:
+
+| Query | Before | After | Top result now |
+|---|---|---|---|
+| "prayer" | 345, unranked | 346, ranked | *excerpts on Prayer* |
+| "trusting God through illness" | **0** | 10 | *Walking with God through the Valley* |
+| "the anchor that holds" | 1 | 31 | *The Anchor that holds* |
+| "anchour" (typo) | 0 | 2 | *The Anchor that holds* |
+| "camp meeting" | 116 | 118 | *Annual Camp meetings* |
+
+**Three things that were not obvious, each found by measuring:**
+
+1. **`word_similarity`, not `similarity`, for matching — and the reverse for
+   ranking.** `similarity()` compares against the *whole* title, so "anchour"
+   against "The Anchor that holds" scores far under threshold and finds nothing.
+   But `word_similarity` returns 1.0 for *any* title containing the word, so
+   ranking by it puts every title holding "prayer" in one arbitrary-ordered tie —
+   it surfaced "Surrender: a vital part of effective prayer" above "excerpts on
+   Prayer". Match on one, rank on the other.
+2. **The substring list had to stay, and had to become conditional.** Full text
+   stems, so "holines" and "holiness" are different words while
+   `ilike '%holines%'` matched inside it and found 83. Dropping it took that to
+   3. But it is also by far the slowest list — 579 ms of "god"'s cost against
+   432 ms for chunk full text and 102 ms for titles — so it runs as a second
+   query only when the first found fewer than 15 results, which is exactly when
+   a fragment is the likely explanation.
+3. **The stored `tsv` column.** ARCHITECTURE §5 has always listed it on
+   `material_chunks` and it was never created, so the GIN index made the *match*
+   fast and left `ts_rank` rebuilding a vector for every hit: "god" took **2.5
+   seconds**. Generated column, migration `0004`, and it dropped to 744 ms; with
+   the conditional substring, **343 ms**.
+
+Searching now defaults to **Best match**, offered only while there is a query —
+there is nothing for an unsearched library to be relevant to. A result found in
+the text says which page it was found on.
+
+**Meaning is the one method still missing.** 4,569 vectors and the HNSW index are
+there, but comparing against them needs the *query* embedded, and that is 33 MB
+of ONNX inside a public page request. It needs a decision, not code: a free
+embedding API for the query, or accepting a cold start. Recorded rather than
+papered over.
+
+**A trap closed while doing it.** Ten e2e tests "failed" and were asserting
+against a completely different app — Playwright's `reuseExistingServer` reuses
+whatever answers on the port, and another project was on 3000. The port is
+overridable now (`E2E_PORT=3005 pnpm test:e2e`). The genuinely broken test was
+targeting the search box by placeholder, which had changed when author filtering
+shipped; there are three search inputs on the page now, so it targets `#q`.
+**14 passing.**
+
 ### Next, in the order worth taking them
 
 1. **Invitation email.** Still nothing is sent — admins copy the link by hand.
    `resend` is not a dependency, and `RESEND_API_KEY` is read into `hasEmail` and
    never used. This is now the oldest untouched item on the list.
-2. **Search relevance.** "prayer" matches 59% of the archive and nothing is
-   ranked. **The blocker is gone**: 4,569 chunk vectors exist, so hybrid search —
-   Postgres full text for rank, pg_trgm for fuzzy titles, pgvector for meaning —
-   is wiring rather than building. This is the largest remaining gap for readers.
+2. ~~**Search relevance.**~~ **Done** — see *Ranked search* below. Meaning is the
+   one method of the four still missing, and it needs a decision rather than
+   code: embedding the *query* means loading a 33 MB model inside a public page
+   request.
 3. **Audit the invitation flow.** Creating an account and accepting an invitation
    write no audit entry, which CLAUDE.md requires of every mutation.
 4. **Show why a material was archived, and what it duplicates.** Both are stored;
@@ -370,7 +433,8 @@ that phase's migration.
       Worth noting for whoever adds hybrid search: this is the class of bug
       full-text search removes by construction, because a tsvector holds tokens
       and never sees the whitespace between them.
-- [ ] Hybrid search (full text + fuzzy titles + meaning) — needs the OCR text
+- [x] Hybrid search — full text, fuzzy titles, topic names and substring, fused
+      by reciprocal rank. Meaning is the fifth and is not connected (see below)
 
 **Decided 2026-09-16:** the v1 archive publishes straight from the backfill, with
 no review queue. These materials were already published in print and on the v1
@@ -1215,7 +1279,7 @@ Asked for directly, in the owner's words, and not yet built:
 - [ ] **Nothing tells the admin when processing finishes.** The drawer says "it
       is being read now" and closes; the material appears on the next refresh.
       No polling, no realtime.
-- [ ] Hybrid search. The library still filters by title and topic only.
+- [x] Hybrid search — done 2026-09-18. The library ranks now
 
 **Then:**
 

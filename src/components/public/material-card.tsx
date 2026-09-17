@@ -9,7 +9,21 @@ import { Cover } from "./cover"
  * A link to /m/[slug], not to the file — v1 sent people straight to Google
  * Drive, which meant leaving the site to read anything. ARCHITECTURE.md §9.
  */
-export function MaterialCard({ material, shelf }: { material: Card; shelf?: string }) {
+export function MaterialCard({
+  material,
+  shelf,
+  matchedPage,
+}: {
+  material: Card
+  shelf?: string
+  /**
+   * The page a search matched on, when it matched the text rather than the
+   * title. It answers "why is this here?" for a result whose title says nothing
+   * about what was typed — which, in an archive of photographed pages, is most
+   * of them.
+   */
+  matchedPage?: number | null
+}) {
   const topic = shelf ?? material.topics[0]?.name
 
   return (
@@ -28,6 +42,12 @@ export function MaterialCard({ material, shelf }: { material: Card; shelf?: stri
             <span>
               {material.pageCount} {material.pageCount === 1 ? "page" : "pages"}
             </span>
+          </>
+        ) : null}
+        {matchedPage ? (
+          <>
+            <i className="h-[3px] w-[3px] rounded-full bg-current opacity-50" />
+            <span className="text-gold">found on page {matchedPage}</span>
           </>
         ) : null}
       </div>

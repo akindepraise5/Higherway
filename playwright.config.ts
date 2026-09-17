@@ -1,6 +1,16 @@
 import { defineConfig, devices } from "@playwright/test"
 
-const PORT = 3000
+/**
+ * `reuseExistingServer` reuses **whatever answers on this port**, and it does
+ * not check that the thing answering is this project. A different app left
+ * running on 3000 produced ten failures that read exactly like regressions —
+ * the first one asserted on an `<h1>` and found "Shop from top local vendors".
+ *
+ * So the port is overridable. Run against a Higherway dev server on another
+ * port with `E2E_PORT=3005 pnpm test:e2e`, and read the failure twice before
+ * believing it.
+ */
+const PORT = Number(process.env.E2E_PORT) || 3000
 const baseURL = `http://localhost:${PORT}`
 
 /**
@@ -20,7 +30,7 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["iPhone 14"] } },
   ],
   webServer: {
-    command: "pnpm dev",
+    command: `pnpm exec next dev -p ${PORT}`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

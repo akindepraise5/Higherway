@@ -29,6 +29,13 @@
       "when": 1789560156130,
       "tag": "0003_search_collapses_whitespace",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789685927680,
+      "tag": "0004_slow_nekra",
+      "breakpoints": true
     }
   ]
 }
