@@ -92,6 +92,37 @@ title rather than `original.pdf`. Idempotent; re-running costs nothing.
 
 ---
 
+## Meaning
+
+### `pnpm embed [--topics] [--force] [--limit N]`
+Chunks each material's text, embeds it locally, and stores the vectors — pipeline stage
+5. Also gives every topic a vector from its name and sub-text.
+
+Touches no R2 object, renders nothing, runs no recogniser: the inputs are already in
+`material_pages.text`. Local model, ~33 MB, downloaded once and then read off disk — no
+API, no account, no quota, nothing sent anywhere.
+
+**~2 s per material.** The whole archive is about twenty minutes. Redirect it to a file:
+`pnpm embed > embed.log 2>&1`. Do not pipe a long run through `tail` — that is how 7 of
+the backfill's 27 failures became unexplainable.
+
+- **Resumable.** Without `--force` it takes only materials that have text and no chunks,
+  so an interrupted run continues and a re-run after new uploads does only the new ones.
+- `--force` re-embeds everything. Needed after the stored text changes — `fix:hyphens`,
+  an `ocr:local --force`, or a change to `lib/text/chunk`.
+- `--topics` re-embeds just the topics. Seconds. Run it after adding or renaming one.
+- `embedMaterial` **replaces**, never appends, so re-running cannot leave vectors of text
+  that no longer exists sitting in the same index as the text that replaced it.
+
+**A material with no text is not a failure.** It is counted as "had no text" and skipped:
+a photographed PDF has nothing to embed until a recogniser has read it.
+
+**Topics are counted excluding merged ones.** The first run reported 58, not the 69 in the
+v1 sheet — 9 have been merged away and 2 deleted. That is the number being right, not a
+bug, and it is the kind of difference worth checking rather than assuming.
+
+---
+
 ## Duplicates
 
 ### `pnpm scan:duplicates [--titles] [--dry]`
@@ -104,8 +135,16 @@ resolved automatically.**
 - A pair that no longer qualifies is **withdrawn**, so the review page never offers a
   finding the scan has abandoned.
 
-Run it **after** OCR. On titles alone it flags "Exploring the word" against "Exploring the
-word Sacrifice" — two articles in a series, not a copy.
+Run it **after** OCR, and after `pnpm embed` — the meaning signal needs the vectors and
+silently scores 0 without them. On titles alone it flags "Exploring the word" against
+"Exploring the word Sacrifice" — two articles in a series, not a copy.
+
+**A new upload no longer needs this run by hand.** `enrich-material` scans the one
+material it has just ingested against the rest, which is O(n) rather than the script's
+O(n²). The script stays for the whole-archive pass, which is the only thing that can
+*withdraw* a stale pair — a single-material scan knows nothing about the pairs between two
+other materials, and withdrawing on that basis would delete other findings on every
+upload.
 
 ---
 

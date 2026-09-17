@@ -5,6 +5,7 @@ import { notFound } from "next/navigation"
 import { CategoryPicker } from "../../../../components/admin/category-picker"
 import { MaterialEditor } from "../../../../components/admin/material-editor"
 import { PageReader } from "../../../../components/admin/page-reader"
+import { TopicSuggestions } from "../../../../components/admin/topic-suggestions"
 import { Cover } from "../../../../components/public/cover"
 import { db } from "../../../../db"
 import {
@@ -20,6 +21,7 @@ import { requireSession } from "../../../../lib/session"
 import { exact, timeAgo, who } from "../../../../lib/when"
 import { describeChange } from "../../../../server/activity"
 import { contributors, materialHistory } from "../../../../server/materials/history"
+import { suggestTopics } from "../../../../server/suggest/topics"
 
 /**
  * One material, as an admin sees it.
@@ -103,6 +105,14 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
       .limit(1),
   ])
 
+  /**
+   * Only for an unfiled material, and only after the topics are known — so it
+   * is a second round trip rather than part of the batch above. That is the
+   * right trade: it keeps a nearest-neighbour query off every page load of the
+   * 252 materials that are already filed, which is most of them.
+   */
+  const suggestions = topics.length === 0 ? await suggestTopics(id) : []
+
   const base = process.env.R2_PUBLIC_BASE_URL ?? ""
   const look = lookFor(material.slug, topics[0]?.slug ?? "uncategorised")
   const withText = pages.filter((p) => p.text).length
@@ -174,6 +184,13 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
                 mayCreate={role === "owner"}
               />
             </div>
+
+            {/* Only when it is unfiled. 314 published materials are, which is
+                where the work is; on a material already on a shelf, a panel
+                proposing more shelves is noise. */}
+            {topics.length === 0 ? (
+              <TopicSuggestions materialId={id} suggestions={suggestions} />
+            ) : null}
 
             {unfiledNext[0] ? (
               <Link

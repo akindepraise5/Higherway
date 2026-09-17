@@ -33,6 +33,34 @@ export async function assignCategory(
   materialId: string,
   input: { categoryId?: string; newName?: string },
 ): Promise<MaterialResult> {
+  return fileUnder(materialId, input, false)
+}
+
+/**
+ * File a material under a topic the machine proposed.
+ *
+ * A separate action rather than a flag on `assignCategory`, because the flag
+ * would be set by the browser — and "a machine suggested this" is a claim about
+ * the archive's provenance that a form post should not be able to make. Here it
+ * is the server that knows, because this is the only door that sets it.
+ *
+ * It records `suggested` on the join row, so the trail can always distinguish a
+ * topic a person chose from one they merely agreed with. Nothing files itself:
+ * `suggestTopics` proposes, an editor presses accept, and that press is what
+ * writes the row.
+ */
+export async function acceptSuggestedCategory(
+  materialId: string,
+  categoryId: string,
+): Promise<MaterialResult> {
+  return fileUnder(materialId, { categoryId }, true)
+}
+
+async function fileUnder(
+  materialId: string,
+  input: { categoryId?: string; newName?: string },
+  fromSuggestion: boolean,
+): Promise<MaterialResult> {
   const session = await requireSession()
   const role = (session.user as { role?: "owner" | "admin" | "editor" }).role
 
@@ -115,7 +143,10 @@ export async function assignCategory(
       materialId,
       categoryId,
       ordinal: next,
+      // Still the person: they accepted it. `suggested` records that a machine
+      // proposed it, not that a machine decided it.
       assignedBy: session.user.id,
+      suggested: fromSuggestion ? new Date() : null,
     })
 
     const [category] = await tx
@@ -130,7 +161,11 @@ export async function assignCategory(
       entityId: materialId,
       // The title is not what changed. Recording it here made every filing read
       // as though someone had edited the title.
-      after: { topic: category?.name, created: createdName ?? undefined },
+      after: {
+        topic: category?.name,
+        created: createdName ?? undefined,
+        via: fromSuggestion ? "suggestion" : undefined,
+      },
       actorId: session.user.id,
     })
 

@@ -1,6 +1,7 @@
-import { task } from "@trigger.dev/sdk"
+import { task, tasks } from "@trigger.dev/sdk"
 import { type IngestSource, ingestPdf } from "../server/ingest"
 import { getObject } from "../server/r2/client"
+import type { enrichMaterial } from "./enrich-material"
 
 /**
  * Turning a staged upload into a material.
@@ -12,6 +13,11 @@ import { getObject } from "../server/r2/client"
  *
  * Nothing in here is imported by the Next.js app. The app triggers it by id
  * with a type-only import, so mupdf and sharp never reach the web bundle.
+ *
+ * It hands off to `enrich-material` for stages 5 and 6 rather than doing them
+ * here. That keeps the 33 MB embedding model out of the path a plain upload
+ * waits on, and means a failed duplicate scan never costs a second render of a
+ * 13 MB photograph.
  */
 
 export type ProcessMaterialPayload = {
@@ -52,6 +58,25 @@ export const processMaterial = task({
      */
     if (!result.ok && result.reason === "processing") {
       throw new Error(result.error)
+    }
+
+    /**
+     * Stages 5 and 6, once the material exists and its pages are readable.
+     *
+     * Triggered rather than awaited: the upload is finished from the person's
+     * point of view, and holding this run open while a model downloads would
+     * only make an already-successful ingest look slow. A failure there retries
+     * on its own and does not undo this.
+     *
+     * Only on success. A duplicate or an invalid file has no material row to
+     * enrich — `existingId` on a duplicate points at the material it copies,
+     * which is already embedded and must not be scanned against itself.
+     */
+    if (result.ok) {
+      await tasks.trigger<typeof enrichMaterial>("enrich-material", {
+        materialId: result.materialId,
+        reason: "ingest",
+      })
     }
 
     return result

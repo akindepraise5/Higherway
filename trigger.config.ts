@@ -33,11 +33,12 @@ export default defineConfig({
 
   build: {
     /**
-     * Neither of these can be bundled: `sharp` ships a compiled binary and
-     * `mupdf` is WebAssembly. Trigger's own docs name exactly this case — left
-     * out, the task builds fine and then fails at runtime, which is the worst
-     * order to find out.
+     * None of these can be bundled. `sharp` ships a compiled binary, `mupdf` is
+     * WebAssembly, and `@huggingface/transformers` pulls in `onnxruntime-node`,
+     * which is a `.node` binary per platform. Trigger's own docs name exactly
+     * this case — left out, the task builds fine and then fails at runtime,
+     * which is the worst order to find out.
      */
-    external: ["sharp", "mupdf"],
+    external: ["sharp", "mupdf", "@huggingface/transformers", "onnxruntime-node"],
   },
 })

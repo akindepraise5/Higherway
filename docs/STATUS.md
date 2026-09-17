@@ -757,15 +757,102 @@ byte-for-byte match, and no topic. That is the 340-unfiled problem again, faster
       `titleFromUrl`, which was a slightly different copy of the same guess
       inside `importFromUrl`.
 
-**C — connect pipeline stages 4 to 7.** See *Stage 5 of the pipeline was never
-wired in* under Phase 5, and the note below on what else is written and unused.
+**C — stages 5, 6 and 7 are connected. Stage 4 (server-side OCR) is not yet.**
+
+- [x] **Stage 5, embeddings.** `src/server/embed/store.ts` and `pnpm embed`.
+      The whole archive is embedded: **542 materials, 4,569 chunks**, about 2 s
+      each, twenty minutes end to end. Local model, no API, no account, nothing
+      sent anywhere. Each material gets a chunk per page-sized piece plus one
+      document vector, which is what a suggestion and a duplicate's meaning
+      signal compare against.
+
+      Idempotent by *replacement*, not by append — re-embedding after the text
+      changes has to remove the old chunks, or vectors of text that no longer
+      exists sit in the same index as the text that replaced it.
+- [x] **Stage 6, the duplicate scan, on every upload.** `scanMaterial` compares
+      one material against the rest: 566 comparisons rather than the script's
+      160,000. Ingest previously had only the SHA-256 equality check, which
+      catches the same file twice and nothing else — and the pairs that matter
+      here are the same teaching photographed on two occasions, where no two
+      bytes agree.
+
+      **It passes the meaning signal, which nothing ever has.** `scoreDuplicate`
+      has always accepted an `embedding` argument and the script has never
+      supplied one, so it silently defaulted to 0 — every duplicate finding in
+      this archive so far rests on titles and shingles alone.
+
+      It deliberately does **not** withdraw pending pairs it did not find, which
+      the whole-archive script does. That script has looked at every pair; this
+      one has looked at a single material and knows nothing about the pairs
+      between two others. Withdrawing on that basis would delete other
+      materials' findings on every upload.
+- [x] **Stage 7, topic suggestions** — and this one had to be measured twice,
+      because the obvious design does not work.
+
+      Comparing a material against `categories.embedding`, which is the column's
+      whole purpose, is right **45%** of the time on the top three. The failure
+      is systematic: 46 of the 58 live topics have no sub-text, so each vector is
+      one generic word, and "Faith" and "Prayer" sit near the middle of
+      everything a church publication says. They won nearly every comparison.
+
+      The replacement asks a better question — not *which topic name is this text
+      like* but *what are the 15 most similar materials already filed under*. On
+      its own it is **more precise and much shyer**: it declines on a third of
+      materials and is right 58% of the time when it answers, 74% above a 0.4
+      share.
+
+      Swept against all 253 hand-filed materials rather than argued about:
+
+      | | right, top 3 | offered on |
+      |---|---|---|
+      | topic name only | 45% | 253/253 |
+      | neighbours only, ≥0.2 | 38% | 164/253 |
+      | **merged** | **56%** | 253/253 |
+
+      So it is both: the neighbours' answer first, the remaining slots filled
+      from the names, and a "likely" badge above 0.4. **Verified on the shipped
+      function, not on the query the sweep used** — 141/253 (56%), badge right
+      48/68 (71%).
+
+      Many of the misses are near-synonyms: "Overcoming obstacles" filed under
+      Victory, offered Warfare; "I heard from Heaven" filed under Heaven,
+      offered Truth. The archive has 19 topics used exactly once, and narrow
+      single-use topics are what it loses. Good as a prompt, nowhere near good
+      enough to file on its own, which is why it is worded as a question and
+      never applied automatically.
+
+      **The cheapest available improvement to all of this is a one-line
+      description for the 46 topics that have none.** Every name vector is
+      currently a single word.
+- [ ] **Stage 4, server-side OCR — still the largest hole.** A photographed PDF
+      added from the dashboard has no searchable text until someone runs
+      `pnpm ocr:local` on a Mac. `lib/ocr/` from ARCHITECTURE.md §7 has never
+      been created. It is next.
+
+**Measured against the live database on 2026-09-17**, and several of these have
+moved a long way since the table above was written — most of all the duplicate
+queue, which is **empty**:
+
+| | then (09-16) | now (09-17) |
+|---|---|---|
+| Live materials | 611 | **569** (82 archived, was 40) |
+| Published | 607 | 566 |
+| Unfiled | 340 | **314** |
+| Duplicate pairs | 83 pending | **0 pending** · 59 merged · 24 dismissed |
+| Topics | 69 | **58 live** (9 merged, 2 gone) |
+| Embedded | 0 chunks | **4,569 chunks across 542 materials** |
+| Pages with text | 2,228 | 2,223 of 2,228; every live material with pages has text |
+| Materials with no pages | 3 | **2** |
 
 **D — the sync button**, Phase 6. Blocked on the Google service account; it will
 ship gated behind `hasDrive` exactly as `hasJobs` gates uploads.
 
 **Written and unused, measured 2026-09-17:** `hasDrive`, `hasCloudOcr` and
-`hasSuggestions` in `src/lib/env.ts` have no readers anywhere, and the `sync_runs`
-table has no writer. C and D are what give all four a caller.
+`hasSuggestions` in `src/lib/env.ts` had no readers anywhere, and `sync_runs` had
+no writer. `hasCloudOcr` gets one in stage 4 and `hasDrive` in D. **`hasSuggestions`
+should be deleted**: it gates a Cloudflare Workers AI client that has never
+existed, and suggestions now work with no credentials at all, so there is nothing
+left for it to gate.
 
 ### Requested before launch (2026-09-16)
 
