@@ -461,8 +461,9 @@ Still to do, now unblocked:
   arithmetic leaves no room for them — 1,162 + 1,066 is exactly 2,228. I have
   not explained where they went, only confirmed they are not there now.
 
-- [ ] **3 live materials still have no pages at all**, all `staged`, all from
-  the backfill and all already understood: `5 keys for successful building`
+- [ ] **2 live materials still have no pages at all** (was 3), both `staged`,
+  both from the backfill and both already understood, from:
+  `5 keys for successful building`
   (Drive returns 404), `Youths Without Blemish` (Drive served a sign-in page,
   not a PDF) and `marks standard handbook for mechanical engineers` (never
   uploaded, and appears to have strayed into the Drive folder). `resolve:stuck`
@@ -684,10 +685,13 @@ the dialog is what stops it being needed again.
       can still begin "orn into". Re-read Vision's own pages with
       `pnpm ocr:local --force` — which deliberately excludes the 1,071 pages
       whose text came from the PDF itself, since that text is exact and free.
-- [ ] Quality scoring and flagging
+- [x] Quality scoring — `lib/text/quality` runs on every page, from every engine,
+      and `ocr_quality` is stored. **Flagging is still unbuilt**: nothing surfaces
+      the low scorers for a human, though `pnpm ocr:status` counts them
 - [x] Duplicate engine: fingerprint, title, shingles, **and meaning** — the last
       of these was accepted by `scoreDuplicate` and supplied by nothing
-- [ ] Duplicate review page: clusters, keep one, never-again decisions
+- [x] Duplicate review page — `/admin/duplicates`, and it has been used: the
+      whole queue of 83 was worked through
 - [x] Suggestions: categories, on the free path, 56% on the top three — measured
       against 253 hand-filed materials. Titles and summaries are still unbuilt
 
@@ -1181,7 +1185,10 @@ Asked for directly, in the owner's words, and not yet built:
 - [ ] Analytics: Vercel, PostHog, Search Console
 - [ ] Performance budget, accessibility pass
 - [ ] Verified sending domain for invitations
-- [ ] 83 duplicate pairs reviewed, 367 materials filed
+- [x] Duplicate pairs reviewed — **the queue is empty**: 0 pending, 59 merged,
+      24 dismissed, measured 2026-09-17
+- [ ] **314 materials still unfiled** (was 367). Topic suggestions now appear on
+      every unfiled material's page, right 56% of the time on the top three
 - [ ] Cut `main` over from v1
 
 `pnpm build` passes: 80 static pages, every route resolving, proxy middleware
