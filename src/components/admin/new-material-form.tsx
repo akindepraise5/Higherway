@@ -58,6 +58,9 @@ type Item = {
   message?: string
 }
 
+/** "1 topic", not "1 topics". */
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
+
 const labelOf = (item: Item) =>
   item.source.kind === "file" ? item.source.file.name : item.source.url
 
@@ -493,7 +496,7 @@ function ApplyToAll({
           disabled={disabled}
           onSelect={(t) => setChosen((c) => [...c, t.id])}
           onDeselect={(t) => setChosen((c) => c.filter((x) => x !== t.id))}
-          placeholder={chosen.length === 0 ? "Topics" : `${chosen.length} topics`}
+          placeholder={chosen.length === 0 ? "Topics" : plural(chosen.length, "topic")}
         />
 
         <button
@@ -587,7 +590,7 @@ function Row({
           aria-hidden="true"
         />
         {item.author || item.topics.length > 0
-          ? [item.author, item.topics.length > 0 ? `${item.topics.length} topics` : null]
+          ? [item.author, item.topics.length > 0 ? plural(item.topics.length, "topic") : null]
               .filter(Boolean)
               .join(" · ")
           : "Author and topics"}
@@ -618,7 +621,7 @@ function Row({
             placeholder={
               item.topics.length === 0
                 ? "Uncategorised — choose topics"
-                : `${item.topics.length} ${item.topics.length === 1 ? "topic" : "topics"}`
+                : plural(item.topics.length, "topic")
             }
           />
         </div>

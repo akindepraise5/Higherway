@@ -45,6 +45,34 @@ Read this first when coming back. Everything below it is history and reasoning.
    more), and whether to write one-line descriptions for the 46 topics that have
    none — that is the cheapest improvement available to topic suggestions.
 
+### Two bugs found by the owner on 2026-09-17, both fixed
+
+1. **The topic picker could not be opened in the add drawer.** The drawer is a
+   `<dialog>` opened with `showModal()`, which puts it in the browser's **top
+   layer**; the combobox popup portalled to `<body>`, which renders *underneath*
+   the top layer — invisible and inert to clicks. It is not a `z-index` problem
+   and no `z-index` would have fixed it: the top layer sits outside that system
+   entirely. The popup now portals into the nearest `<dialog>`, found from the
+   trigger rather than passed in, so no call site has to know whether it happens
+   to be inside a drawer.
+
+2. **"The connection failed" on every upload — and it was never a code bug.**
+   The **bucket has no CORS policy**. A browser PUT carrying
+   `Content-Type: application/pdf` is not a simple request, so a preflight
+   `OPTIONS` goes first, and a bucket with no rules answers it **403**. The PUT
+   is never sent and the page can only report a failed connection.
+
+   Which means **uploading from a browser has never worked**, from the day it was
+   written — consistent with this file recording that the admin area had never
+   been clicked. `pnpm r2:cors` writes the rules and is documented in the
+   RUNBOOK. Reading was never affected: page images and downloads come from the
+   custom domain as plain GETs with no preflight, which is why the public site
+   has always been fine.
+
+   **Needs an R2 token with bucket-settings permission.** An "Object Read & Write"
+   token gets `AccessDenied` — the existing one does — so either issue an Admin
+   Read & Write token or set the same rules in the Cloudflare dashboard.
+
 ### Next, in the order worth taking them
 
 1. **Invitation email.** Still nothing is sent — admins copy the link by hand.

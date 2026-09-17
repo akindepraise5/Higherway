@@ -2,7 +2,7 @@
 
 import { Combobox } from "@base-ui/react/combobox"
 import { Check, ChevronsUpDown, Plus } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 /**
  * Choosing a topic, from a list you can actually see.
@@ -22,6 +22,14 @@ import { useMemo, useState } from "react"
  * what is chosen underneath — the material page as rows naming who filed each
  * topic and when, the add form as removable pills — and a third copy inside the
  * control would be the same fact in two places, free to disagree.
+ *
+ * **The popup portals into the nearest `<dialog>`, not to `<body>`.** A dialog
+ * opened with `showModal()` is in the browser's *top layer*, which sits above
+ * everything in the normal stacking context no matter what `z-index` says. A
+ * popup portalled to `<body>` therefore renders underneath it: invisible, and
+ * inert to clicks. That is not a styling bug with a `z-index` fix — the top
+ * layer is outside the z-index system entirely. It shipped exactly that way and
+ * made the topic picker in the add drawer impossible to open.
  */
 
 export type Topic = { id: string; name: string; total?: number }
@@ -57,6 +65,19 @@ export function TopicSelect({
   id?: string
 }) {
   const [query, setQuery] = useState("")
+
+  /**
+   * The nearest dialog ancestor, or null to portal to `<body>` as usual.
+   *
+   * Found from the trigger rather than passed in: every call site would
+   * otherwise have to know whether it happens to be inside a drawer, and the
+   * one that forgot would fail silently and invisibly, which is precisely how
+   * this went unnoticed.
+   */
+  const [container, setContainer] = useState<HTMLElement | null>(null)
+  const anchor = useCallback((node: HTMLButtonElement | null) => {
+    setContainer(node?.closest("dialog") ?? null)
+  }, [])
 
   const chosen = useMemo(() => new Set(selected), [selected])
   const trimmed = query.trim()
@@ -114,6 +135,7 @@ export function TopicSelect({
       ) : null}
 
       <Combobox.Trigger
+        ref={anchor}
         id={id}
         className="flex w-full min-h-11 cursor-default items-center justify-between gap-3 rounded-[4px] border border-line bg-paper-2 px-3.5 py-2.5 text-left text-[14px] text-ink-2 transition-colors select-none hover:border-ink focus-visible:border-ink focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink disabled:opacity-40"
       >
@@ -123,7 +145,7 @@ export function TopicSelect({
         </Combobox.Icon>
       </Combobox.Trigger>
 
-      <Combobox.Portal>
+      <Combobox.Portal container={container}>
         <Combobox.Positioner align="start" sideOffset={4} className="z-50 outline-none">
           <Combobox.Popup
             aria-label="Topics"

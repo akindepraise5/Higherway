@@ -97,6 +97,35 @@ title rather than `original.pdf`. Idempotent; re-running costs nothing.
 
 ---
 
+## Storage
+
+### `pnpm r2:cors [--apply] [https://the-deployed-address]`
+Writes the CORS rules that let the browser upload straight to the bucket.
+
+**Adding a material could never work without this, and it presents as "the connection
+failed".** The upload is a cross-origin PUT carrying `Content-Type: application/pdf`,
+which is not on the CORS safelist, so the browser sends a preflight `OPTIONS` first. A
+bucket with no rules answers that **403**, the PUT is never sent, and the page has
+nothing to report but a failed connection. It looked like a bug in the form and was
+configuration the bucket had never been given.
+
+- **Reading was never affected.** Page images and downloads come from the custom domain
+  as plain GETs with no preflight, which is why the public site has always worked.
+- **Pass the deployed address as an argument.** The rules are built from
+  `NEXT_PUBLIC_SITE_URL`, which on a development machine is `http://localhost:3000` — run
+  locally without an argument and you write a policy that allows localhost and refuses
+  production. The script prints the full list before writing and warns if only localhost
+  is in it.
+- It **replaces** the configuration rather than merging, so what the script holds is the
+  whole intended policy.
+- **The R2 token needs bucket-settings permission, not just object access.** An
+  "Object Read & Write" token gets `AccessDenied` here. Either issue an Admin Read &
+  Write token, or set the same rules by hand in the Cloudflare dashboard under
+  R2 → the bucket → Settings → CORS policy.
+- Verify by reading back: re-run without `--apply`.
+
+---
+
 ## Meaning
 
 ### `pnpm embed [--topics] [--force] [--limit N]`
