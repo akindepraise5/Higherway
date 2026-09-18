@@ -1408,13 +1408,25 @@ queue, which is **empty**:
       Owner because sync adds material to a public archive without anyone having
       read it, over a whole folder at once: a larger blast radius than merging a
       topic, which is already Owner-only.
-- [ ] **Not yet run against a real folder.** It needs
-      `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`; the
-      folder id is already set. Until they arrive `hasDrive` is false and the page
-      says so rather than offering a button that cannot work. **The service
-      account needs Viewer on the folder and nothing more** — if it is ever given
-      Editor, the only thing standing between this project and a write to Drive
-      becomes the code rather than the permission.
+- [x] **Read against the real folder, 2026-09-18.** The service account is
+      created, shared as Viewer, and listing works: **796 PDFs, 2.37 GB, every
+      one reporting a checksum.**
+
+      **148 of them are new** — not in the archive at all. 567 are already here,
+      81 are archived here and would not be brought back, and 0 have changed in
+      Drive since import. So the folder has grown by 148 since the v1 import, and
+      the sync button is what collects them.
+
+      The service account has **Viewer and nothing more** — if it is ever given
+      Editor, the only thing between this project and a write to Drive becomes
+      the code rather than the permission.
+- [ ] **Do not press it until a worker is running.** Nothing has processed
+      anything yet: the material uploaded on 09-17 still has `page_count: null`
+      and `ocr_engine: none`. A sync now would stage 148 files with nothing to
+      read them — the failure already met with two, multiplied by seventy-four.
+      **Bring in five, to start** exists for exactly this: five either produces
+      five finished materials or proves the pipeline is not running, and both
+      answers beat 148 rows in limbo.
 
 **Written and unused, measured 2026-09-17:** `hasDrive`, `hasCloudOcr` and
 `hasSuggestions` in `src/lib/env.ts` had no readers anywhere, and `sync_runs` had

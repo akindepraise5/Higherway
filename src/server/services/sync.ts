@@ -30,7 +30,21 @@ import { audit } from "../audit"
 
 export type SyncResult = { ok: true; message: string; runId: string } | { ok: false; error: string }
 
-export async function startSync(options?: { dryRun?: boolean }): Promise<SyncResult> {
+export async function startSync(options?: {
+  dryRun?: boolean
+  /**
+   * Import at most this many, to prove the pipeline before committing the
+   * folder to it.
+   *
+   * Not a nicety. Measured on 2026-09-18 the folder holds **796 PDFs of which
+   * 148 are new**, and a sync started while nothing is consuming the queue
+   * stages 148 files with no worker to read them — the same failure the owner
+   * already hit with two, multiplied. A first run of five either produces five
+   * finished materials or proves that nothing is running, and both answers are
+   * worth far more than 148 rows in limbo.
+   */
+  limit?: number
+}): Promise<SyncResult> {
   const { session } = await requireRole("owner")
 
   if (!hasDrive) {
@@ -74,6 +88,7 @@ export async function startSync(options?: { dryRun?: boolean }): Promise<SyncRes
   const handle = await tasks.trigger<typeof syncDrive>("sync-drive", {
     actorId: session.user.id,
     dryRun: options?.dryRun,
+    limit: options?.limit,
   })
 
   /**
@@ -86,7 +101,7 @@ export async function startSync(options?: { dryRun?: boolean }): Promise<SyncRes
       action: "sync.run",
       entityType: "sync",
       entityId: handle.id,
-      after: { dryRun: Boolean(options?.dryRun) },
+      after: { dryRun: Boolean(options?.dryRun), limit: options?.limit },
       actorId: session.user.id,
     })
   })
@@ -97,7 +112,9 @@ export async function startSync(options?: { dryRun?: boolean }): Promise<SyncRes
     runId: handle.id,
     message: options?.dryRun
       ? "Checking what is in the folder. Nothing will be imported."
-      : "Scanning the folder. Anything new will be pulled in and read.",
+      : options?.limit
+        ? `Bringing in the first ${options.limit}. Watch them finish before doing the rest.`
+        : "Scanning the folder. Anything new will be pulled in and read.",
   }
 }
 
