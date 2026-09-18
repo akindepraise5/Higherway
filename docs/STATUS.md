@@ -356,6 +356,40 @@ confirmation. A script that diverges from the button is two behaviours.
 entry reads `{"hadAccount": false, "invitationsWithdrawn": 1}` against John
 Chinonso Edeh.
 
+### Watching work finish, and finding what was read badly — done 2026-09-18
+
+**Adding a material ended in silence.** It said "it is being read now" and that
+was the last anyone heard; the material appeared on some later refresh, or did
+not, and nothing said which. Rows exist from the moment the bytes land now, so
+there is something to watch — this is the part that watches it.
+
+It polls **only while something is in flight**, and stops on its own. The earlier
+decision not to poll the sync page still stands: a page that reloads itself on a
+timer is a page nobody can read. The difference is that this condition is
+specific and self-clearing. It backs off from 3 to 30 seconds, and after five
+minutes stops entirely and says why — at that point "wait longer" is the wrong
+advice, because nothing is processing these.
+
+**Building it exposed a flaw in the obvious version.** Counting everything
+`staged` or `processing` would have put a spinner on that page **permanently**:
+three materials have been staged since the backfill — one whose Drive link 404s,
+one Drive served a sign-in page for, one that strayed into the folder — and
+nothing will ever process them. That is how a notice becomes wallpaper. In flight
+means recent (within the hour); the three stuck ones live in the **In progress**
+filter, where they can actually be dealt with.
+
+**And the flagging half of "quality scoring and flagging" is built.**
+`lib/text/quality` has scored every page since Phase 1 and `ocr:status` counted
+the bad ones, but nothing ever *showed* them. There is a **Read badly** filter
+now — 5 materials, 6 pages — and a count on each material's page.
+
+It is deliberately separate from **Awaiting text**, and the distinction matters: a
+page with no text can be helped by running a recogniser, while a page read at 0.3
+has already been through one and needs a person to look at the image. Putting
+them together would send someone to do something that cannot work. The reader's
+own per-page marker used a hardcoded `0.55`; it uses `USABLE_THRESHOLD` now, so
+there is one number.
+
 ### Next, in the order worth taking them
 
 1. ~~**Invitation email.**~~ **Done** — see *Invitations are sent* below.
@@ -909,9 +943,9 @@ the dialog is what stops it being needed again.
       can still begin "orn into". Re-read Vision's own pages with
       `pnpm ocr:local --force` — which deliberately excludes the 1,071 pages
       whose text came from the PDF itself, since that text is exact and free.
-- [x] Quality scoring — `lib/text/quality` runs on every page, from every engine,
-      and `ocr_quality` is stored. **Flagging is still unbuilt**: nothing surfaces
-      the low scorers for a human, though `pnpm ocr:status` counts them
+- [x] Quality scoring **and flagging** — `lib/text/quality` scores every page from
+      every engine, and there is a **Read badly** filter and a count on each
+      material. 5 materials, 6 pages, below the usable threshold
 - [x] Duplicate engine: fingerprint, title, shingles, **and meaning** — the last
       of these was accepted by `scoreDuplicate` and supplied by nothing
 - [x] Duplicate review page — `/admin/duplicates`, and it has been used: the
@@ -1399,9 +1433,8 @@ Asked for directly, in the owner's words, and not yet built:
 - [x] **A new upload gets no OCR** — fixed 2026-09-17. `read-material` reads it
       with Google Cloud Vision when a key is set and tesseract.js otherwise. See
       *Requested 2026-09-17* C.
-- [ ] **Nothing tells the admin when processing finishes.** The drawer says "it
-      is being read now" and closes; the material appears on the next refresh.
-      No polling, no realtime.
+- [x] **Nothing tells the admin when processing finishes** — fixed 2026-09-18.
+      See *Watching work finish* below.
 - [x] Hybrid search — done 2026-09-18. The library ranks now
 
 **Then:**

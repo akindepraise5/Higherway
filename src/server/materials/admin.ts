@@ -5,10 +5,12 @@ import {
   desc,
   eq,
   exists,
+  gte,
   ilike,
   inArray,
   isNotNull,
   isNull,
+  lt,
   or,
   type SQL,
   sql,
@@ -16,6 +18,7 @@ import {
 import { db } from "../../db"
 import { categories, materialCategories, materialPages, materials } from "../../db/schema"
 import { thumbKey } from "../../lib/r2/keys"
+import { USABLE_THRESHOLD } from "../../lib/text/quality"
 
 /**
  * Reading materials for the admin panel.
@@ -37,6 +40,7 @@ export type AdminFilter =
   | "in-progress"
   | "uncategorised"
   | "needs-ocr"
+  | "poorly-read"
   | "archived"
   | "review"
 
@@ -54,6 +58,18 @@ export const FILTERS: { value: AdminFilter; label: string }[] = [
   { value: "in-progress", label: "In progress" },
   { value: "uncategorised", label: "Uncategorised" },
   { value: "needs-ocr", label: "Awaiting text" },
+  /**
+   * Read, but badly. Distinct from "Awaiting text", and the distinction is the
+   * whole point: a page with no text can be helped by running a recogniser,
+   * while a page read at 0.3 has already been through one and needs a person to
+   * look at the image. Sending someone to run OCR on it would be sending them to
+   * do something that cannot work.
+   *
+   * `lib/text/quality` has scored every page since Phase 1 and `ocr:status`
+   * counts these, but nothing has ever *shown* them — the flagging half of
+   * "quality scoring and flagging" was never built.
+   */
+  { value: "poorly-read", label: "Read badly" },
   { value: "review", label: "In review" },
   { value: "archived", label: "Archived" },
 ]
@@ -94,6 +110,22 @@ function whereFor(filter: AdminFilter, q?: string): SQL | undefined {
         sql`not exists (
           select 1 from material_categories mc where mc.material_id = ${materials.id}
         )`,
+      )
+      break
+    case "poorly-read":
+      clauses.push(
+        isNull(materials.archivedAt),
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(materialPages)
+            .where(
+              and(
+                eq(materialPages.materialId, materials.id),
+                lt(materialPages.ocrQuality, USABLE_THRESHOLD),
+              ),
+            ),
+        ),
       )
       break
     case "needs-ocr":
@@ -211,23 +243,63 @@ export async function adminMaterials({
 
 /** Counts for the filter chips, so each one shows its size before you click. */
 export async function adminCounts() {
-  const [all, inProgress, uncategorised, needsOcr, review, archived] = await Promise.all([
-    db.select({ n: count() }).from(materials).where(whereFor("all")),
-    db.select({ n: count() }).from(materials).where(whereFor("in-progress")),
-    db.select({ n: count() }).from(materials).where(whereFor("uncategorised")),
-    db.select({ n: count() }).from(materials).where(whereFor("needs-ocr")),
-    db.select({ n: count() }).from(materials).where(whereFor("review")),
-    db.select({ n: count() }).from(materials).where(whereFor("archived")),
-  ])
+  const [all, inProgress, uncategorised, needsOcr, poorlyRead, review, archived] =
+    await Promise.all([
+      db.select({ n: count() }).from(materials).where(whereFor("all")),
+      db.select({ n: count() }).from(materials).where(whereFor("in-progress")),
+      db.select({ n: count() }).from(materials).where(whereFor("uncategorised")),
+      db.select({ n: count() }).from(materials).where(whereFor("needs-ocr")),
+      db.select({ n: count() }).from(materials).where(whereFor("poorly-read")),
+      db.select({ n: count() }).from(materials).where(whereFor("review")),
+      db.select({ n: count() }).from(materials).where(whereFor("archived")),
+    ])
 
   return {
     all: all[0]?.n ?? 0,
     "in-progress": inProgress[0]?.n ?? 0,
     uncategorised: uncategorised[0]?.n ?? 0,
     "needs-ocr": needsOcr[0]?.n ?? 0,
+    "poorly-read": poorlyRead[0]?.n ?? 0,
     review: review[0]?.n ?? 0,
     archived: archived[0]?.n ?? 0,
   } satisfies Record<AdminFilter, number>
+}
+
+/**
+ * How many materials are being worked on **right now**.
+ *
+ * Three constraints, and every one of them exists because of something in this
+ * archive rather than in the abstract:
+ *
+ * - `staged` and `processing` only, **not** `rejected`. Rejected is settled: it
+ *   has an answer and will not change on its own, so counting it would leave a
+ *   "waiting to be read" notice up for ever over finished work.
+ * - **And only recently.** Three materials have been `staged` since the
+ *   backfill — one whose Drive link 404s, one Drive served a sign-in page for,
+ *   one that strayed into the folder — and nothing will ever process them.
+ *   Counting those would put a spinner on this page permanently, which is how a
+ *   notice becomes wallpaper. They are not in flight; they are stuck, and the
+ *   "In progress" filter is where they can be dealt with.
+ * - An hour is generous. A pipeline stage is seconds, and the longest thing in
+ *   it is rendering a 13 MB photograph.
+ */
+const IN_FLIGHT_WINDOW_MS = 60 * 60 * 1000
+
+export async function inFlightCount(): Promise<number> {
+  const since = new Date(Date.now() - IN_FLIGHT_WINDOW_MS)
+
+  const [row] = await db
+    .select({ n: count() })
+    .from(materials)
+    .where(
+      and(
+        isNull(materials.archivedAt),
+        inArray(materials.status, ["staged", "processing"]),
+        gte(materials.updatedAt, since),
+      ),
+    )
+
+  return row?.n ?? 0
 }
 
 /**

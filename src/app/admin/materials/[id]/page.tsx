@@ -18,6 +18,7 @@ import {
 import { lookFor } from "../../../../lib/art/palette"
 import { pageKey, publicUrl } from "../../../../lib/r2/keys"
 import { requireSession } from "../../../../lib/session"
+import { USABLE_THRESHOLD } from "../../../../lib/text/quality"
 import { exact, timeAgo, who } from "../../../../lib/when"
 import { describeChange } from "../../../../server/activity"
 import { adminAuthors } from "../../../../server/materials/admin"
@@ -126,6 +127,13 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
   const base = process.env.R2_PUBLIC_BASE_URL ?? ""
   const look = lookFor(material.slug, topics[0]?.slug ?? "uncategorised")
   const withText = pages.filter((p) => p.text).length
+  /**
+   * Read, but badly. Different from having no text: a recogniser cannot help
+   * here, it has already run — this needs a person to look at the image.
+   */
+  const readBadly = pages.filter(
+    (p) => p.ocrQuality !== null && p.ocrQuality < USABLE_THRESHOLD,
+  ).length
 
   const facts: [string, React.ReactNode][] = [
     ["Status", material.status],
@@ -134,6 +142,16 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
     ["Size", fmtBytes(material.byteSize)],
     ["Text", material.ocrEngine === "none" ? "awaiting" : material.ocrEngine.replace(/_/g, " ")],
     ["Pages with text", `${withText} of ${pages.length}`],
+    ...(readBadly > 0
+      ? ([
+          [
+            "Read badly",
+            <span key="badly" className="text-[#8c2f22]">
+              {readBadly} {readBadly === 1 ? "page" : "pages"} — worth looking at
+            </span>,
+          ],
+        ] as [string, React.ReactNode][])
+      : []),
     ["Public text", material.textPublic ? "shown" : "hidden"],
     ["Added", material.createdAt.toISOString().slice(0, 10)],
     // Worth keeping — it is what the v1 sheet called the file, so it traces a

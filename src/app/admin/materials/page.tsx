@@ -2,6 +2,7 @@ import { Plus } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { BulkSelect, RowSelect, SelectAll } from "../../../components/admin/bulk-select"
+import { InFlight } from "../../../components/admin/in-flight"
 import { stickyCell, stickyHead, TableScroll } from "../../../components/admin/table-scroll"
 import { Pagination } from "../../../components/public/pagination"
 import { requireSession } from "../../../lib/session"
@@ -15,6 +16,7 @@ import {
   asAdminSort,
   asFilter,
   FILTERS,
+  inFlightCount,
 } from "../../../server/materials/admin"
 import { lastChanges } from "../../../server/materials/history"
 
@@ -71,10 +73,11 @@ export default async function AdminMaterialsPage({
   const q = params.q?.trim() ?? ""
   const page = Number(params.page) || 1
 
-  const [result, counts, topics] = await Promise.all([
+  const [result, counts, topics, inFlight] = await Promise.all([
     adminMaterials({ filter, q, sort, page }),
     adminCounts(),
     adminCategories(),
+    inFlightCount(),
   ])
 
   // One query for the whole page, after the rows are known.
@@ -129,6 +132,10 @@ export default async function AdminMaterialsPage({
           Add materials
         </Link>
       </div>
+
+      {/* Only while something is actually in flight; it refreshes the page
+          itself and stops on its own. */}
+      <InFlight count={inFlight} />
 
       <div className="mt-6 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
