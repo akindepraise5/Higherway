@@ -292,6 +292,16 @@ It also checks shapes, not just presence: a service account email that does not 
 whose `\n` escapes were lost in the paste — that last one fails inside `createSign`
 with a PEM error naming nothing.
 
+### `pnpm service:account <path-to-downloaded.json>`
+Writes the two Drive variables into `.env.local` from the JSON Google gives you,
+correctly escaped. It replaces those two lines and leaves every other line alone,
+and it **never prints the key** — only the address and a length.
+
+**The two halves of that JSON go to different places, and only one of them leaves
+your machine.** `client_email` goes into the environment *and* is the address you
+share the Drive folder with, as **Viewer**. `private_key` goes into the environment
+and nowhere else, ever — it is the password for that address.
+
 ### Which variable goes where
 
 Three places need environment variables, and they need **different sets**. A

@@ -49,10 +49,13 @@ let token: { value: string; expiresAt: number } | null = null
  * A bearer token, minted from the service account key and cached until it is
  * nearly expired.
  *
- * The private key arrives from the environment with its newlines escaped — a
- * `.env` file cannot hold a literal newline — so they are put back before
- * signing. Without that, `createSign` fails with a PEM routines error that says
- * nothing about the cause.
+ * The private key reaches us in one of two shapes and both have to work.
+ * Verified rather than assumed: Node's `--env-file` parser expands `\n` inside a
+ * double-quoted value, so a key loaded from `.env.local` arrives with **real**
+ * newlines; typed into the Vercel or Trigger.dev dashboard it keeps the
+ * **two-character** escapes. The replace below fixes the second and is a no-op
+ * on the first. Without it, `createSign` fails with a PEM routines error that
+ * says nothing about the cause.
  */
 async function accessToken(): Promise<string> {
   if (token && Date.now() < token.expiresAt - RENEW_MARGIN_MS) return token.value
