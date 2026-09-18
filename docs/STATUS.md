@@ -472,6 +472,27 @@ transaction.
 material is refused, a wrong title is refused, an unknown id is refused, and the
 row count was unchanged afterwards.
 
+### A deploy trap closed before it bit — 2026-09-18
+
+`lib/env`'s schema **required** `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` and
+`NEXT_PUBLIC_SITE_URL` at module scope, and the Trigger tasks import that module
+— `read-material` through `server/ocr`, `sync-drive` directly. The Trigger
+indexer imports every task file with **no environment at all**, so the next
+deploy would have failed with "There was an error importing task files", naming
+neither the variable nor the file. RUNBOOK already records that exact trap from a
+previous occurrence; this was the same one reached by a different road.
+
+**Simulated rather than reasoned about**: importing the four task files with only
+`DATABASE_URL` and `R2_BUCKET` set threw on two of them. The three are checked
+where they are used now — `lib/auth.ts`, the sitemap, the seed — and after the
+change all four import cleanly, while the app still refuses with
+*"BETTER_AUTH_SECRET is not set. The app cannot start without it."* Nothing was
+weakened; the check moved to where the value is needed.
+
+**`docs/RUNBOOK.md` now has a table of which variable goes to Vercel, to
+Trigger.dev and to GitHub Actions**, because they are three different sets and a
+variable in the wrong place fails without naming itself.
+
 ### Next, in the order worth taking them
 
 1. ~~**Invitation email.**~~ **Done** — see *Invitations are sent* below.

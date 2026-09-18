@@ -10,11 +10,35 @@ import { z } from "zod"
  */
 
 const schema = z.object({
-  // Required.
+  // Required everywhere. Nothing in this project does anything without it.
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
-  BETTER_AUTH_SECRET: z.string().min(32, "BETTER_AUTH_SECRET must be at least 32 characters"),
-  BETTER_AUTH_URL: z.string().url(),
-  NEXT_PUBLIC_SITE_URL: z.string().url(),
+
+  /**
+   * Required by the **app**, and checked where they are used rather than here.
+   *
+   * This module is imported by the Trigger.dev tasks — `read-material` reaches
+   * it through `server/ocr`, `sync-drive` directly — and **the Trigger indexer
+   * imports every task file with no environment at all**. A `z.string().url()`
+   * at module scope therefore threw during indexing and failed the entire
+   * deploy with "There was an error importing task files", naming neither the
+   * variable nor the file. RUNBOOK.md records that exact trap from a previous
+   * occurrence; this is the same one, reached by a different road.
+   *
+   * Simulated rather than assumed: importing the four task files with only
+   * `DATABASE_URL` and `R2_BUCKET` set throws on two of them, and does not once
+   * these are optional here.
+   *
+   * Nothing is weakened. `lib/auth.ts` refuses to construct without the secret
+   * and the URL, and every admin page and every mutation goes through it; the
+   * sitemap and robots already refuse a production build with no site URL. The
+   * check moved to where the value is needed — it did not disappear.
+   */
+  BETTER_AUTH_SECRET: z
+    .string()
+    .min(32, "BETTER_AUTH_SECRET must be at least 32 characters")
+    .optional(),
+  BETTER_AUTH_URL: z.string().url().optional(),
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
 
   // Files. Required in practice, optional here so tests and CI can run dry.
   R2_ACCOUNT_ID: z.string().optional(),
@@ -68,6 +92,21 @@ export const env = schema.parse({
   SEED_OWNER_EMAIL: process.env.SEED_OWNER_EMAIL,
   SEED_OWNER_NAME: process.env.SEED_OWNER_NAME,
 })
+
+/**
+ * Read a value the app cannot run without, failing with a message that says
+ * which one.
+ *
+ * Used at the point of use rather than at import, so a background worker that
+ * never touches authentication is not required to carry an auth secret.
+ */
+export function required<K extends keyof typeof env>(name: K): NonNullable<(typeof env)[K]> {
+  const value = env[name]
+  if (value === undefined || value === "") {
+    throw new Error(`${String(name)} is not set. The app cannot start without it.`)
+  }
+  return value as NonNullable<(typeof env)[K]>
+}
 
 /** Invite emails can actually be delivered. Without it, admins copy the link. */
 export const hasEmail = Boolean(env.RESEND_API_KEY && env.EMAIL_FROM)

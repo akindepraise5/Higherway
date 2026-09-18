@@ -278,6 +278,47 @@ The CI build's other values (`BETTER_AUTH_*`, `NEXT_PUBLIC_SITE_URL`,
 `R2_PUBLIC_BASE_URL`) are literals in `ci.yml`. They are placeholders or public
 hostnames, not secrets — do not replace them with real ones.
 
+### Which variable goes where
+
+Three places need environment variables, and they need **different sets**. A
+variable in the wrong place fails in a way that does not name it.
+
+| | Vercel | Trigger.dev | GitHub Actions |
+|---|---|---|---|
+| `DATABASE_URL` | ✓ | ✓ | ✓ (the build prerenders from it) |
+| `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | ✓ | — | — |
+| `NEXT_PUBLIC_SITE_URL` | ✓ | — | ✓ |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | ✓ | ✓ | — |
+| `R2_PUBLIC_BASE_URL` | ✓ | — | ✓ |
+| `TRIGGER_SECRET_KEY`, `TRIGGER_PROJECT_REF` | ✓ | — | — |
+| `TRIGGER_ACCESS_TOKEN` | — | — | ✓ (deploy only) |
+| `RESEND_API_KEY`, `EMAIL_FROM` | ✓ | — | — |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | ✓ | — | — |
+| `GOOGLE_CLOUD_VISION_KEY` | — | ✓ (OCR runs in the worker) | — |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `_PRIVATE_KEY`, `GOOGLE_DRIVE_FOLDER_ID` | ✓ (to show the page) | ✓ (to do the work) | — |
+
+**A deploy succeeds without any of the Trigger.dev ones.** It only fails when a
+run first queries, which is minutes or days later and looks like a different
+problem. Set them before the first deploy, not after the first failure.
+
+**`GOOGLE_CLOUD_VISION_KEY` belongs in Trigger.dev and nowhere else.** Reading a
+page happens in the worker; the app never calls Vision.
+
+**The Drive variables are in both**, for different reasons: Vercel needs them for
+`hasDrive` to show `/admin/sync` at all, and the worker needs them to read Drive.
+
+**A Turnstile site key is bound to hostnames.** Add `localhost` to the widget in
+the Cloudflare dashboard, or the check fails with error 110200 on a development
+machine and the form says it could not load.
+
+**What the worker deliberately does *not* need**, as of 2026-09-18:
+`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` and `NEXT_PUBLIC_SITE_URL`. They used to
+be required by `lib/env`'s schema, which the tasks import — and the Trigger
+indexer imports every task file with **no environment at all**, so the whole
+deploy failed with "There was an error importing task files", naming neither the
+variable nor the file. They are checked where they are used now (`lib/auth.ts`,
+the sitemap, the seed) rather than at import.
+
 ### Trigger.dev
 
 Deploys automatically on every push to `main` via `.github/workflows/deploy-trigger.yml`.
