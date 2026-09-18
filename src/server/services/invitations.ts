@@ -11,6 +11,7 @@ import { INVITE_EXPIRES_HOURS, invitationExpiry, newToken } from "../../lib/invi
 import { type Role, requireRole } from "../../lib/session"
 import { audit } from "../audit"
 import { sendEmail } from "../email/send"
+import { removeAccount } from "../users/remove"
 
 /**
  * Issuing invitations from the admin panel.
@@ -274,4 +275,30 @@ export async function setAccountEnabled(userId: string, enabled: boolean): Promi
 
   revalidatePath("/admin/users")
   return result
+}
+
+/**
+ * Remove someone's account from the panel. Owner only.
+ *
+ * The logic is in `server/users/remove.ts` so that `pnpm account:delete` can use
+ * the identical path with no session — one behaviour, two doors, rather than a
+ * script that quietly diverges from the button.
+ *
+ * Suspending is the everyday answer and is one click away in the same row;
+ * this is for an address that should not exist at all.
+ */
+export async function deleteAccount(userId: string): Promise<SimpleResult> {
+  const { session } = await requireRole("owner")
+
+  const [target] = await txdb
+    .select({ email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1)
+
+  if (!target) return { ok: false, error: "That account no longer exists." }
+
+  const result = await removeAccount({ email: target.email, actorId: session.user.id })
+  revalidatePath("/admin/users")
+  return result.ok ? { ok: true, message: result.message } : { ok: false, error: result.error }
 }

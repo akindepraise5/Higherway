@@ -322,6 +322,40 @@ room to spare and refuses anything that could only come from a crafted request.
 table header is not, so once the bar is up the header's "select all" checkbox
 sits underneath it. Selecting all now lives in the bar as well.
 
+### Removing an account — done 2026-09-18
+
+`user.delete` had been in the `AuditAction` union since Phase 3, **labelled in two
+places, and written by nothing**: the action was named and the function it
+describes was never built. Asked for by the owner, who wanted to remove
+`edehjaycee@gmail.com`.
+
+**What was actually there was not an account.** Measured before touching
+anything: that address has **no user row at all** — the three accounts are
+`netojaycee@`, `danmaiye@` and `akindepraise5@` — but it did have **one open
+invitation** as Owner, created 2026-09-17, and three settled ones. So the thing
+to remove was a live invitation, which is a link in somebody's inbox that creates
+an account.
+
+Removal therefore does both, and the pairing is the point rather than tidiness:
+deleting an account while leaving an open invitation for the same address means
+the account can simply be recreated from the link. Settled invitations are left
+alone — they are history.
+
+**The audit trail keeps everything.** The foreign keys were already right and are
+relied on rather than reimplemented: `audit_log.actor_id` and both invitation
+references are `SET NULL`, sessions and credentials `CASCADE`. So every entry
+survives without its actor, and the final `user.delete` entry carries the email,
+name and role, because once the row is gone that is the only record it existed.
+The last Owner is refused, as with demoting and suspending.
+
+Two doors, one function (`server/users/remove.ts`): `pnpm account:delete` for the
+command line, and a Trash control on the People page behind a typed-email
+confirmation. A script that diverges from the button is two behaviours.
+
+**Applied and checked**: the open invitation is withdrawn, and the `user.delete`
+entry reads `{"hadAccount": false, "invitationsWithdrawn": 1}` against John
+Chinonso Edeh.
+
 ### Next, in the order worth taking them
 
 1. ~~**Invitation email.**~~ **Done** — see *Invitations are sent* below.

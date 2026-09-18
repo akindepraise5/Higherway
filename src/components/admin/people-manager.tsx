@@ -1,16 +1,18 @@
 "use client"
 
-import { Copy, ShieldCheck, ShieldOff, UserPlus, X } from "lucide-react"
+import { Copy, ShieldCheck, ShieldOff, Trash2, UserPlus, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import type { Role } from "../../lib/session"
 import {
   changeRole,
+  deleteAccount,
   inviteUser,
   revokeInvitation,
   setAccountEnabled,
 } from "../../server/services/invitations"
 import type { PendingInvite, StaffRow } from "../../server/users/queries"
+import { ConfirmDialog } from "./confirm-dialog"
 import { stickyCell, stickyHead, TableScroll } from "./table-scroll"
 
 /**
@@ -41,6 +43,8 @@ export function PeopleManager({
 }) {
   const [pending, start] = useTransition()
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
+  /** The person a removal is being confirmed for. Null when nothing is open. */
+  const [removing, setRemoving] = useState<StaffRow | null>(null)
   const [link, setLink] = useState<string | null>(null)
   /** Whether the email actually went. It changes what the link panel is *for*. */
   const [emailed, setEmailed] = useState(false)
@@ -287,25 +291,72 @@ export function PeopleManager({
                   <span className="text-[12.5px] text-ink-3">active</span>
                 )}
                 {isOwner && person.id !== currentUserId ? (
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() =>
-                      run(() => setAccountEnabled(person.id, Boolean(person.disabledAt)))
-                    }
-                    className="ml-3 align-middle text-taupe transition-colors hover:text-ink disabled:opacity-40"
-                    aria-label={
-                      person.disabledAt ? `Restore ${person.name}` : `Suspend ${person.name}`
-                    }
-                  >
-                    {person.disabledAt ? <ShieldCheck size={16} /> : <ShieldOff size={16} />}
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() =>
+                        run(() => setAccountEnabled(person.id, Boolean(person.disabledAt)))
+                      }
+                      className="ml-3 align-middle text-taupe transition-colors hover:text-ink disabled:opacity-40"
+                      aria-label={
+                        person.disabledAt ? `Restore ${person.name}` : `Suspend ${person.name}`
+                      }
+                      title={person.disabledAt ? "Restore" : "Suspend — this can be undone"}
+                    >
+                      {person.disabledAt ? <ShieldCheck size={16} /> : <ShieldOff size={16} />}
+                    </button>
+
+                    {/* Suspending sits immediately to its left and is the
+                        everyday answer: it keeps the person, their history and
+                        their name against every change they made. This is for
+                        an address that should not exist at all. */}
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => setRemoving(person)}
+                      className="ml-2 align-middle text-taupe transition-colors hover:text-[#8c2f22] disabled:opacity-40"
+                      aria-label={`Remove ${person.name || person.email} permanently`}
+                      title="Remove permanently"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  </>
                 ) : null}
               </td>
             </tr>
           ))}
         </tbody>
       </TableScroll>
+
+      {/*
+        Typing the address is the same bar every irreversible action here
+        clears. Deliberately the *email* and not the name: two people can share
+        a display name, the email is the thing being removed, and it is what the
+        row shows.
+      */}
+      <ConfirmDialog
+        open={removing !== null}
+        title={`Remove ${removing?.name || removing?.email || ""}?`}
+        description={
+          <>
+            Their account and any invitation still open for{" "}
+            <span className="font-medium">{removing?.email}</span> are removed, and they are signed
+            out everywhere. Everything they did stays in the activity trail, without their name on
+            it. <span className="font-medium">This cannot be undone</span> — suspending is
+            reversible and is usually what is wanted.
+          </>
+        }
+        confirmLabel="Remove the account"
+        confirmPhrase={removing?.email}
+        busy={pending}
+        onConfirm={() => {
+          const person = removing
+          setRemoving(null)
+          if (person) run(() => deleteAccount(person.id))
+        }}
+        onCancel={() => setRemoving(null)}
+      />
     </div>
   )
 }

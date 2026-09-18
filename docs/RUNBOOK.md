@@ -233,6 +233,31 @@ imports nothing. A sync adds material to a public archive that nobody has read y
 
 ## People
 
+### `pnpm account:delete <email> [--apply] [--as <owner-email>]`
+Removes someone's access permanently, and **withdraws any invitation still open** for
+that address. Prints what it would do; changes nothing without `--apply`.
+
+**Suspending is usually the right answer instead** — one click on the People page. It
+keeps the person, their history and their name against every change they made, and it
+can be undone. This is for an address that should not exist at all: a typo, a test,
+someone who never joined.
+
+- **Nothing in the audit trail is deleted.** The foreign keys are `SET NULL`, so every
+  entry survives without its actor. A trail that loses entries when a person leaves is a
+  worse record than one saying "someone, since removed". The account's email, name and
+  role go into the final `user.delete` entry, because once the row is gone that is the
+  only record it ever existed.
+- Sessions and stored credentials cascade away, so they are signed out everywhere.
+- **Settled invitations are left alone.** Accepted or withdrawn ones are history, and
+  history is not ours to edit.
+- **The last Owner is refused**, for the same reason they cannot be demoted or suspended.
+- `--as` names the Owner who decided, since a script has no session. With one eligible
+  Owner it is inferred and printed; with several it is required.
+
+The same thing is on the People page behind a typed-email confirmation. One function,
+two doors — `server/users/remove.ts` — so the script cannot quietly diverge from the
+button.
+
 ### `pnpm reinvite`
 Re-issues the first owner invitation. For when the seeded account's link has expired.
 
