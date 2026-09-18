@@ -444,6 +444,34 @@ from cache, or on a fast connection. On a cold load `window.turnstile` was
 undefined, the effect returned, and nothing ran it again: no widget, no token,
 and a Send button that could never be enabled. It waits for the script now.
 
+### Destroying a material — done 2026-09-18
+
+The only thing in the project that truly deletes archive content, and the one
+CLAUDE.md reserves for an Owner as a separate, deliberate act.
+
+**Two decisions, not one.** It refuses anything that is not already archived.
+Archiving asks why and is reversible; this is the second step and is not. A
+single button taking a live material to nothing would put an irreversible act
+one click from a typo fix. The title must be typed, and that is **re-checked on
+the server** — a confirmation that lives only in the browser is a suggestion.
+
+**Order, and the reason this entry already gave:** the row and its audit entry go
+first in one transaction, then the R2 objects. A failure deleting objects leaves
+orphaned bytes, which are litter and findable — every key is listed in the audit
+entry. The other order risks a row whose file is gone, which is a material that
+exists, lists and cannot be opened. Bytes nobody references beat a record that
+lies.
+
+**Something the cascades do not cover.** `duplicate_of_id` has no foreign key —
+83 archived materials point at 77 others — so destroying a material that
+something is recorded as a duplicate *of* would leave the survivor's page saying
+"kept instead:" followed by nothing. Those pointers are cleared in the same
+transaction.
+
+**Every refusal exercised against the real archive**, destroying nothing: a live
+material is refused, a wrong title is refused, an unknown id is refused, and the
+row count was unchanged afterwards.
+
 ### Next, in the order worth taking them
 
 1. ~~**Invitation email.**~~ **Done** — see *Invitations are sent* below.
@@ -956,12 +984,9 @@ the dialog is what stops it being needed again.
       filed in the same transaction that creates it, one audit entry per topic.
       Empty stays a real answer: "Uncategorised" is the absence of rows, not a
       category
-- [ ] **Destroying a material** is deliberately absent. Archiving is reversible
-      and covers the everyday case; CLAUDE.md reserves true destruction for an
-      Owner as a separate, deliberate act. Building it means Owner-only gating,
-      a typed-name confirmation, and removing the R2 objects in the same
-      breath — an archived row whose file is already gone is worse than either
-      outcome
+- [x] **Destroying a material** — built 2026-09-18, exactly as this entry
+      specified: Owner-only, typed-title confirmation, and the R2 objects
+      removed with the row. See *Destroying a material* below
 
 ### Phase 5 — Reading and duplicates
 - [x] OCR interface (`lib/ocr/`); tesseract.js and Google Cloud Vision on the

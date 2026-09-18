@@ -8,6 +8,7 @@ import { txdb } from "../../db/tx"
 import { hasRole, requireRole, requireSession } from "../../lib/session"
 import { slugify } from "../../lib/slug"
 import { audit } from "../audit"
+import { destroyMaterial } from "../materials/destroy"
 
 /**
  * Editing a material.
@@ -730,4 +731,23 @@ export async function archiveMany(materialIds: string[], reason: string): Promis
   revalidatePath("/admin/materials")
   revalidatePath("/library")
   return result
+}
+
+/**
+ * Destroy a material and its files. Owner only, and only once archived.
+ *
+ * The logic is in `server/materials/destroy.ts`, which also re-checks the typed
+ * title — a confirmation that lives only in the browser is a suggestion.
+ */
+export async function destroyMaterialAction(
+  materialId: string,
+  typed: string,
+): Promise<MaterialResult> {
+  const { session } = await requireRole("owner")
+
+  const result = await destroyMaterial({ materialId, actorId: session.user.id, typed })
+
+  revalidatePath("/admin/materials")
+  revalidatePath("/library")
+  return result.ok ? { ok: true, message: result.message } : { ok: false, error: result.error }
 }

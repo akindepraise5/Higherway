@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { CategoryPicker } from "../../../../components/admin/category-picker"
+import { DestroyMaterial } from "../../../../components/admin/destroy-material"
 import { MaterialEditor } from "../../../../components/admin/material-editor"
 import { PageReader } from "../../../../components/admin/page-reader"
 import { TopicSuggestions } from "../../../../components/admin/topic-suggestions"
@@ -357,6 +358,13 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
               ))}
             </ol>
           )}
+
+          {/* Only for an Owner, and only once it is archived — two deliberate
+              decisions rather than one. It sits at the very bottom, under the
+              history, because it is the last thing anyone should reach for. */}
+          {role === "owner" && material.archivedAt !== null ? (
+            <DestroyMaterial materialId={id} title={material.title} pages={pages.length} />
+          ) : null}
         </div>
       </div>
     </>

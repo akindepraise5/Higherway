@@ -45,6 +45,12 @@ export type AuditAction =
       `category.unmerge`. */
   | "material.uncategorise"
   | "material.text_visibility"
+  /** Truly deleting a material and its files — the only thing in the project
+      that does. Owner-only and deliberately a second step after archiving. The
+      title, page count and every R2 key go in `before`, because once the row is
+      gone that entry is the only record the material existed, and the keys are
+      how orphaned bytes are found if storage refused to delete them. */
+  | "material.destroy"
   | "duplicate.dismiss"
   | "duplicate.merge"
   | "invitation.create"

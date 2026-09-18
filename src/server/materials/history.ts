@@ -37,6 +37,7 @@ export const ACTION_LABEL: Record<AuditAction, string> = {
   "material.categorise": "Added to a topic",
   "material.uncategorise": "Removed from a topic",
   "material.text_visibility": "Text visibility changed",
+  "material.destroy": "Destroyed",
   "duplicate.dismiss": "Marked not a duplicate",
   "duplicate.merge": "Duplicate merged",
   "invitation.create": "Invitation sent",

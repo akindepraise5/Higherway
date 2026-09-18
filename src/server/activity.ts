@@ -47,6 +47,7 @@ const PHRASING: Record<AuditAction, string> = {
   "material.categorise": "filed",
   "material.uncategorise": "unfiled",
   "material.text_visibility": "changed text visibility for",
+  "material.destroy": "destroyed a material",
   "duplicate.dismiss": "marked a pair as not duplicates",
   "duplicate.merge": "resolved a duplicate pair",
   "invitation.create": "invited someone",
