@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next"
+import { hasSubmissions } from "../lib/env"
 import { allPublishedSlugs, topicList } from "../server/materials/queries"
 
 /**
@@ -39,6 +40,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${base}/library`, changeFrequency: "weekly", priority: 0.9 },
     { url: `${base}/about`, changeFrequency: "yearly", priority: 0.4 },
+    // Only when it is open. Listing a page that says "not just yet" invites a
+    // crawler to index the refusal.
+    ...(hasSubmissions
+      ? [{ url: `${base}/submit`, changeFrequency: "yearly" as const, priority: 0.3 }]
+      : []),
 
     ...topics.map((topic) => ({
       url: `${base}/topics/${topic.slug}`,

@@ -14,18 +14,22 @@ import { requireSession } from "../../lib/session"
  * curating this archive are the same people who read it.
  */
 
+/** `owner` marks a link only an Owner is shown — and only shown: the page
+    itself calls `requireRole`, because hiding a link is not a guard. */
 const NAV = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/materials", label: "Materials" },
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/duplicates", label: "Duplicates" },
+  { href: "/admin/sync", label: "Sync", owner: true },
   { href: "/admin/users", label: "People" },
   { href: "/admin/activity", label: "Activity" },
-]
+] as const
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await requireSession()
   const role = (session.user as { role?: string }).role ?? "editor"
+  const nav = NAV.filter((item) => !("owner" in item && item.owner) || role === "owner")
 
   return (
     <div className="min-h-screen bg-paper">
@@ -36,7 +40,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Link>
 
           <nav aria-label="Admin" className="ml-auto hidden items-center gap-5 md:flex">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -59,7 +63,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           aria-label="Admin"
           className="flex gap-4 overflow-x-auto border-t border-line-soft px-6 py-2.5 md:hidden"
         >
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <Link
               key={item.href}
               href={item.href}

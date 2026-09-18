@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { db } from "../db"
-import { env } from "./env"
+import { required } from "./env"
 
 /**
  * Better Auth, configured for a closed archive.
@@ -17,8 +17,12 @@ import { env } from "./env"
  */
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg" }),
-  secret: env.BETTER_AUTH_SECRET,
-  baseURL: env.BETTER_AUTH_URL,
+  // Asserted here rather than in the environment schema: this module is what
+  // genuinely needs them, and every admin page and every mutation reaches it
+  // through `requireSession`. A Trigger worker never does, and used to be
+  // required to carry an auth secret in order to be indexed at all.
+  secret: required("BETTER_AUTH_SECRET"),
+  baseURL: required("BETTER_AUTH_URL"),
 
   emailAndPassword: {
     enabled: true,

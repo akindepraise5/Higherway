@@ -1,13 +1,14 @@
 "use server"
 
 import { randomUUID } from "node:crypto"
-import { and, eq, sql } from "drizzle-orm"
+import { and, eq, inArray, sql } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { categories, materialCategories, materials } from "../../db/schema"
 import { txdb } from "../../db/tx"
 import { hasRole, requireRole, requireSession } from "../../lib/session"
 import { slugify } from "../../lib/slug"
 import { audit } from "../audit"
+import { destroyMaterial } from "../materials/destroy"
 
 /**
  * Editing a material.
@@ -32,6 +33,34 @@ export type MaterialResult = { ok: true; message: string } | { ok: false; error:
 export async function assignCategory(
   materialId: string,
   input: { categoryId?: string; newName?: string },
+): Promise<MaterialResult> {
+  return fileUnder(materialId, input, false)
+}
+
+/**
+ * File a material under a topic the machine proposed.
+ *
+ * A separate action rather than a flag on `assignCategory`, because the flag
+ * would be set by the browser — and "a machine suggested this" is a claim about
+ * the archive's provenance that a form post should not be able to make. Here it
+ * is the server that knows, because this is the only door that sets it.
+ *
+ * It records `suggested` on the join row, so the trail can always distinguish a
+ * topic a person chose from one they merely agreed with. Nothing files itself:
+ * `suggestTopics` proposes, an editor presses accept, and that press is what
+ * writes the row.
+ */
+export async function acceptSuggestedCategory(
+  materialId: string,
+  categoryId: string,
+): Promise<MaterialResult> {
+  return fileUnder(materialId, { categoryId }, true)
+}
+
+async function fileUnder(
+  materialId: string,
+  input: { categoryId?: string; newName?: string },
+  fromSuggestion: boolean,
 ): Promise<MaterialResult> {
   const session = await requireSession()
   const role = (session.user as { role?: "owner" | "admin" | "editor" }).role
@@ -115,7 +144,10 @@ export async function assignCategory(
       materialId,
       categoryId,
       ordinal: next,
+      // Still the person: they accepted it. `suggested` records that a machine
+      // proposed it, not that a machine decided it.
       assignedBy: session.user.id,
+      suggested: fromSuggestion ? new Date() : null,
     })
 
     const [category] = await tx
@@ -130,7 +162,11 @@ export async function assignCategory(
       entityId: materialId,
       // The title is not what changed. Recording it here made every filing read
       // as though someone had edited the title.
-      after: { topic: category?.name, created: createdName ?? undefined },
+      after: {
+        topic: category?.name,
+        created: createdName ?? undefined,
+        via: fromSuggestion ? "suggestion" : undefined,
+      },
       actorId: session.user.id,
     })
 
@@ -450,4 +486,268 @@ export async function unarchiveMaterial(materialId: string): Promise<MaterialRes
   revalidatePath(`/admin/materials/${materialId}`)
   revalidatePath("/admin/materials")
   return result
+}
+
+/**
+ * The same actions, over a selection.
+ *
+ * **Why these exist.** 314 published materials have no topic, and filing them
+ * one at a time means one page load, one picker and one round trip each. The
+ * backlog is the archive's main outstanding job and the interface was making it
+ * a thousand small errands.
+ *
+ * Three rules, and they are what keep bulk safe rather than fast:
+ *
+ * 1. **One audit entry per material**, exactly as if each had been done by hand.
+ *    A single "filed 40 materials" entry would record the *operation* and not
+ *    the *changes*, and the trail's job is to answer "why is this material here",
+ *    material by material. This project has already learned that the hard way:
+ *    `mergeCategory` moved 42 materials with one UPDATE and recorded how many
+ *    moved but not which, and only the v1 spreadsheet made it recoverable.
+ * 2. **One transaction.** Either the selection is done or none of it is — a
+ *    half-applied bulk action leaves nobody able to say what happened.
+ * 3. **Skipping is not failing.** A material already filed there, or already
+ *    published, is counted and stepped over rather than aborting the other
+ *    thirty-nine. The result says how many were changed and how many were left.
+ */
+
+export type BulkResult =
+  | { ok: true; changed: number; skipped: number; message: string }
+  | { ok: false; error: string }
+
+/**
+ * The most a single action may touch.
+ *
+ * A page of the admin list is 40, so this covers "select everything on screen"
+ * with room to spare, and refuses anything that could only have come from a
+ * crafted request. It is also a real safety rail: the whole point of the
+ * confirmation on category merge is that a wide, silent change is the dangerous
+ * kind.
+ */
+const MAX_BULK = 100
+
+const cleanIds = (ids: string[]): string[] =>
+  [...new Set(ids)].filter((id) => UUID_PATTERN.test(id)).slice(0, MAX_BULK)
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** File a selection under one topic. Editor work, like filing one. */
+export async function fileManyUnder(
+  materialIds: string[],
+  categoryId: string,
+): Promise<BulkResult> {
+  const session = await requireSession()
+  const ids = cleanIds(materialIds)
+  if (ids.length === 0) return { ok: false, error: "Nothing was selected." }
+  if (!UUID_PATTERN.test(categoryId)) return { ok: false, error: "That is not a topic." }
+
+  const result = await txdb.transaction(async (tx) => {
+    const [topic] = await tx
+      .select({ id: categories.id, name: categories.name })
+      .from(categories)
+      .where(eq(categories.id, categoryId))
+      .limit(1)
+    if (!topic) return { ok: false as const, error: "That topic no longer exists." }
+
+    const rows = await tx
+      .select({ id: materials.id, title: materials.title })
+      .from(materials)
+      .where(inArray(materials.id, ids))
+
+    const already = await tx
+      .select({ materialId: materialCategories.materialId })
+      .from(materialCategories)
+      .where(
+        and(
+          eq(materialCategories.categoryId, categoryId),
+          inArray(materialCategories.materialId, ids),
+        ),
+      )
+    const filed = new Set(already.map((r) => r.materialId))
+
+    let changed = 0
+    for (const material of rows) {
+      if (filed.has(material.id)) continue
+
+      // Ordinal per material, not a shared counter: it decides which topic's
+      // colours a cover wears, and that is a fact about the material.
+      const [{ next }] = await tx
+        .select({ next: sql<number>`coalesce(max(${materialCategories.ordinal}), -1) + 1` })
+        .from(materialCategories)
+        .where(eq(materialCategories.materialId, material.id))
+
+      await tx.insert(materialCategories).values({
+        materialId: material.id,
+        categoryId,
+        ordinal: next,
+        assignedBy: session.user.id,
+      })
+
+      await audit(tx, {
+        action: "material.categorise",
+        entityType: "material",
+        entityId: material.id,
+        after: { topic: topic.name, inBulk: ids.length },
+        actorId: session.user.id,
+      })
+      changed++
+    }
+
+    const skipped = ids.length - changed
+    return {
+      ok: true as const,
+      changed,
+      skipped,
+      message:
+        changed === 0
+          ? `All ${ids.length} were already filed under “${topic.name}”.`
+          : `Filed ${changed} under “${topic.name}”${skipped > 0 ? `, ${skipped} already were` : ""}.`,
+    }
+  })
+
+  revalidatePath("/admin/materials")
+  revalidatePath("/library")
+  return result
+}
+
+/** Publish a selection. Admin work, like publishing one. */
+export async function publishMany(materialIds: string[]): Promise<BulkResult> {
+  const { session } = await requireRole("admin")
+  const ids = cleanIds(materialIds)
+  if (ids.length === 0) return { ok: false, error: "Nothing was selected." }
+
+  const result = await txdb.transaction(async (tx) => {
+    const rows = await tx
+      .select({
+        id: materials.id,
+        title: materials.title,
+        status: materials.status,
+        archivedAt: materials.archivedAt,
+        r2KeyPdf: materials.r2KeyPdf,
+        publishedAt: materials.publishedAt,
+      })
+      .from(materials)
+      .where(inArray(materials.id, ids))
+
+    let changed = 0
+    for (const material of rows) {
+      // The same three refusals as publishing one, applied per material rather
+      // than to the batch: one archived material in a selection of forty must
+      // not stop the other thirty-nine.
+      if (material.archivedAt) continue
+      if (material.status === "published") continue
+      if (!material.r2KeyPdf) continue
+
+      await tx
+        .update(materials)
+        .set({
+          status: "published",
+          publishedAt: material.publishedAt ?? new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(materials.id, material.id))
+
+      await audit(tx, {
+        action: "material.publish",
+        entityType: "material",
+        entityId: material.id,
+        before: { status: material.status },
+        after: { status: "published", name: material.title, inBulk: ids.length },
+        actorId: session.user.id,
+      })
+      changed++
+    }
+
+    const skipped = ids.length - changed
+    return {
+      ok: true as const,
+      changed,
+      skipped,
+      message:
+        changed === 0
+          ? "None of those could be published — they are archived, already out, or have no file."
+          : `Published ${changed}${skipped > 0 ? `, skipped ${skipped} that could not be` : ""}.`,
+    }
+  })
+
+  revalidatePath("/admin/materials")
+  revalidatePath("/library")
+  return result
+}
+
+/**
+ * Take a selection out of the library. Admin work, and the reason is required.
+ *
+ * Asked for in the dialog rather than collected afterwards, for the same reason
+ * the single version does: a reason collected afterwards is one nobody writes.
+ * Over forty materials at once it matters more, not less — this is the action
+ * whose blast radius is widest and whose trail has to carry the most.
+ */
+export async function archiveMany(materialIds: string[], reason: string): Promise<BulkResult> {
+  const { session } = await requireRole("admin")
+  const ids = cleanIds(materialIds)
+  if (ids.length === 0) return { ok: false, error: "Nothing was selected." }
+
+  const why = reason.trim()
+  if (why.length < 3) return { ok: false, error: "Say why, in a few words at least." }
+
+  const result = await txdb.transaction(async (tx) => {
+    const rows = await tx
+      .select({ id: materials.id, title: materials.title, archivedAt: materials.archivedAt })
+      .from(materials)
+      .where(inArray(materials.id, ids))
+
+    let changed = 0
+    for (const material of rows) {
+      if (material.archivedAt) continue
+
+      await tx
+        .update(materials)
+        .set({ status: "archived", archivedAt: new Date(), updatedAt: new Date() })
+        .where(eq(materials.id, material.id))
+
+      await audit(tx, {
+        action: "material.archive",
+        entityType: "material",
+        entityId: material.id,
+        after: { status: "archived", name: material.title, reason: why, inBulk: ids.length },
+        actorId: session.user.id,
+      })
+      changed++
+    }
+
+    const skipped = ids.length - changed
+    return {
+      ok: true as const,
+      changed,
+      skipped,
+      message:
+        changed === 0
+          ? "They were all archived already."
+          : `Took ${changed} out of the library${skipped > 0 ? `, ${skipped} already were` : ""}. Each can be restored.`,
+    }
+  })
+
+  revalidatePath("/admin/materials")
+  revalidatePath("/library")
+  return result
+}
+
+/**
+ * Destroy a material and its files. Owner only, and only once archived.
+ *
+ * The logic is in `server/materials/destroy.ts`, which also re-checks the typed
+ * title — a confirmation that lives only in the browser is a suggestion.
+ */
+export async function destroyMaterialAction(
+  materialId: string,
+  typed: string,
+): Promise<MaterialResult> {
+  const { session } = await requireRole("owner")
+
+  const result = await destroyMaterial({ materialId, actorId: session.user.id, typed })
+
+  revalidatePath("/admin/materials")
+  revalidatePath("/library")
+  return result.ok ? { ok: true, message: result.message } : { ok: false, error: result.error }
 }

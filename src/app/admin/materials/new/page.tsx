@@ -4,6 +4,7 @@ import { NewMaterialForm } from "../../../../components/admin/new-material-form"
 import { hasJobs } from "../../../../lib/env"
 import { requireSession } from "../../../../lib/session"
 import { adminCategories } from "../../../../server/categories/queries"
+import { adminAuthors } from "../../../../server/materials/admin"
 
 /**
  * Adding a material by hand.
@@ -16,7 +17,7 @@ import { adminCategories } from "../../../../server/categories/queries"
  * reaches the public library until someone publishes it.
  */
 export const metadata: Metadata = {
-  title: "Add a material",
+  title: "Add materials",
   robots: { index: false, follow: false },
 }
 
@@ -24,7 +25,7 @@ export const dynamic = "force-dynamic"
 
 export default async function NewMaterialPage() {
   await requireSession()
-  const topics = await adminCategories()
+  const [topics, authors] = await Promise.all([adminCategories(), adminAuthors()])
 
   return (
     <>
@@ -36,17 +37,17 @@ export default async function NewMaterialPage() {
       </Link>
 
       <p className="mt-6 text-[11px] font-medium uppercase tracking-[.2em] text-taupe">
-        Add a material
+        Add materials
       </p>
       <h1 className="mt-3 font-serif text-[clamp(28px,3.4vw,38px)] font-light tracking-[-0.02em]">
-        Put something new in the archive
+        Put something new in the archive — one file or fifty
       </h1>
       <p className="mt-3 max-w-[54ch] text-[15px] leading-relaxed text-ink-2">
-        Upload a PDF, or paste a link and the server will fetch it. Either way the pages are
-        rendered and the text read before it appears.
+        Upload as many PDFs as you like, or paste links and the server will fetch them. Either way
+        the pages are rendered and the text read before anything appears.
       </p>
 
-      <NewMaterialForm jobsConfigured={hasJobs} topics={topics} />
+      <NewMaterialForm jobsConfigured={hasJobs} topics={topics} authors={authors} />
     </>
   )
 }

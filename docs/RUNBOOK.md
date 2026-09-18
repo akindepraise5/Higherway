@@ -64,6 +64,32 @@ Roughly 0.5–1.5s a page.
 holds nothing, and is finished. While the queue asked for empty text, five blank pages
 came back every single run — "read 5 … still waiting 5", for ever.
 
+### Google Cloud Vision, and staying inside the free allowance
+Set `GOOGLE_CLOUD_VISION_KEY` and Vision takes over from tesseract on the server
+automatically. Nothing else changes.
+
+**Two protections, and the important one is not in this codebase.**
+
+1. **Set a hard quota in the Google Cloud console** — Cloud Vision API → Quotas →
+   *Requests per day* → a low number such as 50. This archive reads ~35 pages a *month*
+   against an allowance of 1,000, so 50 a day is generous and makes overspending
+   impossible. A limit enforced by Google cannot be bypassed by a bug here; a check in
+   application code always can be.
+2. **A quota refusal falls back to tesseract**, per page, and the run carries on. 429
+   (rate or quota) and 403 (API disabled, no billing account, key without permission) all
+   mean the same thing operationally, and a 200 carrying a quota message is treated the
+   same way. An ordinary failure — a dropped connection, a corrupt file — **does not**
+   fall back: it surfaces and is retried, because silently downgrading every page over
+   one timeout would leave the archive read at 90–95% with nothing recording why.
+
+`ocr_engine` stores the engine that actually read each page, so anything the fallback
+took is findable afterwards and can be upgraded with `ocr:local`.
+
+**A new upload no longer waits for this.** `read-material` reads it on the server —
+Google Cloud Vision when `GOOGLE_CLOUD_VISION_KEY` is set, tesseract.js otherwise.
+`ocr:local` stays for the backlog and for upgrading a tesseract read, because macOS
+Vision is still the best of the three.
+
 ### `pnpm ocr:status`
 Read-only. Says what has no text and *why*, from anywhere — no Mac, no waiting.
 
@@ -92,6 +118,66 @@ title rather than `original.pdf`. Idempotent; re-running costs nothing.
 
 ---
 
+## Storage
+
+### `pnpm r2:cors [--apply] [https://the-deployed-address]`
+Writes the CORS rules that let the browser upload straight to the bucket.
+
+**Adding a material could never work without this, and it presents as "the connection
+failed".** The upload is a cross-origin PUT carrying `Content-Type: application/pdf`,
+which is not on the CORS safelist, so the browser sends a preflight `OPTIONS` first. A
+bucket with no rules answers that **403**, the PUT is never sent, and the page has
+nothing to report but a failed connection. It looked like a bug in the form and was
+configuration the bucket had never been given.
+
+- **Reading was never affected.** Page images and downloads come from the custom domain
+  as plain GETs with no preflight, which is why the public site has always worked.
+- **Pass the deployed address as an argument.** The rules are built from
+  `NEXT_PUBLIC_SITE_URL`, which on a development machine is `http://localhost:3000` — run
+  locally without an argument and you write a policy that allows localhost and refuses
+  production. The script prints the full list before writing and warns if only localhost
+  is in it.
+- It **replaces** the configuration rather than merging, so what the script holds is the
+  whole intended policy.
+- **The R2 token needs bucket-settings permission, not just object access.** An
+  "Object Read & Write" token gets `AccessDenied` here. Either issue an Admin Read &
+  Write token, or set the same rules by hand in the Cloudflare dashboard under
+  R2 → the bucket → Settings → CORS policy.
+- Verify by reading back: re-run without `--apply`.
+
+---
+
+## Meaning
+
+### `pnpm embed [--topics] [--force] [--limit N]`
+Chunks each material's text, embeds it locally, and stores the vectors — pipeline stage
+5. Also gives every topic a vector from its name and sub-text.
+
+Touches no R2 object, renders nothing, runs no recogniser: the inputs are already in
+`material_pages.text`. Local model, ~33 MB, downloaded once and then read off disk — no
+API, no account, no quota, nothing sent anywhere.
+
+**~2 s per material.** The whole archive is about twenty minutes. Redirect it to a file:
+`pnpm embed > embed.log 2>&1`. Do not pipe a long run through `tail` — that is how 7 of
+the backfill's 27 failures became unexplainable.
+
+- **Resumable.** Without `--force` it takes only materials that have text and no chunks,
+  so an interrupted run continues and a re-run after new uploads does only the new ones.
+- `--force` re-embeds everything. Needed after the stored text changes — `fix:hyphens`,
+  an `ocr:local --force`, or a change to `lib/text/chunk`.
+- `--topics` re-embeds just the topics. Seconds. Run it after adding or renaming one.
+- `embedMaterial` **replaces**, never appends, so re-running cannot leave vectors of text
+  that no longer exists sitting in the same index as the text that replaced it.
+
+**A material with no text is not a failure.** It is counted as "had no text" and skipped:
+a photographed PDF has nothing to embed until a recogniser has read it.
+
+**Topics are counted excluding merged ones.** The first run reported 58, not the 69 in the
+v1 sheet — 9 have been merged away and 2 deleted. That is the number being right, not a
+bug, and it is the kind of difference worth checking rather than assuming.
+
+---
+
 ## Duplicates
 
 ### `pnpm scan:duplicates [--titles] [--dry]`
@@ -104,15 +190,188 @@ resolved automatically.**
 - A pair that no longer qualifies is **withdrawn**, so the review page never offers a
   finding the scan has abandoned.
 
-Run it **after** OCR. On titles alone it flags "Exploring the word" against "Exploring the
-word Sacrifice" — two articles in a series, not a copy.
+Run it **after** OCR, and after `pnpm embed` — the meaning signal needs the vectors and
+silently scores 0 without them. On titles alone it flags "Exploring the word" against
+"Exploring the word Sacrifice" — two articles in a series, not a copy.
+
+**A new upload no longer needs this run by hand.** `enrich-material` scans the one
+material it has just ingested against the rest, which is O(n) rather than the script's
+O(n²). The script stays for the whole-archive pass, which is the only thing that can
+*withdraw* a stale pair — a single-material scan knows nothing about the pairs between two
+other materials, and withdrawing on that basis would delete other findings on every
+upload.
+
+---
+
+## Drive
+
+### The Sync button — `/admin/sync`, Owner only
+Pulls new PDFs out of the read-only Drive inbox. There is no script: it is a Trigger
+task started from the page, because a folder of hundreds is far past any function
+timeout and the run has to survive the browser closing.
+
+**Press *Check the folder* first.** It is a dry run — it lists what would be pulled and
+imports nothing. A sync adds material to a public archive that nobody has read yet.
+
+- **Drive is never written to.** No uploads, no renames, no deletions. The OAuth scope
+  asked for is `drive.readonly`, so a token minted from it could not write even if the
+  code tried. **Give the service account Viewer on the folder and nothing more** — with
+  Editor, the only thing between this project and a write is the code rather than the
+  permission.
+- **One run at a time.** Two over the same folder would both see the same file as new and
+  stage it twice, which the SHA-256 index then rejects as a crash rather than a skip —
+  exactly how the backfill left 27 materials stuck.
+- **A run that dies still closes its row.** If one is somehow left open it blocks the next
+  press for ever; an Owner clears it from the page. Deliberately not a timeout — that
+  would eventually clear a run that was merely slow and let a second start beside it.
+- **Archived materials are never brought back**, and a file edited in Drive since import
+  is **flagged, not re-imported**. Replacing a published material's bytes silently is an
+  edit nobody asked for.
+- Nothing publishes itself. Everything arrives waiting for a person, like any upload.
 
 ---
 
 ## People
 
+### `pnpm account:delete <email> [--apply] [--as <owner-email>]`
+Removes someone's access permanently, and **withdraws any invitation still open** for
+that address. Prints what it would do; changes nothing without `--apply`.
+
+**Suspending is usually the right answer instead** — one click on the People page. It
+keeps the person, their history and their name against every change they made, and it
+can be undone. This is for an address that should not exist at all: a typo, a test,
+someone who never joined.
+
+- **Nothing in the audit trail is deleted.** The foreign keys are `SET NULL`, so every
+  entry survives without its actor. A trail that loses entries when a person leaves is a
+  worse record than one saying "someone, since removed". The account's email, name and
+  role go into the final `user.delete` entry, because once the row is gone that is the
+  only record it ever existed.
+- Sessions and stored credentials cascade away, so they are signed out everywhere.
+- **Settled invitations are left alone.** Accepted or withdrawn ones are history, and
+  history is not ours to edit.
+- **The last Owner is refused**, for the same reason they cannot be demoted or suspended.
+- `--as` names the Owner who decided, since a script has no session. With one eligible
+  Owner it is inferred and printed; with several it is required.
+
+The same thing is on the People page behind a typed-email confirmation. One function,
+two doors — `server/users/remove.ts` — so the script cannot quietly diverge from the
+button.
+
 ### `pnpm reinvite`
 Re-issues the first owner invitation. For when the seeded account's link has expired.
+
+---
+
+## Deploying
+
+Production is `main`, built by Vercel. Background jobs run on Trigger.dev, which is
+deployed separately. **The two do not share environment variables.**
+
+| Where | Needs |
+|---|---|
+| **Vercel** | What the app reads: `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `NEXT_PUBLIC_SITE_URL`, `R2_*`, `TRIGGER_PROJECT_REF`, and `TRIGGER_SECRET_KEY` as a **`tr_prod_…`** key |
+| **Trigger.dev dashboard** | Its **own** `DATABASE_URL` and `R2_*`. Vercel's never reach it. Without them a deploy succeeds and every run fails at its first query |
+| **GitHub → Actions secrets** | `DATABASE_URL`, because the CI build prerenders from the database · `TRIGGER_ACCESS_TOKEN`, a `tr_pat_…` personal token, which deploys the tasks |
+
+The CI build's other values (`BETTER_AUTH_*`, `NEXT_PUBLIC_SITE_URL`,
+`R2_PUBLIC_BASE_URL`) are literals in `ci.yml`. They are placeholders or public
+hostnames, not secrets — do not replace them with real ones.
+
+### `pnpm env:check`
+Says what is configured, what is not, and what each one switches on. **Never prints
+a value** — lengths and shapes only, so the output is safe to paste anywhere.
+
+It exists because `KEY=""` looks identical to a configured key at a glance and to a
+careless grep. `.env.example` ships empty placeholders, copying it gives every name
+with no value, and the result is a feature that silently stays off. Three
+credentials sat "present" and empty here before this existed.
+
+It also checks shapes, not just presence: a service account email that does not end
+`…iam.gserviceaccount.com`, a private key with no `BEGIN PRIVATE KEY`, a private key
+whose `\n` escapes were lost in the paste — that last one fails inside `createSign`
+with a PEM error naming nothing.
+
+### Two Google settings that are not credentials
+Both present as a 403 with valid keys, which reads like a wrong key and is not.
+
+- **Vision needs billing enabled on the project**, even at zero spend — the catch
+  ARCHITECTURE.md §7 recorded when the engine was chosen. Without it every call is
+  `PERMISSION_DENIED: This API method requires billing to be enabled`. The 1,000
+  pages a month remain free; the card is a condition of using the API at all.
+  **Observed here, and the fallback did its job**: the 403 was read as a quota
+  refusal and tesseract took the page, so nothing failed and nothing went unread.
+- **The Drive API has to be enabled on the project.** A service account with a
+  perfectly good key still gets `Google Drive API has not been used in project … or
+  it is disabled`. Getting that far proves the JWT signing and the key are right —
+  it is the API that is switched off, not the credentials.
+
+Both links are in the error messages, keyed to the project number.
+
+### `pnpm service:account <path-to-downloaded.json>`
+Writes the two Drive variables into `.env.local` from the JSON Google gives you,
+correctly escaped. It replaces those two lines and leaves every other line alone,
+and it **never prints the key** — only the address and a length.
+
+**The two halves of that JSON go to different places, and only one of them leaves
+your machine.** `client_email` goes into the environment *and* is the address you
+share the Drive folder with, as **Viewer**. `private_key` goes into the environment
+and nowhere else, ever — it is the password for that address.
+
+### Which variable goes where
+
+Three places need environment variables, and they need **different sets**. A
+variable in the wrong place fails in a way that does not name it.
+
+| | Vercel | Trigger.dev | GitHub Actions |
+|---|---|---|---|
+| `DATABASE_URL` | ✓ | ✓ | ✓ (the build prerenders from it) |
+| `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` | ✓ | — | — |
+| `NEXT_PUBLIC_SITE_URL` | ✓ | — | ✓ |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` | ✓ | ✓ | — |
+| `R2_PUBLIC_BASE_URL` | ✓ | — | ✓ |
+| `TRIGGER_SECRET_KEY`, `TRIGGER_PROJECT_REF` | ✓ | — | — |
+| `TRIGGER_ACCESS_TOKEN` | — | — | ✓ (deploy only) |
+| `RESEND_API_KEY`, `EMAIL_FROM` | ✓ | — | — |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET_KEY` | ✓ | — | — |
+| `GOOGLE_CLOUD_VISION_KEY` | — | ✓ (OCR runs in the worker) | — |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL`, `_PRIVATE_KEY`, `GOOGLE_DRIVE_FOLDER_ID` | ✓ (to show the page) | ✓ (to do the work) | — |
+
+**A deploy succeeds without any of the Trigger.dev ones.** It only fails when a
+run first queries, which is minutes or days later and looks like a different
+problem. Set them before the first deploy, not after the first failure.
+
+**`GOOGLE_CLOUD_VISION_KEY` belongs in Trigger.dev and nowhere else.** Reading a
+page happens in the worker; the app never calls Vision.
+
+**The Drive variables are in both**, for different reasons: Vercel needs them for
+`hasDrive` to show `/admin/sync` at all, and the worker needs them to read Drive.
+
+**A Turnstile site key is bound to hostnames.** Add `localhost` to the widget in
+the Cloudflare dashboard, or the check fails with error 110200 on a development
+machine and the form says it could not load.
+
+**What the worker deliberately does *not* need**, as of 2026-09-18:
+`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL` and `NEXT_PUBLIC_SITE_URL`. They used to
+be required by `lib/env`'s schema, which the tasks import — and the Trigger
+indexer imports every task file with **no environment at all**, so the whole
+deploy failed with "There was an error importing task files", naming neither the
+variable nor the file. They are checked where they are used now (`lib/auth.ts`,
+the sitemap, the seed) rather than at import.
+
+### Trigger.dev
+
+Deploys automatically on every push to `main` via `.github/workflows/deploy-trigger.yml`.
+To deploy by hand:
+
+    pnpm exec trigger deploy
+
+- **The binary is `trigger`, not `trigger.dev`.** `pnpm exec trigger.dev` finds nothing.
+- **Never `npx trigger.dev@latest`.** It fetches whatever CLI is newest, and the CLI
+  refuses to deploy against packages newer than itself. The CLI is a locked devDependency
+  precisely so it always matches `@trigger.dev/sdk`.
+- **`TRIGGER_SECRET_KEY` on Vercel must be `tr_prod_…`.** A `tr_dev_…` key sends runs to
+  a developer's laptop, and they only process while that machine is on.
 
 ---
 
@@ -148,6 +407,33 @@ Use separate queries and join in JavaScript.
 documents as *disabled*. An unguarded `getObject` can wait for ever: one re-read sat at 0%
 CPU for 53 minutes with no sockets and no error. `src/server/r2/client.ts` now sets them,
 and `throwOnRequestTimeout` matters as much as the numbers.
+
+**`pnpm build` leaves a running dev server serving stale code.** `next build` and
+`next dev` share `.next/`. After any build — including the one the pre-push hook runs on
+every `git push` — restart `pnpm dev`, or the browser shows code from before the change.
+This cost an hour chasing a form field that was in the source the entire time.
+
+**Finding a string in `.next/` says nothing about what the dev server serves.** Build
+output lands in `.next/server/`; the dev server compiles to `.next/dev/`. That grep
+"proved" the server was current when it was not.
+
+**`env -i` does not hide `.env.local`.** Next reads it off disk. A "stripped" build run
+that way quietly used every real value and certified the wrong variable list for CI. To
+simulate CI, move the file aside — back it up first — and restore it unconditionally.
+
+**Run `pnpm dev` in your own terminal.** A dev server started as an agent's background
+task was reaped for low memory twice in a row while the machine had half its memory
+free.
+
+**A module-scope `process.env` throw breaks deploys that never query.** The Trigger.dev
+indexer imports every task file with no environment, so a throw at import failed the
+whole deploy with "There was an error importing task files" — naming neither the
+variable nor the file. The database handles connect lazily for exactly this reason;
+keep them that way.
+
+**Only the newest invitation link works.** Sending a fresh link requires revoking the
+old one, so every earlier link is withdrawn. The invite page used to say "expired" for
+all four ways a link can fail; it now says which.
 
 **Check one concrete row before trusting any aggregate.** Nearly every wrong turn above
 shares this cause.

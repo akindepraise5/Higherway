@@ -47,6 +47,7 @@ const PHRASING: Record<AuditAction, string> = {
   "material.categorise": "filed",
   "material.uncategorise": "unfiled",
   "material.text_visibility": "changed text visibility for",
+  "material.destroy": "destroyed a material",
   "duplicate.dismiss": "marked a pair as not duplicates",
   "duplicate.merge": "resolved a duplicate pair",
   "invitation.create": "invited someone",
@@ -55,7 +56,9 @@ const PHRASING: Record<AuditAction, string> = {
   "user.role_change": "changed someone's role",
   "user.disable": "suspended an account",
   "user.enable": "restored an account",
+  "user.delete": "deleted an account",
   "sync.run": "ran a Drive sync",
+  "sync.clear": "cleared a sync that never finished",
 }
 
 export const describe = (action: string): string =>

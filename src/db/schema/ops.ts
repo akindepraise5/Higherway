@@ -44,6 +44,13 @@ export const auditLog = pgTable(
 /**
  * One row per press of the Sync button. Sync is manual and one-way: it pulls
  * from Drive and never writes back. ARCHITECTURE.md §2.
+ *
+ * **Written when the button is pressed, not when the task starts.** It used to be
+ * created inside `sync-drive`, so until a worker picked the run up there was no
+ * row at all: the history stayed empty, the page said "scanning the folder" for
+ * ever, and the one-at-a-time guard — which reads this table — could not see a
+ * run that did not exist yet. Two presses both went through. Same mistake as
+ * creating a material inside `process-material`, and the same fix.
  */
 export const syncRuns = pgTable(
   "sync_runs",
@@ -53,6 +60,16 @@ export const syncRuns = pgTable(
     startedBy: text(),
     startedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp({ withTimezone: true }),
+
+    /**
+     * The Trigger.dev run this row belongs to.
+     *
+     * Stored so the page can ask Trigger what happened to it. A run that is
+     * queued and never picked up is indistinguishable from one that is working,
+     * unless somebody asks — and "queued, no worker" is the single most useful
+     * thing this page can say when nothing appears to be happening.
+     */
+    runId: text(),
 
     imported: integer().notNull().default(0),
     skipped: integer().notNull().default(0),

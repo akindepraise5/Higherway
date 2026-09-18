@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { USABLE_THRESHOLD } from "../../lib/text/quality"
 
 /**
  * Reading a material, rather than judging it by its title.
@@ -95,7 +96,9 @@ export function PageReader({ title, pages }: { title: string; pages: ReaderPage[
               <span>p{page.pageNumber}</span>
               <span
                 className={
-                  page.ocrQuality !== null && page.ocrQuality < 0.55 ? "text-[#8c2f22]" : ""
+                  page.ocrQuality !== null && page.ocrQuality < USABLE_THRESHOLD
+                    ? "text-[#8c2f22]"
+                    : ""
                 }
               >
                 {page.ocrQuality !== null ? `${Math.round(page.ocrQuality * 100)}%` : "—"}

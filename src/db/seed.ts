@@ -17,7 +17,7 @@
 
 import { randomUUID } from "node:crypto"
 import { eq } from "drizzle-orm"
-import { env } from "../lib/env"
+import { env, required } from "../lib/env"
 import { INVITE_EXPIRES_HOURS, invitationExpiry, newToken } from "../lib/invite-token"
 import { db } from "."
 import { invitation, user } from "./schema"
@@ -68,7 +68,7 @@ existing account.`)
     acceptedUserId: null,
   })
 
-  const link = `${env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/invite/${token}`
+  const link = `${required("NEXT_PUBLIC_SITE_URL").replace(/\/$/, "")}/invite/${token}`
 
   console.log(`
 Owner account created.

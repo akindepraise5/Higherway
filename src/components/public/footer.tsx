@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { hasSubmissions } from "../../lib/env"
 import { topicList } from "../../server/materials/queries"
 import { Logo } from "./logo"
 
@@ -36,6 +37,16 @@ export async function Footer() {
                   About Higherway
                 </Link>
               </li>
+              {/* Only when submissions are actually open. A link to a page that
+                  explains it is closed is a small broken promise, and the page
+                  is a 404-with-an-explanation rather than a disabled form. */}
+              {hasSubmissions ? (
+                <li>
+                  <Link href="/submit" className="text-sm transition-colors hover:text-paper-2">
+                    Send us something
+                  </Link>
+                </li>
+              ) : null}
             </ul>
           </div>
 

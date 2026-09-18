@@ -3,8 +3,10 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { CategoryPicker } from "../../../../components/admin/category-picker"
+import { DestroyMaterial } from "../../../../components/admin/destroy-material"
 import { MaterialEditor } from "../../../../components/admin/material-editor"
 import { PageReader } from "../../../../components/admin/page-reader"
+import { TopicSuggestions } from "../../../../components/admin/topic-suggestions"
 import { Cover } from "../../../../components/public/cover"
 import { db } from "../../../../db"
 import {
@@ -17,9 +19,12 @@ import {
 import { lookFor } from "../../../../lib/art/palette"
 import { pageKey, publicUrl } from "../../../../lib/r2/keys"
 import { requireSession } from "../../../../lib/session"
+import { USABLE_THRESHOLD } from "../../../../lib/text/quality"
 import { exact, timeAgo, who } from "../../../../lib/when"
 import { describeChange } from "../../../../server/activity"
-import { contributors, materialHistory } from "../../../../server/materials/history"
+import { adminAuthors } from "../../../../server/materials/admin"
+import { contributors, materialHistory, whyArchived } from "../../../../server/materials/history"
+import { suggestTopics } from "../../../../server/suggest/topics"
 
 /**
  * One material, as an admin sees it.
@@ -55,7 +60,7 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
   const [material] = await db.select().from(materials).where(eq(materials.id, id)).limit(1)
   if (!material) notFound()
 
-  const [topics, pages, allTopics, people, history, unfiledNext] = await Promise.all([
+  const [topics, pages, allTopics, people, history, unfiledNext, authors] = await Promise.all([
     db
       .select({
         id: categories.id,
@@ -101,11 +106,35 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
       )
       .orderBy(materials.createdAt)
       .limit(1),
+    adminAuthors(),
   ])
+
+  /**
+   * Only for an unfiled material, and only after the topics are known — so it
+   * is a second round trip rather than part of the batch above. That is the
+   * right trade: it keeps a nearest-neighbour query off every page load of the
+   * 252 materials that are already filed, which is most of them.
+   */
+  const suggestions = topics.length === 0 ? await suggestTopics(id) : []
+
+  /**
+   * Why it was taken out, and what it duplicates. Only fetched when one of them
+   * can be true — a published material that duplicates nothing has neither, and
+   * that is most of them.
+   */
+  const removed =
+    material.archivedAt !== null || material.duplicateOfId !== null ? await whyArchived(id) : null
 
   const base = process.env.R2_PUBLIC_BASE_URL ?? ""
   const look = lookFor(material.slug, topics[0]?.slug ?? "uncategorised")
   const withText = pages.filter((p) => p.text).length
+  /**
+   * Read, but badly. Different from having no text: a recogniser cannot help
+   * here, it has already run — this needs a person to look at the image.
+   */
+  const readBadly = pages.filter(
+    (p) => p.ocrQuality !== null && p.ocrQuality < USABLE_THRESHOLD,
+  ).length
 
   const facts: [string, React.ReactNode][] = [
     ["Status", material.status],
@@ -114,6 +143,16 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
     ["Size", fmtBytes(material.byteSize)],
     ["Text", material.ocrEngine === "none" ? "awaiting" : material.ocrEngine.replace(/_/g, " ")],
     ["Pages with text", `${withText} of ${pages.length}`],
+    ...(readBadly > 0
+      ? ([
+          [
+            "Read badly",
+            <span key="badly" className="text-[#8c2f22]">
+              {readBadly} {readBadly === 1 ? "page" : "pages"} — worth looking at
+            </span>,
+          ],
+        ] as [string, React.ReactNode][])
+      : []),
     ["Public text", material.textPublic ? "shown" : "hidden"],
     ["Added", material.createdAt.toISOString().slice(0, 10)],
     // Worth keeping — it is what the v1 sheet called the file, so it traces a
@@ -175,6 +214,13 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
               />
             </div>
 
+            {/* Only when it is unfiled. 314 published materials are, which is
+                where the work is; on a material already on a shelf, a panel
+                proposing more shelves is noise. */}
+            {topics.length === 0 ? (
+              <TopicSuggestions materialId={id} suggestions={suggestions} />
+            ) : null}
+
             {unfiledNext[0] ? (
               <Link
                 href={`/admin/materials/${unfiledNext[0].id}`}
@@ -193,12 +239,44 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
         </div>
 
         <div>
+          {/* Both of these have always been recorded and neither was shown
+              anywhere: the reason is collected in the archive dialog precisely
+              so it exists, and went straight into the trail and out of sight. */}
+          {removed && (removed.reason || removed.duplicateOf) ? (
+            <div className="mb-5 rounded-[4px] border-l-2 border-[#8c2f22] bg-paper-2 px-4 py-3">
+              <p className="text-[11px] font-medium uppercase tracking-[.16em] text-[#8c2f22]">
+                {material.archivedAt ? "Taken out of the library" : "Refused"}
+              </p>
+              {removed.reason ? (
+                <p className="mt-1.5 text-[14px] leading-relaxed text-ink-2">{removed.reason}</p>
+              ) : null}
+              {removed.duplicateOf ? (
+                <p className="mt-1.5 text-[13px] text-ink-3">
+                  {removed.duplicateOf.live ? "Kept instead: " : "Against: "}
+                  <Link
+                    href={`/admin/materials/${removed.duplicateOf.id}`}
+                    className="border-b border-line hover:border-ink"
+                  >
+                    {removed.duplicateOf.title}
+                  </Link>
+                  {removed.duplicateOf.live ? null : " — which is itself archived"}
+                </p>
+              ) : null}
+              {removed.by && removed.at ? (
+                <p className="mt-1.5 text-[11.5px] text-taupe">
+                  {who(removed.by.name, removed.by.email)} · {timeAgo(removed.at)}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="flex items-start gap-3">
             <h1 className="font-serif text-[clamp(26px,3.2vw,36px)] font-light leading-tight tracking-[-0.02em]">
               {material.title}
             </h1>
             <MaterialEditor
               materialId={id}
+              authors={authors}
               title={material.title}
               author={material.author}
               summary={material.summary}
@@ -280,6 +358,13 @@ export default async function AdminMaterialPage({ params }: { params: Promise<{ 
               ))}
             </ol>
           )}
+
+          {/* Only for an Owner, and only once it is archived — two deliberate
+              decisions rather than one. It sits at the very bottom, under the
+              history, because it is the last thing anyone should reach for. */}
+          {role === "owner" && material.archivedAt !== null ? (
+            <DestroyMaterial materialId={id} title={material.title} pages={pages.length} />
+          ) : null}
         </div>
       </div>
     </>

@@ -45,6 +45,12 @@ export type AuditAction =
       `category.unmerge`. */
   | "material.uncategorise"
   | "material.text_visibility"
+  /** Truly deleting a material and its files — the only thing in the project
+      that does. Owner-only and deliberately a second step after archiving. The
+      title, page count and every R2 key go in `before`, because once the row is
+      gone that entry is the only record the material existed, and the keys are
+      how orphaned bytes are found if storage refused to delete them. */
+  | "material.destroy"
   | "duplicate.dismiss"
   | "duplicate.merge"
   | "invitation.create"
@@ -53,7 +59,19 @@ export type AuditAction =
   | "user.role_change"
   | "user.disable"
   | "user.enable"
+  /** Permanently removing an account. Deliberate and Owner-only: suspending
+      (`user.disable`) is the everyday answer and keeps the person's history.
+      The account's email, name and role go in `before`, because once the row
+      is gone that snapshot is the only record the account ever existed. */
+  | "user.delete"
+  /** An Owner pressed the Sync button. What that run *found* is in `sync_runs`;
+      this records only that a person asked for it, which is the part a human
+      did and the part the trail exists to answer. */
   | "sync.run"
+  /** An Owner closed a run that died without closing itself. Deliberately a
+      person's decision: a timeout would eventually clear a run that was merely
+      slow and let a second one start beside it. */
+  | "sync.clear"
 
 export type AuditEntry = {
   action: AuditAction

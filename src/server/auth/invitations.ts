@@ -4,8 +4,10 @@ import { randomUUID } from "node:crypto"
 import { eq } from "drizzle-orm"
 import { db } from "../../db"
 import { invitation, user } from "../../db/schema"
+import { txdb } from "../../db/tx"
 import { auth } from "../../lib/auth"
 import { classifyInvitation, hashToken, type InviteProblem } from "../../lib/invite-token"
+import { audit } from "../audit"
 
 /**
  * Invitations: the only way an account comes into being.
@@ -167,16 +169,40 @@ export async function acceptInvitation(token: string, password: string): Promise
     })
   }
 
-  await db
-    .update(invitation)
-    .set({ acceptedAt: new Date(), acceptedUserId: account.id })
-    .where(eq(invitation.id, invite.id))
+  /**
+   * Marking the invitation used, verifying the address and recording the whole
+   * thing, in **one transaction**.
+   *
+   * This was three unaudited statements on the read handle. CLAUDE.md requires
+   * every mutation to write its audit row in the same transaction as the change,
+   * and accepting an invitation is not a small mutation: it is the moment a
+   * person gains access to the archive. The trail had no entry for it at all, so
+   * the only record that an account came into existence was the account.
+   *
+   * It is also the one place where the actor is the *new* account rather than
+   * someone already signed in — there is no session yet. That is recorded
+   * honestly: `actorId` is the person who accepted, which is who acted.
+   */
+  await txdb.transaction(async (tx) => {
+    await tx
+      .update(invitation)
+      .set({ acceptedAt: new Date(), acceptedUserId: account.id })
+      .where(eq(invitation.id, invite.id))
 
-  // Accepting the link is itself proof the address reaches them.
-  await db
-    .update(user)
-    .set({ emailVerified: true, updatedAt: new Date() })
-    .where(eq(user.id, account.id))
+    // Accepting the link is itself proof the address reaches them.
+    await tx
+      .update(user)
+      .set({ emailVerified: true, updatedAt: new Date() })
+      .where(eq(user.id, account.id))
+
+    await audit(tx, {
+      action: "invitation.accept",
+      entityType: "invitation",
+      entityId: invite.id,
+      after: { email: invite.email, role: invite.role },
+      actorId: account.id,
+    })
+  })
 
   return { ok: true }
 }

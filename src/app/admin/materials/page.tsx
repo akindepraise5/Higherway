@@ -1,8 +1,10 @@
+import { Plus } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
-import { AddMaterialDrawer } from "../../../components/admin/add-material-drawer"
+import { BulkSelect, RowSelect, SelectAll } from "../../../components/admin/bulk-select"
+import { InFlight } from "../../../components/admin/in-flight"
+import { stickyCell, stickyHead, TableScroll } from "../../../components/admin/table-scroll"
 import { Pagination } from "../../../components/public/pagination"
-import { hasJobs } from "../../../lib/env"
 import { requireSession } from "../../../lib/session"
 import { exact, timeAgo, who } from "../../../lib/when"
 import { describeChange } from "../../../server/activity"
@@ -14,6 +16,7 @@ import {
   asAdminSort,
   asFilter,
   FILTERS,
+  inFlightCount,
 } from "../../../server/materials/admin"
 import { lastChanges } from "../../../server/materials/history"
 
@@ -57,7 +60,12 @@ export default async function AdminMaterialsPage({
 }: {
   searchParams: Promise<Search>
 }) {
-  await requireSession()
+  const session = await requireSession()
+  const role = (session.user as { role?: string }).role ?? "editor"
+  // Filing is every editor's daily work; publishing and archiving decide what
+  // the archive says in public, so they stay Admin — in the bar exactly as they
+  // are on a single material.
+  const canModerate = role === "admin" || role === "owner"
   const params = await searchParams
 
   const filter = asFilter(params.filter)
@@ -65,10 +73,11 @@ export default async function AdminMaterialsPage({
   const q = params.q?.trim() ?? ""
   const page = Number(params.page) || 1
 
-  const [result, counts, topics] = await Promise.all([
+  const [result, counts, topics, inFlight] = await Promise.all([
     adminMaterials({ filter, q, sort, page }),
     adminCounts(),
     adminCategories(),
+    inFlightCount(),
   ])
 
   // One query for the whole page, after the rows are known.
@@ -111,8 +120,22 @@ export default async function AdminMaterialsPage({
           </button>
         </form>
 
-        <AddMaterialDrawer jobsConfigured={hasJobs} topics={topics} />
+        {/* A link, not a drawer. Adding is a queue of up to sixty files with
+            uploads in flight; that belongs on a page with an address, not in a
+            modal that cannot be dismissed while it works. Editing is still a
+            drawer, because editing really is one material at a time. */}
+        <Link
+          href="/admin/materials/new"
+          className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-[13.5px] font-medium text-paper-2 transition-colors hover:bg-forest-2"
+        >
+          <Plus size={15} />
+          Add materials
+        </Link>
       </div>
+
+      {/* Only while something is actually in flight; it refreshes the page
+          itself and stops on its own. */}
+      <InFlight count={inFlight} />
 
       <div className="mt-6 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
@@ -142,22 +165,32 @@ export default async function AdminMaterialsPage({
           )}
         </p>
       ) : (
-        <div className="mt-8 overflow-hidden rounded-[3px] border border-line-soft">
-          <table className="w-full border-collapse text-left">
+        <BulkSelect ids={result.items.map((m) => m.id)} topics={topics} canModerate={canModerate}>
+          <TableScroll minWidth="62rem" className="mt-4">
             <thead>
               <tr className="border-b border-line-soft bg-paper-2 text-[11px] font-medium uppercase tracking-[.14em] text-taupe">
-                <th className="px-4 py-3 font-medium">Material</th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">Topics</th>
-                <th className="hidden px-4 py-3 font-medium sm:table-cell">Pages</th>
-                <th className="hidden px-4 py-3 font-medium lg:table-cell">Text</th>
-                <th className="hidden px-4 py-3 font-medium lg:table-cell">Last change</th>
+                <th className="w-10 px-4 py-3 font-medium">
+                  <SelectAll ids={result.items.map((m) => m.id)} />
+                  <span className="sr-only">Select</span>
+                </th>
+                <th className={`px-4 py-3 font-medium ${stickyHead}`}>Material</th>
+                <th className="px-4 py-3 font-medium">Topics</th>
+                <th className="px-4 py-3 font-medium">Pages</th>
+                <th className="px-4 py-3 font-medium">Text</th>
+                <th className="px-4 py-3 font-medium">Last change</th>
                 <th className="px-4 py-3 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
               {result.items.map((m) => (
-                <tr key={m.id} className="border-b border-line-soft last:border-0 hover:bg-paper-2">
-                  <td className="px-4 py-3">
+                <tr
+                  key={m.id}
+                  className="group border-b border-line-soft last:border-0 hover:bg-paper-2"
+                >
+                  <td className="px-4 py-3 align-top">
+                    <RowSelect id={m.id} title={m.title} />
+                  </td>
+                  <td className={`px-4 py-3 ${stickyCell}`}>
                     <Link
                       href={`/admin/materials/${m.id}`}
                       className="font-serif text-[16px] leading-snug hover:text-gold"
@@ -169,7 +202,7 @@ export default async function AdminMaterialsPage({
                     ) : null}
                   </td>
 
-                  <td className="hidden px-4 py-3 md:table-cell">
+                  <td className="px-4 py-3">
                     {m.topics.length === 0 ? (
                       <span className="text-[12.5px] text-gold">Uncategorised</span>
                     ) : (
@@ -179,11 +212,9 @@ export default async function AdminMaterialsPage({
                     )}
                   </td>
 
-                  <td className="hidden px-4 py-3 text-[13px] text-ink-3 sm:table-cell">
-                    {m.pageCount ?? "—"}
-                  </td>
+                  <td className="px-4 py-3 text-[13px] text-ink-3">{m.pageCount ?? "—"}</td>
 
-                  <td className="hidden px-4 py-3 lg:table-cell">
+                  <td className="px-4 py-3">
                     {m.ocrEngine === "none" ? (
                       <span className="text-[12.5px] text-taupe">awaiting</span>
                     ) : (
@@ -194,7 +225,7 @@ export default async function AdminMaterialsPage({
                     )}
                   </td>
 
-                  <td className="hidden px-4 py-3 lg:table-cell">
+                  <td className="px-4 py-3">
                     {(() => {
                       const c = changes.get(m.id)
                       if (!c) return <span className="text-[12.5px] text-taupe">—</span>
@@ -222,8 +253,8 @@ export default async function AdminMaterialsPage({
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+          </TableScroll>
+        </BulkSelect>
       )}
 
       <Pagination

@@ -5,6 +5,8 @@ allowBuilds:
   protobufjs: true
   unrs-resolver: false
   '@depot/cli': true
+  # Its only install script is opencollective-postinstall, a donation banner.
+  tesseract.js: false
 minimumReleaseAgeExclude:
   - '@trigger.dev/build@4.6.1 || 4.6.2'
   - '@trigger.dev/core@4.6.1 || 4.6.2'

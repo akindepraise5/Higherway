@@ -16,16 +16,21 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "env:check": "tsx --env-file=.env.local scripts/check-env.ts",
+    "service:account": "tsx scripts/service-account.ts",
     "db:seed": "tsx --env-file=.env.local src/db/seed.ts",
     "import:sheet": "tsx --env-file=.env.local scripts/import-sheet.ts",
     "backfill": "tsx --env-file=.env.local scripts/backfill.ts",
+    "embed": "tsx --env-file=.env.local scripts/embed.ts",
     "ocr:local": "tsx --env-file=.env.local scripts/ocr-local.ts",
     "ocr:status": "tsx --env-file=.env.local scripts/ocr-status.ts",
     "fix:names": "tsx --env-file=.env.local scripts/fix-download-names.ts",
     "reinvite": "tsx --env-file=.env.local scripts/reinvite-owner.ts",
+    "account:delete": "tsx --env-file=.env.local scripts/delete-account.ts",
     "scan:duplicates": "tsx --env-file=.env.local scripts/scan-duplicates.ts",
     "resolve:stuck": "tsx --env-file=.env.local scripts/resolve-stuck.ts",
-    "fix:hyphens": "tsx --env-file=.env.local scripts/fix-hyphens.ts"
+    "fix:hyphens": "tsx --env-file=.env.local scripts/fix-hyphens.ts",
+    "r2:cors": "tsx --env-file=.env.local scripts/r2-cors.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1132.0",
@@ -44,8 +49,10 @@
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "resend": "^6.28.1",
     "shadcn": "^4.21.0",
     "sharp": "^0.35.4",
+    "tesseract.js": "^7.0.0",
     "tw-animate-css": "^1.4.0",
     "ws": "^8.21.3",
     "zod": "^4.6.5"
