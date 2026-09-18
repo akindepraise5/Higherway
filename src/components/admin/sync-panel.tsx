@@ -11,11 +11,13 @@ import { TableScroll } from "./table-scroll"
 /**
  * The Sync button, and what every press of it did.
  *
- * Two buttons rather than one, and the order is deliberate. **Check the folder**
- * is a dry run: it lists what would be pulled and imports nothing. **Pull in what
- * is new** does it. A sync adds material to a public archive that nobody has
- * looked at, and being able to see the answer before committing to it is the
- * difference between a button people press and one they avoid.
+ * Three buttons, and the order is the advice. **Check the folder** is a dry run:
+ * it lists what would be pulled and imports nothing. **Bring in five** proves the
+ * pipeline on a handful. **Pull in everything new** commits to the rest.
+ *
+ * A sync adds material to a public archive that nobody has looked at, and being
+ * able to see the answer before committing to it is the difference between a
+ * button people press and one they avoid.
  *
  * The page does not poll. A run over a folder of hundreds takes minutes, and a
  * page that reloads itself every few seconds is a page nobody can read the
@@ -91,6 +93,21 @@ export function SyncPanel({
           Check the folder
         </button>
 
+        {/* Five first, and it is the button to press on a folder nobody has
+            synced before. The folder holds 796 PDFs of which 148 are new; a
+            sync started while nothing is consuming the queue stages every one
+            of them with no worker to read them. Five either produces five
+            finished materials or proves the pipeline is not running, and both
+            answers beat 148 rows in limbo. */}
+        <button
+          type="button"
+          disabled={pending || running !== null}
+          onClick={() => run(() => startSync({ limit: 5 }))}
+          className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2.5 text-[13.5px] text-ink-2 transition-colors hover:border-ink disabled:opacity-40"
+        >
+          Bring in five, to start
+        </button>
+
         <button
           type="button"
           disabled={pending || running !== null}
@@ -98,7 +115,7 @@ export function SyncPanel({
           className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-[13.5px] font-medium text-paper-2 transition-colors hover:bg-forest-2 disabled:opacity-40"
         >
           <RefreshCw size={15} className={running ? "animate-spin" : ""} />
-          {running ? "A sync is running" : "Pull in what is new"}
+          {running ? "A sync is running" : "Pull in everything new"}
         </button>
 
         {running ? (
