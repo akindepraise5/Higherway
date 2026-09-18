@@ -278,6 +278,20 @@ The CI build's other values (`BETTER_AUTH_*`, `NEXT_PUBLIC_SITE_URL`,
 `R2_PUBLIC_BASE_URL`) are literals in `ci.yml`. They are placeholders or public
 hostnames, not secrets — do not replace them with real ones.
 
+### `pnpm env:check`
+Says what is configured, what is not, and what each one switches on. **Never prints
+a value** — lengths and shapes only, so the output is safe to paste anywhere.
+
+It exists because `KEY=""` looks identical to a configured key at a glance and to a
+careless grep. `.env.example` ships empty placeholders, copying it gives every name
+with no value, and the result is a feature that silently stays off. Three
+credentials sat "present" and empty here before this existed.
+
+It also checks shapes, not just presence: a service account email that does not end
+`…iam.gserviceaccount.com`, a private key with no `BEGIN PRIVATE KEY`, a private key
+whose `\n` escapes were lost in the paste — that last one fails inside `createSign`
+with a PEM error naming nothing.
+
 ### Which variable goes where
 
 Three places need environment variables, and they need **different sets**. A

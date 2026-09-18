@@ -16,6 +16,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "env:check": "tsx --env-file=.env.local scripts/check-env.ts",
     "db:seed": "tsx --env-file=.env.local src/db/seed.ts",
     "import:sheet": "tsx --env-file=.env.local scripts/import-sheet.ts",
     "backfill": "tsx --env-file=.env.local scripts/backfill.ts",
