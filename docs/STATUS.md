@@ -493,6 +493,37 @@ weakened; the check moved to where the value is needed.
 Trigger.dev and to GitHub Actions**, because they are three different sets and a
 variable in the wrong place fails without naming itself.
 
+### The sync button, pressed for real — 2026-09-18
+
+The owner pressed **Check the folder** and nothing came back. Three separate
+faults, found by asking Trigger rather than by reasoning:
+
+1. **The `sync_runs` row was created inside the task**, so until a worker picked
+   the run up there was no row at all — the history stayed empty and the page
+   said "scanning the folder" for ever. Exactly the mistake already fixed for
+   materials, in a second place. It is written when the button is pressed now,
+   and the task adopts it.
+2. **The one-at-a-time guard therefore never worked.** It reads `sync_runs`, and
+   with no row to find, two presses both went through and queued two runs.
+3. **The page could not say what was happening**, because a run queued with no
+   worker looks identical to one working hard. It asks Trigger for the run's
+   status now and says which — *"waiting in the queue, nothing has picked it up,
+   which means no worker is deployed"* is the single most useful sentence that
+   page can produce. Clearing is offered immediately for a run Trigger reports as
+   queued or already finished, rather than after an hour: those are facts, and
+   making someone wait to act on a fact is the interface being stubborn.
+
+**And a correction to what I told the owner.** I said no worker had ever run.
+Wrong: both runs *did* execute, and failed in nine seconds with *"Drive is not
+configured"* — a local `trigger.dev dev` worker whose process had started before
+the Google credentials were added. Restarting it fixed that, and the evidence I
+had used (an upload from the previous day with no pages) predated the worker
+existing at all.
+
+**Verified by running one.** A real dry run through the real worker:
+`COMPLETED`, `{inFolder: 796, imported: 0, skipped: 796, dryRun: true}`, and the
+`sync_runs` row closed with those counts.
+
 ### Next, in the order worth taking them
 
 1. ~~**Invitation email.**~~ **Done** — see *Invitations are sent* below.

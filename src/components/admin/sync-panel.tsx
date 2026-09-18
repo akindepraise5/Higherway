@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 import { timeAgo, who } from "../../lib/when"
 import { clearStuckSync, startSync } from "../../server/services/sync"
-import type { SyncRun } from "../../server/sync/queries"
+import type { OpenRun, SyncRun } from "../../server/sync/queries"
 import { TableScroll } from "./table-scroll"
 
 /**
@@ -30,7 +30,7 @@ export function SyncPanel({
   /** Drive credentials present. Without them the buttons explain rather than fail. */
   configured: boolean
   runs: SyncRun[]
-  running: { id: string; startedAt: Date } | null
+  running: OpenRun | null
 }) {
   const [pending, start] = useTransition()
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
@@ -46,7 +46,19 @@ export function SyncPanel({
       router.refresh()
     })
 
-  const stale = running !== null && Date.now() - new Date(running.startedAt).getTime() > 3_600_000
+  /**
+   * When to offer clearing it.
+   *
+   * Immediately for a run Trigger says is queued or already gone — those are
+   * facts, not guesses, and making someone wait an hour to act on a fact is the
+   * interface being stubborn. Only a run that is genuinely executing, or one
+   * Trigger could not be asked about, gets the benefit of the doubt, and that
+   * runs out after ten minutes.
+   */
+  const age = running ? Date.now() - new Date(running.startedAt).getTime() : 0
+  const stuck =
+    running !== null &&
+    (running.state === "queued" || running.state === "gone" || age > 10 * 60_000)
 
   if (!configured) {
     return (
@@ -109,12 +121,27 @@ export function SyncPanel({
         </p>
       ) : null}
 
-      {stale && running ? (
+      {stuck && running ? (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-[4px] border-l-2 border-[#8c2f22] bg-paper-2 px-4 py-3">
           <AlertTriangle size={15} className="flex-none text-[#8c2f22]" aria-hidden="true" />
           <p className="min-w-0 flex-1 text-[13px] text-ink-2">
-            A sync started {timeAgo(new Date(running.startedAt))} and never reported. Until it is
-            cleared, no other sync can start.
+            {running.state === "queued" ? (
+              <>
+                A sync has been <strong className="font-medium">waiting in the queue</strong> since{" "}
+                {timeAgo(new Date(running.startedAt))} — nothing has picked it up, which means no
+                worker is deployed to run these tasks. Deploy them, then clear this and try again.
+              </>
+            ) : running.state === "gone" ? (
+              <>
+                The run behind this sync has finished or failed without reporting back. Clear it to
+                start another.
+              </>
+            ) : (
+              <>
+                A sync started {timeAgo(new Date(running.startedAt))} and has not reported. Until it
+                is cleared, no other sync can start.
+              </>
+            )}
           </p>
           <button
             type="button"

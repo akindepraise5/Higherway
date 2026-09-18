@@ -36,6 +36,13 @@
       "when": 1789685927680,
       "tag": "0004_slow_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789698007138,
+      "tag": "0005_smiling_jack_flag",
+      "breakpoints": true
     }
   ]
 }

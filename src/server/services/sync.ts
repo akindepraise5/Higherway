@@ -66,6 +66,11 @@ export async function startSync(options?: {
    * as new — neither has imported it yet — and stage it twice, which the
    * SHA-256 index then rejects as a crash rather than a skip. That is precisely
    * how the backfill ended up with 27 materials stuck.
+   *
+   * This guard **did not work** until the row below was created here. It reads
+   * `sync_runs`, and the row used to be written inside the task, so until a
+   * worker picked the run up there was nothing to find: two presses on a project
+   * with no worker both went through and queued two runs.
    */
   const [running] = await txdb
     .select({ id: syncRuns.id, startedAt: syncRuns.startedAt })
@@ -79,17 +84,46 @@ export async function startSync(options?: {
     return {
       ok: false,
       error:
-        minutes > 60
-          ? `A sync started ${minutes} minutes ago and never finished. It has to be cleared before another can run.`
-          : `A sync is already running, started ${minutes} minute${minutes === 1 ? "" : "s"} ago.`,
+        minutes >= 2
+          ? `A sync started ${minutes} minute${minutes === 1 ? "" : "s"} ago and has not reported. Clear it below before starting another.`
+          : "A sync is already running.",
     }
   }
 
-  const handle = await tasks.trigger<typeof syncDrive>("sync-drive", {
-    actorId: session.user.id,
-    dryRun: options?.dryRun,
-    limit: options?.limit,
-  })
+  /**
+   * The row first, then the task. Written here so the history shows the run the
+   * moment it is asked for, whether or not anything ever picks it up — which is
+   * exactly the state worth being able to see.
+   */
+  const [row] = await txdb
+    .insert(syncRuns)
+    .values({ startedBy: session.user.id })
+    .returning({ id: syncRuns.id })
+
+  if (!row) return { ok: false, error: "The run could not be recorded." }
+
+  let handle: { id: string }
+  try {
+    handle = await tasks.trigger<typeof syncDrive>("sync-drive", {
+      runId: row.id,
+      actorId: session.user.id,
+      dryRun: options?.dryRun,
+      limit: options?.limit,
+    })
+  } catch (error) {
+    // Close the row rather than leaving it open to block the next attempt over
+    // something that never started.
+    await txdb
+      .update(syncRuns)
+      .set({ finishedAt: new Date(), error: "The run could not be queued." })
+      .where(eq(syncRuns.id, row.id))
+    return {
+      ok: false,
+      error: `Could not start the sync: ${error instanceof Error ? error.message : "unknown error"}`,
+    }
+  }
+
+  await txdb.update(syncRuns).set({ runId: handle.id }).where(eq(syncRuns.id, row.id))
 
   /**
    * Audited here rather than inside the task. The task records *what a sync

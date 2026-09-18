@@ -37,6 +37,13 @@ import type { processMaterial } from "./process-material"
  */
 
 export type SyncDrivePayload = {
+  /**
+   * The `sync_runs` row the button already created. Adopted rather than
+   * inserted: the row has to exist from the moment a person asks, or a run that
+   * no worker picks up leaves the history empty and the page saying "scanning
+   * the folder" for ever.
+   */
+  runId: string
   /** The Owner who pressed the button. The run is recorded against them. */
   actorId: string
   /** Report what would happen and change nothing. */
@@ -57,16 +64,21 @@ const MAX_BYTES = 80 * 1024 * 1024
 export const syncDrive = task({
   id: "sync-drive",
   maxDuration: 3600,
-  run: async ({ actorId, dryRun = false, limit }: SyncDrivePayload) => {
+  run: async ({ runId, actorId, dryRun = false, limit }: SyncDrivePayload) => {
     if (!hasDrive || !env.GOOGLE_DRIVE_FOLDER_ID) {
+      /**
+       * Close the row before throwing. A run that dies with its row open reads
+       * as "still going" for ever and blocks the next press — and a
+       * misconfiguration is exactly the case where somebody will press again.
+       */
+      await txdb
+        .update(syncRuns)
+        .set({ finishedAt: new Date(), error: "Drive is not configured on the worker." })
+        .where(eq(syncRuns.id, runId))
       throw new Error("Drive is not configured — set the service account and the folder id.")
     }
 
-    const [run] = await txdb
-      .insert(syncRuns)
-      .values({ startedBy: actorId })
-      .returning({ id: syncRuns.id })
-    if (!run) throw new Error("The sync run could not be recorded")
+    const run = { id: runId }
 
     const outcomes: Outcome[] = []
 

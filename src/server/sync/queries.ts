@@ -1,3 +1,4 @@
+import { runs } from "@trigger.dev/sdk"
 import { desc, eq, isNull } from "drizzle-orm"
 import { db } from "../../db"
 import { syncRuns } from "../../db/schema"
@@ -59,14 +60,53 @@ export async function recentRuns(limit = 10): Promise<SyncRun[]> {
   }))
 }
 
-/** A run that has not reported. What stops a second one being started. */
-export async function runningSync(): Promise<{ id: string; startedAt: Date } | null> {
+export type OpenRun = {
+  id: string
+  startedAt: Date
+  /** Trigger's own word for it, when it could be asked. */
+  state: "queued" | "running" | "gone" | "unknown"
+}
+
+/**
+ * A run that has not reported, and **what Trigger says about it**.
+ *
+ * Asking matters. A run queued with no worker to pick it up looks exactly like
+ * one that is working hard, and the page can only say "a sync is running" — for
+ * ever. That is what happened here: two dry runs were queued against a project
+ * with no deployed worker, and nothing on the page could say so.
+ *
+ * `QUEUED` after the first few seconds means nothing is consuming the queue,
+ * which is the single most useful thing this page can tell an Owner. If Trigger
+ * cannot be reached the state is `unknown` and the page says less rather than
+ * guessing.
+ */
+export async function runningSync(): Promise<OpenRun | null> {
   const [row] = await db
-    .select({ id: syncRuns.id, startedAt: syncRuns.startedAt })
+    .select({ id: syncRuns.id, startedAt: syncRuns.startedAt, runId: syncRuns.runId })
     .from(syncRuns)
     .where(isNull(syncRuns.finishedAt))
     .orderBy(desc(syncRuns.startedAt))
     .limit(1)
 
-  return row ?? null
+  if (!row) return null
+  if (!row.runId) return { id: row.id, startedAt: row.startedAt, state: "unknown" }
+
+  try {
+    const run = await runs.retrieve(row.runId)
+    const status = String(run.status)
+    return {
+      id: row.id,
+      startedAt: row.startedAt,
+      state:
+        status === "QUEUED" || status === "WAITING_FOR_DEPLOY" || status === "DELAYED"
+          ? "queued"
+          : status === "EXECUTING" || status === "REATTEMPTING"
+            ? "running"
+            : // Finished, failed, cancelled or expired, yet the row is open —
+              // so the task died without closing it. Worth saying plainly.
+              "gone",
+    }
+  } catch {
+    return { id: row.id, startedAt: row.startedAt, state: "unknown" }
+  }
 }
