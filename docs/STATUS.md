@@ -543,19 +543,26 @@ block the start of the work.
 - [x] Cloudflare R2 bucket + credentials — live, receiving files
 - [x] Resend API key
 - [x] Owner email for the seeded account
-- [ ] Trigger.dev
+- [x] Trigger.dev — keys set
 - [ ] PostHog
-- [ ] Google service account, with **read** access to the Drive folder
+- [x] Google service account, with **read** access to the Drive folder — created
+      and loaded. **The Drive API is still disabled on the project**, which
+      presents as a 403 with a valid key
 - [x] Drive folder ID — `1Cx9XJ-8lsnvjBxpK59HnYfp_dZZUpb9D` (needed at Phase 6; the
       migration itself works off the public links)
 - [x] R2 bucket `higherway`, served from `cdn-higherway.mavilletech.com`
 - [ ] Email address for the first Owner account
 - [ ] Sender address for invites (a verified `mavilletech.com` address)
-- [ ] Cloudflare account ID + Workers AI token — free, and powers the title, summary and
-      category suggestions
-- [ ] Decide on Google Cloud Vision for server-side OCR: 1,000 pages/month free covers
-      us forever, but Google wants a card on file even at zero spend. Declining costs
-      nothing — tesseract.js takes over automatically
+- [x] Turnstile site and secret keys — set, and refusing a junk token. Add
+      `localhost` (no port) to the widget's hostnames to use `/submit` locally
+- [ ] Cloudflare account ID + Workers AI token — only for title and summary
+      suggestions, which are unbuilt. Topic suggestions need no credentials
+- [x] Decide on Google Cloud Vision — **decided yes**, key created. **Billing is
+      not enabled on the project**, so every call returns
+      `PERMISSION_DENIED: This API method requires billing to be enabled`. The
+      1,000 pages a month stay free; the card is a condition of using the API.
+      Until then tesseract reads instead — observed doing exactly that, which is
+      the fallback proving itself rather than a theory
 
 **Domain — resolved.** `mavilletech.com` is on Cloudflare and verified in Resend, so
 invite emails deliver and R2 can have a custom domain from the start. The project's own

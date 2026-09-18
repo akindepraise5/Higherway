@@ -292,6 +292,22 @@ It also checks shapes, not just presence: a service account email that does not 
 whose `\n` escapes were lost in the paste — that last one fails inside `createSign`
 with a PEM error naming nothing.
 
+### Two Google settings that are not credentials
+Both present as a 403 with valid keys, which reads like a wrong key and is not.
+
+- **Vision needs billing enabled on the project**, even at zero spend — the catch
+  ARCHITECTURE.md §7 recorded when the engine was chosen. Without it every call is
+  `PERMISSION_DENIED: This API method requires billing to be enabled`. The 1,000
+  pages a month remain free; the card is a condition of using the API at all.
+  **Observed here, and the fallback did its job**: the 403 was read as a quota
+  refusal and tesseract took the page, so nothing failed and nothing went unread.
+- **The Drive API has to be enabled on the project.** A service account with a
+  perfectly good key still gets `Google Drive API has not been used in project … or
+  it is disabled`. Getting that far proves the JWT signing and the key are right —
+  it is the API that is switched off, not the credentials.
+
+Both links are in the error messages, keyed to the project number.
+
 ### `pnpm service:account <path-to-downloaded.json>`
 Writes the two Drive variables into `.env.local` from the JSON Google gives you,
 correctly escaped. It replaces those two lines and leaves every other line alone,
