@@ -423,6 +423,20 @@ exists to catch what is missing.
   account behind it, and writing one of ours in would be a false record of who
   acted. Who sent it, if they said, is in the audit payload.
 
+**A second one, found the moment the owner added real keys.** The widget failed
+with Turnstile error **110200 — domain not allowed**, because a site key is bound
+to hostnames and `localhost` was not one of them. That is an ordinary first-deploy
+mistake, and the form's response to it was *nothing*: Send disabled for ever with
+no explanation. It is not only a misconfigured key that does this — a privacy
+extension blocking `challenges.cloudflare.com`, or a strict network, look
+identical, and none of them are the visitor's fault. The form now says the check
+could not load and points at the about page instead of presenting a dead button.
+
+**To use it on a development machine**, add `localhost` to the widget's allowed
+hostnames in the Cloudflare Turnstile dashboard. Cloudflare's own always-pass
+test key (`1x00000000000000000000AA`) works anywhere, which is what the browser
+checks here used.
+
 **A real bug found by driving it**, and the kind that fails silently for the
 people least likely to try twice: the widget was rendered in an effect on mount,
 so it only appeared when the Turnstile script happened to be loaded already —

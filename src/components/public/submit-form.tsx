@@ -52,6 +52,18 @@ export function SubmitForm({ siteKey }: { siteKey: string }) {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
   const [token, setToken] = useState("")
+  /**
+   * Set when the widget itself cannot run.
+   *
+   * Without this the form is a **dead button with no explanation**: the check
+   * never completes, Send stays disabled for ever, and nothing on the page says
+   * why. It happens for ordinary reasons — a site key not allowed for this
+   * hostname (Turnstile error 110200, which is exactly what a first deploy
+   * hits), a privacy extension blocking challenges.cloudflare.com, a network
+   * that does not reach it. None of those are the visitor's fault and all of
+   * them look identical to a broken site.
+   */
+  const [checkFailed, setCheckFailed] = useState(false)
 
   const fileInput = useRef<HTMLInputElement>(null)
   const widget = useRef<HTMLDivElement>(null)
@@ -75,9 +87,15 @@ export function SubmitForm({ siteKey }: { siteKey: string }) {
     if (!scriptReady || !el || widgetId.current || !window.turnstile) return
     widgetId.current = window.turnstile.render(el, {
       sitekey: siteKey,
-      callback: (value: string) => setToken(value),
+      callback: (value: string) => {
+        setToken(value)
+        setCheckFailed(false)
+      },
       "expired-callback": () => setToken(""),
-      "error-callback": () => setToken(""),
+      "error-callback": () => {
+        setToken("")
+        setCheckFailed(true)
+      },
       theme: "light",
     })
   }, [siteKey, scriptReady])
@@ -299,6 +317,22 @@ export function SubmitForm({ siteKey }: { siteKey: string }) {
       </div>
 
       <div ref={widget} className="mt-5" />
+
+      {checkFailed ? (
+        <div className="mt-3 rounded-[4px] border-l-2 border-gold bg-paper-2 px-4 py-3">
+          <p className="text-[13.5px] leading-relaxed text-ink-2">
+            The spam check could not load, so this form cannot be sent right now. A privacy
+            extension or a strict network will sometimes block it.
+          </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-taupe">
+            Please email what you have to the address on the{" "}
+            <a href="/about" className="border-b border-line text-ink-3 hover:border-ink">
+              about page
+            </a>{" "}
+            instead — we would still very much like it.
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
