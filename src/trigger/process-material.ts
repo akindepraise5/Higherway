@@ -38,8 +38,11 @@ export type ProcessMaterialPayload = {
    * dashboard without a database to hand.
    */
   source: IngestSource
-  /** Who uploaded it, so the audit trail names a person and not a job. */
-  actorId: string
+  /**
+   * Who uploaded it, so the audit trail names a person and not a job — or null
+   * for a public submission, which has no account behind it.
+   */
+  actorId: string | null
   sourceUrl?: string
   /** Drive's own identity, when the material came from the inbox. */
   driveFileId?: string

@@ -48,7 +48,7 @@ import { putObject } from "./r2/client"
  * so on the material's own row, where before it said nothing at all.
  */
 
-export type IngestSource = "admin_upload" | "url_import" | "drive_sync"
+export type IngestSource = "admin_upload" | "url_import" | "drive_sync" | "public_submission"
 
 /**
  * Why an ingest failed, because the answer decides whether retrying helps.
@@ -69,7 +69,12 @@ export type IngestResult =
  * in the materials list's "Last change" without a migration — and because *why
  * a material was refused* is exactly the kind of thing the trail exists for.
  */
-async function reject(materialId: string, actorId: string, why: string, duplicateOf?: string) {
+async function reject(
+  materialId: string,
+  actorId: string | null,
+  why: string,
+  duplicateOf?: string,
+) {
   await txdb.transaction(async (tx) => {
     await tx
       .update(materials)
@@ -112,7 +117,12 @@ export async function ingestPdf({
    * only on the edit screen — but an empty answer is a real one.
    */
   author?: string
-  actorId: string
+  /**
+   * Who did this, or **null** for a public submission — which genuinely has no
+   * account behind it. `audit_log.actor_id` is nullable, and writing one of our
+   * own accounts in would be a false record of who acted.
+   */
+  actorId: string | null
   /**
    * Drive's own identity for the file, when it came from the inbox.
    *

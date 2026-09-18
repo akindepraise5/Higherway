@@ -17,6 +17,19 @@
 export const MAX_BATCH = 60
 
 /**
+ * The most a **public submission** may carry.
+ *
+ * Far fewer than an admin's 60, and the difference is not arbitrary: an editor
+ * batching fifty scans is a known person doing a known job, and a stranger is
+ * not. Ten is enough for anyone sending in what they have.
+ *
+ * Here rather than beside the service for the same reason as `MAX_BATCH`: a
+ * `"use server"` module may only export async functions, and the form needs the
+ * same number to know when to stop accepting files.
+ */
+export const MAX_SUBMISSION = 10
+
+/**
  * How many files go up at once.
  *
  * Three, not fifty. The bytes go browser → R2 directly, so the limit being

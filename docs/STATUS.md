@@ -390,6 +390,46 @@ them together would send someone to do something that cannot work. The reader's
 own per-page marker used a hardcoded `0.55`; it uses `USABLE_THRESHOLD` now, so
 there is one number.
 
+### Public submissions — done 2026-09-18
+
+`/submit`, and it is **switched off until a Turnstile key pair exists**. Every
+other flag in `lib/env.ts` degrades to a worse-but-working state; this one
+cannot, because the degraded state is an unauthenticated write to the bucket. So
+the page is a short explanation and a link to the library, not a disabled form —
+verified: with no keys there is no file input on the page at all, and no footer
+link to it.
+
+**Short, because the owner said why:** anyone who arrives wanting to contribute
+is doing us a favour, and every field is a chance to decide it is not worth the
+time. Files, then two fields that both say *optional*. The title is inferred from
+the filename; topic, author and year go unasked, because the review queue already
+exists to catch what is missing.
+
+**This is the only unauthenticated door in the project**, and what bounds it:
+
+- Turnstile is verified **before a single presigned URL is issued**, and a
+  failure to check — no secret, verifier unreachable — **refuses rather than
+  passes**. The dangerous failure is an environment variable dropped in a deploy
+  leaving the bucket open until somebody notices. Checked against Cloudflare's
+  own test keys: always-pass returns ok, always-fail returns a refusal, and no
+  secret at all returns a refusal rather than waving it through.
+- A token is **single use**, so one solved challenge buys one submission. It is
+  spent when the capability is granted, not afterwards.
+- **Ten files, not sixty.** An admin batching fifty scans is a known person doing
+  a known job; a stranger is not.
+- `stagingKey` asserts a uuid, so the only files that can be adopted are ones
+  this server issued a URL for.
+- Nothing publishes. `actorId` is **null** — a submission genuinely has no
+  account behind it, and writing one of ours in would be a false record of who
+  acted. Who sent it, if they said, is in the audit payload.
+
+**A real bug found by driving it**, and the kind that fails silently for the
+people least likely to try twice: the widget was rendered in an effect on mount,
+so it only appeared when the Turnstile script happened to be loaded already —
+from cache, or on a fast connection. On a cold load `window.turnstile` was
+undefined, the effect returned, and nothing ran it again: no widget, no token,
+and a Send button that could never be enabled. It waits for the script now.
+
 ### Next, in the order worth taking them
 
 1. ~~**Invitation email.**~~ **Done** — see *Invitations are sent* below.
@@ -403,8 +443,8 @@ there is one number.
    see below.
 5. ~~**Delete `hasSuggestions`.**~~ **Done** — gone, with a note in its place
    saying why, so it is not reinvented.
-6. **Public submissions** — a short form and batch upload. The batch queue built
-   in B is most of the second half already.
+6. ~~**Public submissions**~~ **Done** — see below. Needs a Turnstile key pair to
+   switch on.
 7. ~~**Bulk actions on the materials table.**~~ **Done** — see below.
 
 ---

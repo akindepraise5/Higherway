@@ -32,6 +32,8 @@ const schema = z.object({
   GOOGLE_SERVICE_ACCOUNT_EMAIL: z.string().optional(),
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: z.string().optional(),
   GOOGLE_DRIVE_FOLDER_ID: z.string().optional(),
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().optional(),
+  TURNSTILE_SECRET_KEY: z.string().optional(),
   TRIGGER_SECRET_KEY: z.string().optional(),
   TRIGGER_PROJECT_REF: z.string().optional(),
   SEED_OWNER_EMAIL: z.string().email().optional(),
@@ -56,6 +58,11 @@ export const env = schema.parse({
   GOOGLE_SERVICE_ACCOUNT_EMAIL: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
   GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY,
   GOOGLE_DRIVE_FOLDER_ID: process.env.GOOGLE_DRIVE_FOLDER_ID,
+  // Read as a literal so Next can inline it into the client bundle. A
+  // `process.env[name]` lookup is not substituted at build time and arrives
+  // undefined in the browser.
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+  TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
   TRIGGER_SECRET_KEY: process.env.TRIGGER_SECRET_KEY,
   TRIGGER_PROJECT_REF: process.env.TRIGGER_PROJECT_REF,
   SEED_OWNER_EMAIL: process.env.SEED_OWNER_EMAIL,
@@ -76,6 +83,19 @@ export const hasEmail = Boolean(env.RESEND_API_KEY && env.EMAIL_FROM)
  * unbuilt and Workers AI remains the plan for them, and a flag can come back
  * when something reads it.
  */
+
+/**
+ * Public submissions are switched on.
+ *
+ * **Both keys, or the page does not exist.** Submitting means handing an
+ * unauthenticated visitor a presigned URL to our bucket, and doing that with no
+ * abuse check is an open door to filling 10 GB of free storage with anything at
+ * all. Every other flag here degrades to a worse-but-working state; this one
+ * cannot, because the degraded state is "anyone may write to the bucket".
+ */
+export const hasSubmissions = Boolean(
+  env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET_KEY,
+)
 
 /** Server-side OCR. Without it, tesseract.js reads new uploads instead. */
 export const hasCloudOcr = Boolean(env.GOOGLE_CLOUD_VISION_KEY)

@@ -32,7 +32,8 @@ import type { IngestSource } from "../ingest"
  * reason rather than leaving the person to wonder.
  */
 export async function stageMaterial(input: {
-  actorId: string
+  /** Null for a public submission: there is no account behind it. */
+  actorId: string | null
   title: string
   author?: string
   source: IngestSource
@@ -40,6 +41,10 @@ export async function stageMaterial(input: {
   sourceUrl?: string
   driveFileId?: string
   categoryIds: string[]
+  /** Who sent it in, if a submitter chose to say. Recorded in the trail. */
+  submittedBy?: string
+  /** Anything they wanted to tell us about it. */
+  note?: string
 }): Promise<string> {
   return txdb.transaction(async (tx) => {
     const [row] = await tx
@@ -66,7 +71,13 @@ export async function stageMaterial(input: {
       action: "material.create",
       entityType: "material",
       entityId: row.id,
-      after: { name: input.title, source: input.source, sourceUrl: input.sourceUrl },
+      after: {
+        name: input.title,
+        source: input.source,
+        sourceUrl: input.sourceUrl,
+        submittedBy: input.submittedBy,
+        note: input.note,
+      },
       actorId: input.actorId,
     })
 
