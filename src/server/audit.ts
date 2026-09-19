@@ -26,6 +26,11 @@ import type { Tx } from "../db/tx"
 export type AuditAction =
   | "category.create"
   | "category.rename"
+  /** Writing or changing a topic's one-line description, without touching its
+      name. Not recorded as a rename: the slug and every shared link are
+      unchanged, and a trail that files this under "renamed" would send anyone
+      looking for a broken URL to an entry that broke nothing. */
+  | "category.describe"
   | "category.merge"
   /** Reversing a merge. Never recorded as a merge — an undo that hides in the
       trail as the thing it undid makes the trail worse than useless. */

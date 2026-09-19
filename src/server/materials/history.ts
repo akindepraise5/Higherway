@@ -26,6 +26,7 @@ export const ACTION_LABEL: Record<AuditAction, string> = {
   "sync.clear": "Sync cleared",
   "category.create": "Topic created",
   "category.rename": "Topic renamed",
+  "category.describe": "Topic described",
   "category.merge": "Topics merged",
   "category.unmerge": "Merge undone",
   "category.delete": "Topic deleted",

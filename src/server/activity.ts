@@ -36,6 +36,7 @@ export type ActivityRow = {
 const PHRASING: Record<AuditAction, string> = {
   "category.create": "created the topic",
   "category.rename": "renamed a topic",
+  "category.describe": "described a topic",
   "category.merge": "merged a topic into another",
   "category.unmerge": "reversed a topic merge",
   "category.delete": "deleted a topic",

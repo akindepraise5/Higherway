@@ -42,8 +42,8 @@ Read this first when coming back. Everything below it is history and reasoning.
    repository secret `DATABASE_URL`.
 4. **Two Owner decisions are waiting**, both recorded below rather than assumed:
    the Google service account for Drive sync (Viewer on the folder, nothing
-   more), and whether to write one-line descriptions for the 46 topics that have
-   none — that is the cheapest improvement available to topic suggestions.
+   more), and ~~whether to write one-line descriptions for the 46 topics that have
+   none~~ — **done 2026-09-19**, see *Every topic described* below.
 
 ### Two bugs found by the owner on 2026-09-17, both fixed
 
@@ -523,6 +523,31 @@ existing at all.
 **Verified by running one.** A real dry run through the real worker:
 `COMPLETED`, `{inFolder: 796, imported: 0, skipped: 796, dryRun: true}`, and the
 `sync_runs` row closed with those counts.
+
+### The church named, and every topic described — 2026-09-19
+
+On `v2`, in PR #7. Asked for by the owner.
+
+- **About page** names The Apostolic Faith Church throughout, adds a section on the
+  church, and links out to apostolicfaith.org and apostolicfaithweca.org. Its counts
+  still come from the database rather than the figures in the brief.
+- **Footer** replaced Browse and Topics with the church's West & Central Africa contact
+  details and a four-link Church column, per the owner's structure. Every URL was
+  supplied by the owner and checked live. Browse and Topics are **no longer in the
+  footer**: the header still has Library and About, but `/submit` has no footer link.
+- **Every topic described.** 48 of 59 live topics had no description, so home page
+  tiles sat nameplate-only beside ones with a sentence. `pnpm topics:describe` wrote
+  47 (all but `in-this-issue`), one `category.describe` entry each, verified in the
+  database afterwards rather than trusted from the script's output.
+- **Not done: `pnpm embed --topics`.** `onnxruntime-node` fails to load on the
+  owner's Windows machine — *"A dynamic link library (DLL) initialization routine
+  failed"* — most likely a Visual C++ runtime older than it needs. The descriptions are
+  live regardless; only topic suggestions still use the old one-word vectors. Run it on
+  the Mac, or after updating the VC++ redistributable.
+- **A local trap, fixed:** this checkout had `core.autocrlf=true`, which rewrote every
+  LF file to CRLF on disk and made `pnpm lint` fail repo-wide on line endings alone, so
+  the pre-push hook failed on every push whatever changed. Set to `false` and the
+  working tree renormalised; nothing in the repository changed.
 
 ### Next, in the order worth taking them
 
