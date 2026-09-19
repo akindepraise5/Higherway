@@ -123,25 +123,6 @@ export default async function AboutPage() {
             </div>
           ))}
         </div>
-
-        <div className="mt-10 flex flex-col gap-3.5 sm:flex-row sm:gap-8">
-          <a
-            href="https://www.apostolicfaith.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-3 transition-colors hover:text-ink"
-          >
-            Learn more about The Apostolic Faith Church <Arrow />
-          </a>
-          <a
-            href="https://apostolicfaithweca.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-[13px] font-medium text-ink-3 transition-colors hover:text-ink"
-          >
-            Visit the West &amp; Central Africa website <Arrow />
-          </a>
-        </div>
       </section>
 
       <section className="bg-forest py-[clamp(56px,7vw,96px)] text-paper-2">

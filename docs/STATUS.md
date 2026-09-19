@@ -528,9 +528,10 @@ existing at all.
 
 On `v2`, in PR #7. Asked for by the owner.
 
-- **About page** names The Apostolic Faith Church throughout, adds a section on the
-  church, and links out to apostolicfaith.org and apostolicfaithweca.org. Its counts
-  still come from the database rather than the figures in the brief.
+- **About page** names The Apostolic Faith Church throughout and adds a section on the
+  church. Its counts still come from the database rather than the figures in the brief.
+  It briefly carried its own two links out to the church sites; they were removed the
+  same day as duplicates, because the footer on every page already has both.
 - **Footer** replaced Browse and Topics with the church's West & Central Africa contact
   details and a four-link Church column, per the owner's structure. Every URL was
   supplied by the owner and checked live. Browse and Topics are **no longer in the
