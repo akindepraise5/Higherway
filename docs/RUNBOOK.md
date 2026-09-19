@@ -147,6 +147,26 @@ configuration the bucket had never been given.
 
 ---
 
+## Topics
+
+### `pnpm topics:describe [--apply] [--as <owner-email>]`
+Writes the one-line description for every topic that has none — the sentence under the
+name on the home page tiles and topic pages. Prints what it would do; changes nothing
+without `--apply`. The descriptions themselves live in `scripts/describe-topics.ts`.
+
+- **Fills gaps, never overwrites.** A topic that already has a description is skipped
+  and listed. Change an existing one in the admin panel, one topic at a time.
+- Each change is its own `category.describe` audit entry — not a rename, because the
+  name and URL are untouched.
+- `--as` names the acting Owner. There are several, so it is required.
+- Run `pnpm embed --topics` afterwards so topic suggestions use the new wording.
+- `in-this-issue` is deliberately left out: it holds nothing published and looks like
+  a magazine heading filed as a subject. Merge or delete it rather than describe it.
+
+**Run 2026-09-19:** 47 written, as akindepraise5@. 58 of 59 live topics now described.
+
+---
+
 ## Meaning
 
 ### `pnpm embed [--topics] [--force] [--limit N]`

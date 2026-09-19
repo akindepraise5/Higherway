@@ -1,14 +1,16 @@
 import { Logo } from "./logo"
 import { Arrow } from "./masthead"
 
-const CHURCH_URL = "https://www.apostolicfaith.org"
-const WECA_URL = "https://apostolicfaithweca.org"
+const CHURCH_URL = "https://www.apostolicfaith.org/"
+const CHURCH_FAITH_URL = "https://www.apostolicfaith.org/our-faith"
+const WECA_URL = "https://apostolicfaithweca.org/"
+const WECA_CONTACT_URL = "https://apostolicfaithweca.org/form/contact"
 
 /**
  * The footer. The Higherway column stays data-driven; the church block below
- * it is fixed content — the address, phone, email and the two site links it
- * carries all come from the church itself, not from anything the archive
- * tracks, so there is nothing here to query.
+ * it is fixed content — the address, phone, email and every church link come
+ * from the church itself, not from anything the archive tracks, so there is
+ * nothing here to query.
  */
 export function Footer() {
   return (
@@ -70,7 +72,7 @@ export function Footer() {
             <ul className="space-y-2.5">
               <li>
                 <a
-                  href={CHURCH_URL}
+                  href={CHURCH_FAITH_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm transition-colors hover:text-paper-2"
@@ -100,7 +102,9 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:info@apostolicfaithweca.org"
+                  href={WECA_CONTACT_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-sm transition-colors hover:text-paper-2"
                 >
                   Contact the Church

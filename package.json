@@ -27,6 +27,7 @@
     "fix:names": "tsx --env-file=.env.local scripts/fix-download-names.ts",
     "reinvite": "tsx --env-file=.env.local scripts/reinvite-owner.ts",
     "account:delete": "tsx --env-file=.env.local scripts/delete-account.ts",
+    "topics:describe": "tsx --env-file=.env.local scripts/describe-topics.ts",
     "scan:duplicates": "tsx --env-file=.env.local scripts/scan-duplicates.ts",
     "resolve:stuck": "tsx --env-file=.env.local scripts/resolve-stuck.ts",
     "fix:hyphens": "tsx --env-file=.env.local scripts/fix-hyphens.ts",
