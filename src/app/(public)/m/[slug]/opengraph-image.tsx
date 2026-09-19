@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og"
 import { coverArt } from "../../../../lib/art/cover"
+import { lookFor } from "../../../../lib/art/palette"
+import { titleCase } from "../../../../lib/text/title-case"
 import { materialBySlug } from "../../../../server/materials/queries"
 import { ogFonts, SERIF, Wordmark } from "../../../../server/og/brand"
 
@@ -26,26 +28,13 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   const { slug } = await params
   const material = await materialBySlug(slug)
 
-  const title = material?.title ?? "Higherway"
+  // The same casing as every cover, so a shared link matches what it opens.
+  const title = titleCase(material?.title ?? "Higherway")
   const topic = material?.topics[0]?.name
-  const look = material?.look ?? {
-    motif: "sun" as const,
-    palette: {
-      sky: ["hsl(200,20%,30%)", "hsl(30,44%,54%)", "hsl(40,74%,80%)"] as [string, string, string],
-      sun: "hsl(42,96%,88%)",
-      sunY: 0.6,
-      sunR: 40,
-      ridges: [
-        "hsl(200,10%,55%)",
-        "hsl(200,10%,42%)",
-        "hsl(200,11%,29%)",
-        "hsl(200,12%,18%)",
-        "hsl(200,13%,10%)",
-      ] as [string, string, string, string, string],
-    },
-  }
+  // A missing material still gets a cover in the house style, not a blank.
+  const look = material?.look ?? lookFor(slug, "faith")
 
-  const art = coverArt({ motif: look.motif, palette: look.palette, seed: slug })
+  const art = coverArt({ look, seed: slug, frame: "cover" })
   const background = `data:image/svg+xml;base64,${Buffer.from(art).toString("base64")}`
 
   /** Long titles need to be smaller, or they overflow the card. */

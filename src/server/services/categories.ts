@@ -114,6 +114,7 @@ export async function renameCategory(
 
   revalidatePath("/admin/categories")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }
 
@@ -173,6 +174,7 @@ export async function mergeCategory(fromId: string, intoId: string): Promise<Ser
 
   revalidatePath("/admin/categories")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }
 
@@ -214,5 +216,6 @@ export async function deleteCategory(id: string): Promise<ServiceResult> {
 
   revalidatePath("/admin/categories")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }

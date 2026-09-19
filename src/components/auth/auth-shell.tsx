@@ -23,7 +23,7 @@ export function AuthShell({
   // A fixed seed, so the sign-in page looks the same every time — it is a
   // front door, and a front door should be recognisable.
   const look = lookFor("higherway-sign-in", "faith")
-  const art = coverArt({ motif: look.motif, palette: look.palette, seed: "higherway-sign-in" })
+  const art = coverArt({ look, seed: "higherway-sign-in", frame: "cover" })
 
   return (
     <div className="flex min-h-screen flex-col lg:grid lg:grid-cols-[1.05fr_1fr]">

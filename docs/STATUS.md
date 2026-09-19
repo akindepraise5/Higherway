@@ -550,6 +550,29 @@ On `v2`, in PR #7. Asked for by the owner.
   the pre-push hook failed on every push whatever changed. Set to `false` and the
   working tree renormalised; nothing in the repository changed.
 
+### Home page redesign and one cover system — 2026-09-19
+
+Asked for by the owner, from reference images, reviewed locally before pushing.
+
+- **Hero** (`components/public/hero/`): headline, search as the one action, and a
+  fan of three books linking to Prayer, Faith and Purpose, over a new misty-morning
+  `heroArt`. The books gather into a stack on hover or focus and the pointed-at one
+  comes forward — CSS only (`book-stack.module.css`), still under reduced motion.
+- **Latest Addition** (`components/public/latest-addition.tsx`): the newest
+  material as a standing book, with the counts beside it. Every figure is live from
+  `archiveStats()` — the same published rows the library counts — and every service
+  that revalidates `/library` now revalidates `/` too, so a publish or archive
+  changes the number at once rather than within five minutes.
+- **Every material cover** now follows those two books: the real logo, a Title Case
+  title, a gold rule, the topic, and a drawn landscape across the lower half.
+  `lib/art/palette.ts` gives each topic a colour family and two scenes; each
+  material takes its own edition and scene within them. See ARCHITECTURE §13.
+- The hero books' titles now go through `titleCase` like every other cover, so
+  they read "A Life Of Prayer", not "A Life of Prayer".
+
+**Worth checking:** covers on a phone's two-column grid are small, and the topic
+label on them is at its 7px floor.
+
 ### Next, in the order worth taking them
 
 1. ~~**Invitation email.**~~ **Done** — see *Invitations are sent* below.

@@ -189,6 +189,7 @@ export async function resolvePair(pairId: string, keepId: string): Promise<Dupli
 
   revalidatePath("/admin/duplicates")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }
 
@@ -230,5 +231,6 @@ export async function restoreMaterial(materialId: string): Promise<DuplicateResu
   revalidatePath("/admin/duplicates")
   revalidatePath("/admin/materials")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }

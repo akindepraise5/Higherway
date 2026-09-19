@@ -181,6 +181,7 @@ async function fileUnder(
   revalidatePath(`/admin/materials/${materialId}`)
   revalidatePath("/admin/materials")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }
 
@@ -221,6 +222,7 @@ export async function unassignCategory(
   revalidatePath(`/admin/materials/${materialId}`)
   revalidatePath("/admin/materials")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }
 
@@ -270,6 +272,7 @@ export async function updateMaterial(
   revalidatePath(`/admin/materials/${materialId}`)
   revalidatePath("/admin/materials")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }
 
@@ -388,6 +391,7 @@ export async function publishMaterial(materialId: string): Promise<MaterialResul
   revalidatePath(`/admin/materials/${materialId}`)
   revalidatePath("/admin/materials")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   if (slug) revalidatePath(`/m/${slug}`)
   return result
 }
@@ -440,6 +444,7 @@ export async function archiveMaterial(materialId: string, reason: string): Promi
   revalidatePath(`/admin/materials/${materialId}`)
   revalidatePath("/admin/materials")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   if (slug) revalidatePath(`/m/${slug}`)
   return result
 }
@@ -607,6 +612,7 @@ export async function fileManyUnder(
 
   revalidatePath("/admin/materials")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }
 
@@ -672,6 +678,7 @@ export async function publishMany(materialIds: string[]): Promise<BulkResult> {
 
   revalidatePath("/admin/materials")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }
 
@@ -730,6 +737,7 @@ export async function archiveMany(materialIds: string[], reason: string): Promis
 
   revalidatePath("/admin/materials")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result
 }
 
@@ -749,5 +757,6 @@ export async function destroyMaterialAction(
 
   revalidatePath("/admin/materials")
   revalidatePath("/library")
+  revalidatePath("/") // the home page counts and shows the newest material
   return result.ok ? { ok: true, message: result.message } : { ok: false, error: result.error }
 }
